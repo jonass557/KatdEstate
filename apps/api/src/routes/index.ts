@@ -17,6 +17,8 @@ import { createPropertyRouter } from '../modules/properties/properties.routes.js
 import { createUtilityRouter } from '../modules/utilities/utilities.routes.js';
 import { createMarketplacePublicRouter, createMarketplaceRouter } from '../modules/marketplace/marketplace.routes.js';
 import { createQuartierPublicRouter, createQuartierRouter } from '../modules/quartier/quartier.routes.js';
+import { createIkeepayRouter } from '../modules/payments/ikeepay.routes.js';
+import { createMarketingRouter } from '../modules/marketing/marketing.routes.js';
 
 export function createApiRouter(config: AppConfig) {
   const router = Router();
@@ -25,8 +27,11 @@ export function createApiRouter(config: AppConfig) {
   router.use('/platform', createPlatformRouter(config));
   router.use('/marketplace', createMarketplacePublicRouter(config));
   router.use('/quartier', createQuartierPublicRouter(config));
+  router.use('/marketing', createMarketingRouter());
+  router.use('/payments/ikeepay', createIkeepayRouter());
 
   const organization = Router({ mergeParams: true });
+  organization.use('/payments/ikeepay', createIkeepayRouter());
   organization.use(createPortalRouter(config));
   organization.use(createMarketplaceRouter(config));
   organization.use(createQuartierRouter(config));

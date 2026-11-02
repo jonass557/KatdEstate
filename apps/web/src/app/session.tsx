@@ -3,7 +3,7 @@ import { PERMISSIONS } from '@rentflow/shared';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, setUnauthorizedHandler } from '../lib/api-client';
-import { fetchSession, signInRequest, signOutRequest, type SignInPayload } from '../lib/auth-api';
+import { fetchSession, signInRequest, signOutRequest, registerRequest, type SignInPayload, type RegisterPayload } from '../lib/auth-api';
 
 /**
  * État de session de l'application.
@@ -28,6 +28,7 @@ interface SessionContextValue {
   /** Recharge la session depuis l'API. */
   reload: () => Promise<void>;
   signIn: (payload: SignInPayload) => Promise<MembershipWithOrganization[]>;
+  registerUser: (payload: RegisterPayload) => Promise<MembershipWithOrganization[]>;
   signOut: () => Promise<void>;
 }
 
@@ -98,6 +99,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [applySession],
   );
 
+  const registerUser = useCallback(
+    async (payload: RegisterPayload) => {
+      const { session } = await registerRequest(payload);
+      applySession(session);
+      return session.memberships;
+    },
+    [applySession],
+  );
+
   const signOut = useCallback(async () => {
     await signOutRequest();
     clearSession();
@@ -114,9 +124,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       memberships,
       reload,
       signIn,
+      registerUser,
       signOut,
     }),
-    [status, user, memberships, reload, signIn, signOut],
+    [status, user, memberships, reload, signIn, registerUser, signOut],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

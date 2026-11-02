@@ -15,5 +15,6 @@ export * from './schemas/property.js';
 export * from './schemas/quartier.js';
 export * from './schemas/tenant.js';
 export * from './schemas/utility.js';
+export * from './schemas/ikeepay.js';
 export * from './types/api.js';
 export * from './types/identity.js';

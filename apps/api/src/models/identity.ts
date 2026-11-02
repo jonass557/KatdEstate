@@ -10,6 +10,7 @@ const userSchema = new Schema(
     displayName: { type: String, required: true, trim: true, maxlength: 120 },
     passwordHash: { type: String, required: true, select: false },
     status: { type: String, enum: ['ACTIVE', 'SUSPENDED'], default: 'ACTIVE', index: true },
+    phone: { type: String, trim: true, maxlength: 32 },
     emailVerifiedAt: { type: Date },
     /** Rôle plateforme. Jamais accordé par une invitation d'organisation. */
     platformRole: { type: String, enum: ['SUPER_ADMIN'] },
@@ -54,7 +55,7 @@ const membershipSchema = new Schema(
   {
     organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    role: { type: String, enum: ['ADMIN', 'OWNER', 'PROPERTY_MANAGER', 'ACCOUNTANT', 'AGENT', 'TENANT'], required: true },
+    role: { type: String, enum: ['ADMIN', 'OWNER', 'PROPERTY_MANAGER', 'ACCOUNTANT', 'AGENT', 'TENANT', 'NEIGHBORHOOD_LEADER', 'BLOCK_LEADER', 'RESIDENT'], required: true },
     grantedPermissions: { type: [String], default: [] },
     revokedPermissions: { type: [String], default: [] },
     status: { type: String, enum: ['INVITED', 'ACTIVE', 'SUSPENDED', 'REMOVED'], default: 'ACTIVE', index: true },

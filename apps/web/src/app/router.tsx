@@ -4,6 +4,8 @@ import { PortalShell } from '../layouts/portal-shell';
 import { NAV_ITEMS } from '../lib/navigation';
 import { ProtectedRoute, PublicOnlyRoute } from '../components/protected-route';
 import { RequirePermission } from '../components/role-guard';
+import { LandingPage } from '../pages/landing-page';
+import { RegisterPage } from '../pages/register';
 import { DashboardPage } from '../pages/dashboard';
 import { DocumentsPage } from '../pages/documents';
 import { ModulePlaceholderPage } from '../pages/module-placeholder';
@@ -39,14 +41,10 @@ import { QuartierHomePage } from '../pages/quartier/quartier-home';
 import type { ReactNode } from 'react';
 
 /**
- * Table de routage.
- *
- * Les routes de modules sont **dérivées** du catalogue de navigation : un module
- * ne peut pas exister dans la barre latérale sans route, ni l'inverse. Chaque
- * route hérite de la permission déclarée dans le catalogue, ce qui évite de
- * dupliquer la règle à deux endroits.
+ * Table de routage KadtEstate.
  */
 const PAGES: Record<string, ReactNode> = {
+  '/dashboard': <DashboardPage />,
   '/quartier': <QuartierHomePage />,
   '/marketplace': <MarketplacePage />,
   '/agent': <AgentPage />,
@@ -69,7 +67,7 @@ const PAGES: Record<string, ReactNode> = {
   '/notifications': <NotificationsPage />,
 };
 
-const moduleRoutes = NAV_ITEMS.filter((item) => item.path !== '/').map((item) => {
+const moduleRoutes = NAV_ITEMS.filter((item) => item.path !== '/' && item.path !== '/dashboard').map((item) => {
   const page = PAGES[item.path] ?? <ModulePlaceholderPage title={item.label} phase={item.phase} />;
 
   return {
@@ -83,18 +81,17 @@ const moduleRoutes = NAV_ITEMS.filter((item) => item.path !== '/').map((item) =>
 });
 
 const router = createBrowserRouter([
+  // Page d'accueil publique KadtEstate
   {
-    path: '/quartier',
-    element: <QuartierHomePage />,
+    path: '/',
+    element: <LandingPage />,
   },
+  // Inscription personnalisée par rôle
   {
-    path: '/quartier/join/:token',
-    element: <QuartierHomePage />,
+    path: '/register',
+    element: <RegisterPage />,
   },
-  {
-    path: '/marketplace',
-    element: <MarketplacePage />,
-  },
+  // Connexion
   {
     path: '/sign-in',
     element: (
@@ -103,6 +100,21 @@ const router = createBrowserRouter([
       </PublicOnlyRoute>
     ),
   },
+  // Chefferie & Recensement (Accès direct ou public token)
+  {
+    path: '/quartier',
+    element: <QuartierHomePage />,
+  },
+  {
+    path: '/quartier/join/:token',
+    element: <QuartierHomePage />,
+  },
+  // Marketplace publique
+  {
+    path: '/marketplace',
+    element: <MarketplacePage />,
+  },
+  // Super Admin Platform
   {
     path: '/platform',
     element: (
@@ -111,6 +123,7 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+  // Portail Locataire
   {
     path: '/portal',
     element: (
@@ -132,15 +145,15 @@ const router = createBrowserRouter([
       { path: 'profile', element: <PortalProfilePage /> },
     ],
   },
+  // Espace Connecté Principal (Dashboard et Modules Bailleurs / Agents / Chefferie)
   {
-    path: '/',
     element: (
       <ProtectedRoute>
         <AppShell />
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <DashboardPage /> },
+      { path: 'dashboard', element: <DashboardPage /> },
       { path: 'properties/new', element: <RequirePermission permission="properties.create"><PropertyFormPage mode="create" /></RequirePermission> },
       { path: 'properties/:id', element: <RequirePermission permission="properties.view"><PropertyDetailPage /></RequirePermission> },
       { path: 'properties/:id/edit', element: <RequirePermission permission="properties.update"><PropertyFormPage mode="edit" /></RequirePermission> },

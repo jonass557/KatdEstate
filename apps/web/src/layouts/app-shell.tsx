@@ -1,6 +1,6 @@
 import { LogOut, Menu, Search, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { useOrganization } from '../app/organization';
 import { useCan } from '../app/permissions';
 import { useSession } from '../app/session';
@@ -58,15 +58,15 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 function Brand() {
   return (
-    <div className="flex items-center gap-2.5 px-3 pt-5">
-      <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
+    <Link to="/" className="flex items-center gap-2.5 px-3 pt-5 group cursor-pointer" title="Retour à l'accueil KadtEstate">
+      <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground group-hover:scale-105 transition-transform">
         KE
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold tracking-tight">KadtEstate</span>
+        <span className="block truncate text-sm font-semibold tracking-tight group-hover:text-primary transition-colors">KadtEstate</span>
         <span className="block truncate text-[11px] text-muted-foreground">Immobilier & Chefferie</span>
       </span>
-    </div>
+    </Link>
   );
 }
 

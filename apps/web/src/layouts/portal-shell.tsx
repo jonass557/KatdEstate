@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { BackButton } from '../components/ui/back-button';
 import {
   Bell,
   FileText,
@@ -42,9 +43,12 @@ export function PortalShell() {
     <div className="min-h-dvh bg-muted/30">
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold">Mon espace locataire</p>
-            <p className="text-xs text-muted-foreground">{user?.displayName}</p>
+          <div className="flex items-center gap-3">
+            <BackButton to="/" label="Accueil KadtEstate" />
+            <div>
+              <p className="text-sm font-semibold">Mon espace locataire</p>
+              <p className="text-xs text-muted-foreground">{user?.displayName}</p>
+            </div>
           </div>
           <button type="button" onClick={() => void signOut()} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
             <LogOut className="size-4" aria-hidden />

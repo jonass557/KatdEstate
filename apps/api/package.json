@@ -10,6 +10,7 @@
     "start": "node --import tsx src/server.ts",
     "start:prod": "node dist/server.js",
     "db:check": "tsx src/scripts/check-database.ts",
+    "db:seed": "tsx src/scripts/seed-platform.ts",
     "typecheck": "node --max-old-space-size=4096 ../../node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "vitest run",

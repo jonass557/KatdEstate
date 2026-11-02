@@ -43,7 +43,7 @@ export const NAVIGATION: readonly NavSection[] = [
   {
     label: 'Pilotage',
     items: [
-      { path: '/', label: 'Tableau de bord', icon: LayoutDashboard, phase: 'Milestone 0' },
+      { path: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard, phase: 'Milestone 0' },
       {
         path: '/owner-portal',
         label: 'Espace Propriétaire',

@@ -14,6 +14,14 @@ export interface SignInPayload {
   password: string;
 }
 
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  displayName: string;
+  role?: string | undefined;
+  phone?: string | undefined;
+}
+
 export interface SignInResult {
   session: AuthSession;
 }
@@ -31,9 +39,18 @@ export async function signInRequest(payload: SignInPayload): Promise<SignInResul
   });
 
   setAccessToken(tokens.accessToken);
+  const session = await apiRequest<AuthSession>('/auth/me');
+  return { session };
+}
 
-  // La session complète (utilisateur + memberships) est récupérée dans la
-  // foulée : la réponse de login ne porte que les jetons.
+/** Enregistre un nouvel utilisateur avec son rôle choisi. */
+export async function registerRequest(payload: RegisterPayload): Promise<SignInResult> {
+  const tokens = await apiRequest<AuthTokensResponse>('/auth/register', {
+    method: 'POST',
+    body: payload,
+  });
+
+  setAccessToken(tokens.accessToken);
   const session = await apiRequest<AuthSession>('/auth/me');
   return { session };
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { BackButton } from '../components/ui/back-button';
 import {
   Building2,
   FileCheck,
@@ -135,11 +136,14 @@ export function MarketplacePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Header */}
-      <div className="border-b border-border bg-card px-4 py-10 sm:px-8">
+      <div className="border-b border-border bg-card px-4 py-8 sm:px-8">
         <div className="mx-auto max-w-6xl space-y-4 text-center sm:text-left">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            <Sparkles className="h-3.5 w-3.5" />
-            Marketplace Immobilière Certifiée DOMORA
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <BackButton to="/" label="Retour à l'accueil" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              Marketplace Immobilière Certifiée KadtEstate
+            </div>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-foreground">
             Trouvez votre bien immobilier en Afrique

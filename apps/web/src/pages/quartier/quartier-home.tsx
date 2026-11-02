@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BackButton } from '../../components/ui/back-button';
 import { ResidentPortal } from './resident-portal';
 import { BlockLeaderDashboard } from './block-leader-dashboard';
 import { NeighborhoodLeaderDashboard } from './neighborhood-leader-dashboard';
@@ -13,7 +14,10 @@ export function QuartierHomePage() {
     <div className="space-y-6">
       {/* Branch Header */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-gradient-to-r from-card via-card to-amber-500/5 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
+        <div className="space-y-2">
+          <div>
+            <BackButton to="/dashboard" label="Retour au Dashboard" />
+          </div>
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-600 text-white font-bold text-xs shadow-sm">
               KE

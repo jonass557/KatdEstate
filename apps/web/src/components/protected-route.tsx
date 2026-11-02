@@ -44,7 +44,7 @@ export function PublicOnlyRoute({ children }: { children: ReactNode }) {
   if (isAuthenticated) {
     const state = location.state as { from?: string } | null;
     const isTenant = memberships.some((membership) => membership.role === 'TENANT');
-    return <Navigate to={state?.from ?? (isTenant ? '/portal' : '/')} replace />;
+    return <Navigate to={state?.from ?? (isTenant ? '/portal' : '/dashboard')} replace />;
   }
 
   return <>{children}</>;

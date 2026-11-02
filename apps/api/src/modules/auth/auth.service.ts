@@ -81,15 +81,30 @@ async function issueTokens(userId: string, config: AppConfig, metadata: { userAg
   };
 }
 
-export async function register(input: { email: string; password: string; displayName: string }, config: AppConfig, metadata: { userAgent?: string | undefined; ip?: string | undefined; requestId?: string }) {
+export async function register(
+  input: { email: string; password: string; displayName: string; role?: string; phone?: string },
+  config: AppConfig,
+  metadata: { userAgent?: string | undefined; ip?: string | undefined; requestId?: string }
+) {
   const user = await User.create({
     emailNormalized: input.email.trim().toLowerCase(),
     displayName: input.displayName,
     passwordHash: await hashPassword(input.password),
+    phone: input.phone,
   });
   const slug = `${input.displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'organisation'}-${String(user._id).slice(-6)}`;
-  const organization = await Organization.create({ name: `${input.displayName} — Organisation`, slug, country: 'SN', currency: 'XOF', timezone: 'Africa/Dakar', locale: 'fr' });
-  await Membership.create({ userId: user._id, organizationId: organization._id, role: 'OWNER', status: 'ACTIVE' });
+  const organization = await Organization.create({
+    name: `${input.displayName} — Espace KadtEstate`,
+    slug,
+    country: 'CI',
+    currency: 'XOF',
+    timezone: 'Africa/Abidjan',
+    locale: 'fr',
+    phone: input.phone,
+    email: input.email,
+  });
+  const roleToAssign = input.role || 'OWNER';
+  await Membership.create({ userId: user._id, organizationId: organization._id, role: roleToAssign, status: 'ACTIVE' });
   await AuditLog.create({ actorId: user._id, action: 'auth.register', resourceType: 'User', resourceId: String(user._id), result: 'SUCCESS', requestId: metadata.requestId ?? 'system' });
   const verificationToken = await createOneTimeToken(
     String(user._id),
