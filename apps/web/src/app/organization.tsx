@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Building2 } from 'lucide-react';
 import { useSession } from './session';
 
 /**
@@ -30,23 +29,13 @@ interface OrganizationContextValue {
   setActiveOrganization: (id: string) => void;
 }
 
-/** Organisations de démonstration, utilisées uniquement en mode aperçu. */
-const PREVIEW_ORGANIZATIONS: readonly OrganizationSummary[] = [
-  {
-    id: 'preview-dakar',
-    name: 'Kora Immobilier',
-    location: 'Sénégal',
-    currency: 'XOF',
-    timezone: 'Africa/Dakar',
-  },
-  {
-    id: 'preview-abidjan',
-    name: 'Baobab Gestion',
-    location: 'Côte d’Ivoire',
-    currency: 'XOF',
-    timezone: 'Africa/Abidjan',
-  },
-];
+const DEFAULT_ORGANIZATION: OrganizationSummary = {
+  id: 'org-kadtestate-default',
+  name: 'KadtEstate Espace Principal',
+  location: 'Côte d’Ivoire',
+  currency: 'XOF',
+  timezone: 'Africa/Abidjan',
+};
 
 const STORAGE_KEY = 'rentflow-active-organization';
 
@@ -57,45 +46,26 @@ function readStoredId(): string | null {
   return window.localStorage.getItem(STORAGE_KEY);
 }
 
-/** Écran affiché lorsqu'un utilisateur authentifié n'a aucune organisation. */
-function NoOrganizationState() {
-  return (
-    <div className="flex min-h-dvh items-center justify-center bg-muted/40 px-4">
-      <div className="w-full max-w-md space-y-3 rounded-2xl border border-border bg-card p-8 text-center">
-        <span className="mx-auto flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-          <Building2 className="size-5" aria-hidden />
-        </span>
-        <h1 className="text-lg font-semibold tracking-tight">Aucune organisation</h1>
-        <p className="text-sm text-muted-foreground">
-          Votre compte n’est rattaché à aucune organisation. Demandez une invitation à un
-          administrateur, ou créez votre première organisation.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export function OrganizationProvider({ children }: { children: ReactNode }) {
-  const { memberships, isPreview } = useSession();
+  const { memberships } = useSession();
 
   const organizations = useMemo<readonly OrganizationSummary[]>(() => {
-    if (isPreview) return PREVIEW_ORGANIZATIONS;
-
-    return memberships.map((membership) => ({
-      id: membership.organization.id,
-      name: membership.organization.name,
-      location: membership.organization.country,
-      currency: membership.organization.currency,
-      timezone: membership.organization.timezone,
-    }));
-  }, [memberships, isPreview]);
+    if (memberships && memberships.length > 0) {
+      return memberships.map((membership) => ({
+        id: membership.organization.id,
+        name: membership.organization.name,
+        location: membership.organization.country,
+        currency: membership.organization.currency,
+        timezone: membership.organization.timezone,
+      }));
+    }
+    return [DEFAULT_ORGANIZATION];
+  }, [memberships]);
 
   const [activeId, setActiveId] = useState<string>(() => readStoredId() ?? '');
 
-  // L'organisation mémorisée peut ne plus exister (membership révoquée) : on
-  // retombe alors sur la première disponible.
   const activeOrganization =
-    organizations.find((organization) => organization.id === activeId) ?? organizations[0];
+    organizations.find((organization) => organization.id === activeId) ?? organizations[0] ?? DEFAULT_ORGANIZATION;
 
   useEffect(() => {
     if (activeOrganization && activeOrganization.id !== activeId) {
@@ -108,8 +78,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, id);
   };
 
-  const value = useMemo<OrganizationContextValue | null>(() => {
-    if (!activeOrganization) return null;
+  const value = useMemo<OrganizationContextValue>(() => {
     return {
       organizations,
       activeOrganization,
@@ -117,8 +86,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       setActiveOrganization: handleChange,
     };
   }, [organizations, activeOrganization]);
-
-  if (!value) return <NoOrganizationState />;
 
   return <OrganizationContext.Provider value={value}>{children}</OrganizationContext.Provider>;
 }

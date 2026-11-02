@@ -4,8 +4,11 @@
   "installCommand": "npm install --include=optional",
   "buildCommand": "npm run build --workspace @rentflow/shared && npm run build --workspace @rentflow/web",
   "outputDirectory": "apps/web/dist",
-  "cleanUrls": true,
   "rewrites": [
+    {
+      "source": "/((?!assets/|favicon.*|manifest.webmanifest|sw.js).*)",
+      "destination": "/index.html"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
