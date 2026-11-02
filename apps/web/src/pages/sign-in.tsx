@@ -75,9 +75,17 @@ export function SignInPage() {
     }
   });
 
-  const handleFillAccount = (email: string) => {
+  const handleFillAccount = async (email: string) => {
     setValue('email', email);
     setValue('password', 'Password123!');
+    setFormError(null);
+    try {
+      const memberships = await signIn({ email, password: 'Password123!' });
+      const isTenant = memberships.some((m) => m.role === 'TENANT');
+      navigate(isTenant ? '/portal' : '/dashboard', { replace: true });
+    } catch (err: any) {
+      setFormError(err?.message || 'Erreur de connexion');
+    }
   };
 
   return (

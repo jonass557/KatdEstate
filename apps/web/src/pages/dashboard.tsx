@@ -13,16 +13,23 @@ import {
   Users, 
   Briefcase, 
   FileText, 
-  Bot, 
   Settings, 
   Sparkles, 
   QrCode, 
   MapPin, 
   Bell, 
   AlertTriangle, 
-  ArrowUpRight,
   TrendingUp,
-  Wallet
+  Wallet,
+  Globe,
+  Plus,
+  Newspaper,
+  Calendar,
+  MessageSquare,
+  Smartphone,
+  Store,
+  FolderOpen,
+  Shield
 } from 'lucide-react';
 import { useOrganization } from '../app/organization';
 import { useSession } from '../app/session';
@@ -44,15 +51,21 @@ interface Overview {
   note?: string;
 }
 
-interface ActionCard {
+interface AppButton {
   title: string;
-  description: string;
   icon: any;
+  colorClass: string;
+  glowClass: string;
   to?: string;
   onClick?: () => void;
-  gradient: string;
   badge?: string;
-  badgeColor?: string;
+  badgeBg?: string;
+}
+
+interface AppSection {
+  title: string;
+  subtitle?: string;
+  buttons: AppButton[];
 }
 
 export function DashboardPage() {
@@ -61,410 +74,785 @@ export function DashboardPage() {
   const { data } = useOrgQuery<Overview>(['dashboard'], '/dashboard');
 
   // Detect active role
-  const userRole = memberships?.[0]?.role || (user as any)?.platformRole || 'OWNER';
-  const isSuperAdmin = userRole === 'SUPER_ADMIN' || (user as any)?.platformRole === 'SUPER_ADMIN';
-
-  // State for switching preview role if desired
-  const [activeTabRole, setActiveTabRole] = useState<string>(userRole);
+  const detectedRole = memberships?.[0]?.role || (user as any)?.platformRole || 'OWNER';
+  const [activeTabRole, setActiveTabRole] = useState<string>(detectedRole);
 
   // Modals state
   const [ikeepayPayinOpen, setIkeepayPayinOpen] = useState(false);
   const [ikeepaySettingsOpen, setIkeepaySettingsOpen] = useState(false);
 
-  // Action Buttons categorized by role
-  const getActionCards = (role: string): ActionCard[] => {
+  // Build categorized button sections according to the active role
+  const getSectionsForRole = (role: string): AppSection[] => {
     switch (role) {
       case 'SUPER_ADMIN':
         return [
           {
-            title: 'Passerelle Ikeepay H2H',
-            description: 'Configurer les clés API Publiques & Secrètes Ikeepay',
-            icon: CreditCard,
-            onClick: () => setIkeepaySettingsOpen(true),
-            gradient: 'from-emerald-600 to-teal-700',
-            badge: 'Paiements H2H',
-            badgeColor: 'bg-emerald-500/20 text-emerald-300',
+            title: 'AUTORITÉS & GOUVERNANCE TERRITORIALE',
+            subtitle: 'Supervision des chefferies coutumières, découpage des secteurs et audit',
+            buttons: [
+              {
+                title: 'Chefferie &\nFoncier',
+                icon: Crown,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/quartier',
+                badge: 'OFFICIEL',
+                badgeBg: 'bg-amber-400 text-black',
+              },
+              {
+                title: 'Découpage\nSecteurs',
+                icon: ShieldCheck,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-blue-600 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/quartier',
+                badge: 'BLOCS',
+                badgeBg: 'bg-cyan-500 text-black',
+              },
+              {
+                title: 'Communes &\nVilles',
+                icon: MapPin,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-sky-600 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/quartier',
+              },
+              {
+                title: 'Modération\nMarketplace',
+                icon: Building2,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/admin-marketplace',
+                badge: 'VALIDATION',
+                badgeBg: 'bg-yellow-400 text-black',
+              },
+              {
+                title: 'Parc\nImmobilier',
+                icon: Home,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-violet-600 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/properties',
+              },
+              {
+                title: 'Audit &\nSécurité',
+                icon: FileText,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/platform',
+              },
+            ],
           },
           {
-            title: 'Chefferie & Gouvernance',
-            description: 'Superviser les arrondissements, chefferies et commissions',
-            icon: Crown,
-            to: '/quartier',
-            gradient: 'from-purple-600 to-indigo-700',
-            badge: 'Territoire',
-            badgeColor: 'bg-purple-500/20 text-purple-300',
-          },
-          {
-            title: 'Modération Marketplace',
-            description: 'Valider et certifier les annonces de vente et location',
-            icon: Building2,
-            to: '/admin-marketplace',
-            gradient: 'from-blue-600 to-cyan-700',
-            badge: 'Catalogue',
-            badgeColor: 'bg-blue-500/20 text-blue-300',
-          },
-          {
-            title: 'Recensement & Sécurité',
-            description: 'Découpage des blocs et validation des chefs de quartier',
-            icon: ShieldCheck,
-            to: '/quartier',
-            gradient: 'from-cyan-600 to-blue-700',
-            badge: 'Sécurité',
-            badgeColor: 'bg-cyan-500/20 text-cyan-300',
-          },
-          {
-            title: 'Statistiques Globales',
-            description: 'Taux de recouvrement, flux foncier et volume de loyers',
-            icon: TrendingUp,
-            to: '/analytics',
-            gradient: 'from-rose-600 to-orange-700',
-            badge: 'KPIs Réseau',
-            badgeColor: 'bg-rose-500/20 text-rose-300',
-          },
-          {
-            title: 'Parc Immobilier Global',
-            description: 'Vue d’ensemble des résidences, baux et immeubles',
-            icon: Home,
-            to: '/properties',
-            gradient: 'from-slate-700 to-slate-900',
-            badge: 'Patrimoine',
-            badgeColor: 'bg-slate-500/20 text-slate-300',
-          },
-        ];
-
-      case 'TENANT':
-        return [
-          {
-            title: 'Payer mon Loyer (Ikeepay)',
-            description: 'Règlement instantané via Orange, MTN, Wave ou Moov',
-            icon: CreditCard,
-            onClick: () => setIkeepayPayinOpen(true),
-            gradient: 'from-emerald-500 to-teal-600',
-            badge: 'Mobile Money',
-            badgeColor: 'bg-emerald-500/20 text-emerald-300',
-          },
-          {
-            title: 'Mes Quittances & Reçus',
-            description: 'Consulter et télécharger mes quittances horodatées',
-            icon: Receipt,
-            to: '/portal/receipts',
-            gradient: 'from-blue-600 to-indigo-600',
-            badge: 'Certifié Conforme',
-            badgeColor: 'bg-blue-500/20 text-blue-300',
-          },
-          {
-            title: 'Mon Contrat de Bail',
-            description: 'Détails du loyer, échéances et inventaire d’entrée',
-            icon: FileText,
-            to: '/portal/lease',
-            gradient: 'from-purple-600 to-violet-700',
-            badge: 'Bail Actif',
-            badgeColor: 'bg-purple-500/20 text-purple-300',
-          },
-          {
-            title: 'Signaler une Panne',
-            description: 'Déclarer un incident ou une demande de réparation',
-            icon: Wrench,
-            to: '/portal/maintenance',
-            gradient: 'from-amber-600 to-orange-600',
-            badge: 'Assistance',
-            badgeColor: 'bg-amber-500/20 text-amber-300',
-          },
-          {
-            title: 'Messages avec le Bailleur',
-            description: 'Échanges directs et notifications officielles',
-            icon: Bell,
-            to: '/portal/messages',
-            gradient: 'from-cyan-600 to-teal-700',
-            badge: 'Messagerie',
-            badgeColor: 'bg-cyan-500/20 text-cyan-300',
+            title: 'COMMERCE, MARCHÉ & PAIEMENTS',
+            subtitle: 'Flux financiers, passerelle Ikeepay H2H et intelligence économique',
+            buttons: [
+              {
+                title: 'Passerelle\nIkeepay H2H',
+                icon: CreditCard,
+                colorClass: 'bg-gradient-to-tr from-emerald-500 to-teal-600 text-white',
+                glowClass: 'shadow-emerald-500/30',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'MOBILE MONEY',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Clés API\nIkeepay',
+                icon: Settings,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-cyan-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                onClick: () => setIkeepaySettingsOpen(true),
+                badge: 'CONFIG',
+                badgeBg: 'bg-teal-300 text-black',
+              },
+              {
+                title: 'Marketplace\nNationale',
+                icon: Store,
+                colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/marketplace',
+              },
+              {
+                title: 'Suivi des\nLoyers',
+                icon: Wallet,
+                colorClass: 'bg-gradient-to-tr from-green-600 to-emerald-700 text-white',
+                glowClass: 'shadow-green-500/25',
+                to: '/rent',
+                badge: 'RÉSEAU',
+                badgeBg: 'bg-green-400 text-black',
+              },
+              {
+                title: 'Statistiques\nGlobales',
+                icon: TrendingUp,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/analytics',
+                badge: 'EN DIRECT',
+                badgeBg: 'bg-rose-400 text-black',
+              },
+              {
+                title: 'KadtEstate\nAI Copilot',
+                icon: Sparkles,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/ai',
+                badge: 'IA V2',
+                badgeBg: 'bg-fuchsia-400 text-black',
+              },
+            ],
           },
         ];
 
       case 'NEIGHBORHOOD_LEADER':
         return [
           {
-            title: 'Ventes de Terrains Coutumières',
-            description: 'Enregistrer les transactions foncières et calculer les droits',
-            icon: MapPin,
-            to: '/quartier',
-            gradient: 'from-purple-600 to-indigo-700',
-            badge: 'Foncier',
-            badgeColor: 'bg-purple-500/20 text-purple-300',
+            title: 'FONCIER & ACTES COUTUMIERS',
+            subtitle: 'Enregistrement légal des transactions et délivrance des actes officiels',
+            buttons: [
+              {
+                title: 'Ventes de\nTerrains',
+                icon: MapPin,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/quartier',
+                badge: 'OBLIGATOIRE',
+                badgeBg: 'bg-amber-400 text-black',
+              },
+              {
+                title: 'Ventes de\nMaisons',
+                icon: Home,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-cyan-600 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/quartier',
+                badge: 'MUTATION',
+                badgeBg: 'bg-blue-300 text-black',
+              },
+              {
+                title: 'Locations &\nBaux',
+                icon: KeyRound,
+                colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-600 text-white',
+                glowClass: 'shadow-emerald-500/25',
+                to: '/quartier',
+              },
+              {
+                title: 'Certificats QR\nOfficiels',
+                icon: QrCode,
+                colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/quartier',
+                badge: 'INFALSIFIABLE',
+                badgeBg: 'bg-yellow-400 text-black',
+              },
+              {
+                title: 'Commissions\nChefferie',
+                icon: Wallet,
+                colorClass: 'bg-gradient-to-tr from-green-600 to-emerald-700 text-white',
+                glowClass: 'shadow-green-500/25',
+                to: '/quartier',
+                badge: 'DROITS',
+                badgeBg: 'bg-green-400 text-black',
+              },
+              {
+                title: 'Registre\nFoncier',
+                icon: FileText,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-sky-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/quartier',
+              },
+            ],
           },
           {
-            title: 'Générateur de Certificats QR',
-            description: 'Émettre les documents certifiés infalsifiables de la chefferie',
-            icon: QrCode,
-            to: '/quartier',
-            gradient: 'from-emerald-600 to-teal-700',
-            badge: 'Sceau Officiel',
-            badgeColor: 'bg-emerald-500/20 text-emerald-300',
-          },
-          {
-            title: 'Ventes & Locations de Maisons',
-            description: 'Historique des mutations et perception des commissions',
-            icon: Home,
-            to: '/quartier',
-            gradient: 'from-blue-600 to-cyan-700',
-            badge: 'Actes Coutumiers',
-            badgeColor: 'bg-blue-500/20 text-blue-300',
-          },
-          {
-            title: 'Supervision des Chefs de Bloc',
-            description: 'Coordonner le recensement et valider les blocs du secteur',
-            icon: ShieldCheck,
-            to: '/quartier',
-            gradient: 'from-cyan-600 to-blue-700',
-            badge: 'Territoire',
-            badgeColor: 'bg-cyan-500/20 text-cyan-300',
-          },
-          {
-            title: 'Alertes & Communications',
-            description: 'Diffuser des consignes de sécurité à toute la population',
-            icon: Bell,
-            to: '/quartier',
-            gradient: 'from-rose-600 to-pink-700',
-            badge: 'Sécurité',
-            badgeColor: 'bg-rose-500/20 text-rose-300',
+            title: 'ORGANISATION & SÉCURITÉ DU QUARTIER',
+            subtitle: 'Coordination des chefs de bloc, recensement des foyers et alertes',
+            buttons: [
+              {
+                title: 'Supervision\nChefs de Bloc',
+                icon: ShieldCheck,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/quartier',
+              },
+              {
+                title: 'Recensement\nSecteur',
+                icon: Users,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/quartier',
+                badge: '15 000+',
+                badgeBg: 'bg-rose-400 text-black',
+              },
+              {
+                title: 'Alertes\nSécurité',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-red-600 to-rose-700 text-white',
+                glowClass: 'shadow-red-500/25',
+                to: '/quartier',
+                badge: 'URGENCE',
+                badgeBg: 'bg-red-500 text-white',
+              },
+              {
+                title: 'Communications\nHabitants',
+                icon: MessageSquare,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-indigo-700 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/messages',
+              },
+              {
+                title: 'Carte\nInteractive',
+                icon: Globe,
+                colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-700 text-white',
+                glowClass: 'shadow-emerald-500/25',
+                to: '/quartier',
+              },
+              {
+                title: 'Marketplace\nLocale',
+                icon: Store,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/marketplace',
+              },
+            ],
           },
         ];
 
       case 'BLOCK_LEADER':
         return [
           {
-            title: 'Enrôlement des Résidences',
-            description: 'Recenser les maisons, immeubles et familles de votre bloc',
-            icon: Home,
-            to: '/quartier',
-            gradient: 'from-cyan-600 to-blue-700',
-            badge: 'Recensement',
-            badgeColor: 'bg-cyan-500/20 text-cyan-300',
+            title: 'RECENSEMENT DE PROXIMITÉ',
+            subtitle: 'Enrôlement terrain des habitations, immeubles et familles',
+            buttons: [
+              {
+                title: 'Enrôler une\nMaison',
+                icon: Home,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-blue-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/quartier',
+                badge: 'NOUVEAU',
+                badgeBg: 'bg-yellow-400 text-black',
+              },
+              {
+                title: 'Générer QR\nCode Bloc',
+                icon: QrCode,
+                colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-700 text-white',
+                glowClass: 'shadow-emerald-500/25',
+                to: '/quartier',
+                badge: 'ADHÉSION',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Registre\ndes Foyers',
+                icon: Users,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/quartier',
+              },
+              {
+                title: 'Immeubles &\nLogements',
+                icon: Building2,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-cyan-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/units',
+              },
+              {
+                title: 'Statistiques\ndu Bloc',
+                icon: TrendingUp,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/quartier',
+                badge: 'DONNÉES',
+                badgeBg: 'bg-indigo-300 text-black',
+              },
+            ],
           },
           {
-            title: 'Générer QR Code du Bloc',
-            description: 'Lien et QR Code d’invitation pour les résidents du secteur',
-            icon: QrCode,
-            to: '/quartier',
-            gradient: 'from-emerald-600 to-teal-700',
-            badge: 'Adhésion',
-            badgeColor: 'bg-emerald-500/20 text-emerald-300',
+            title: 'SÉCURITÉ & VIE DU BLOC',
+            subtitle: 'Gestion des signalements de proximité et liaisons d’urgence',
+            buttons: [
+              {
+                title: 'Signaler un\nIncident',
+                icon: AlertTriangle,
+                colorClass: 'bg-gradient-to-tr from-red-600 to-rose-700 text-white',
+                glowClass: 'shadow-red-500/25',
+                to: '/quartier',
+                badge: 'SOS',
+                badgeBg: 'bg-red-500 text-white',
+              },
+              {
+                title: 'Alertes\nCitoyennes',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/quartier',
+                badge: 'DIRECT',
+                badgeBg: 'bg-amber-400 text-black',
+              },
+              {
+                title: 'Contact\nChefferie',
+                icon: Crown,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/messages',
+              },
+              {
+                title: 'Permanence\nde Garde',
+                icon: ShieldCheck,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/quartier',
+              },
+            ],
+          },
+        ];
+
+      case 'TENANT':
+        return [
+          {
+            title: 'MON LOGEMENT & BAIL',
+            subtitle: 'Contrat certifié, inventaire et assistance technique',
+            buttons: [
+              {
+                title: 'Mon Contrat\nde Bail',
+                icon: FileText,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/portal/lease',
+                badge: 'ACTIF',
+                badgeBg: 'bg-blue-400 text-black',
+              },
+              {
+                title: 'Mes Quittances\n& Reçus',
+                icon: Receipt,
+                colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-700 text-white',
+                glowClass: 'shadow-emerald-500/25',
+                to: '/portal/receipts',
+                badge: 'CONFORME',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Signaler\nune Panne',
+                icon: Wrench,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/portal/maintenance',
+                badge: 'TICKET',
+                badgeBg: 'bg-amber-400 text-black',
+              },
+              {
+                title: 'Messages avec\nle Bailleur',
+                icon: MessageSquare,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-purple-700 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/portal/messages',
+              },
+              {
+                title: 'Mon Profil\nRésident',
+                icon: Users,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-cyan-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/portal/profile',
+              },
+              {
+                title: 'Mes Documents\nClassés',
+                icon: FolderOpen,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/portal/documents',
+              },
+            ],
           },
           {
-            title: 'Signalements & Sécurité',
-            description: 'Gérer les incidents et coordonner la garde de proximité',
-            icon: AlertTriangle,
-            to: '/quartier',
-            gradient: 'from-rose-600 to-amber-700',
-            badge: 'Urgence',
-            badgeColor: 'bg-rose-500/20 text-rose-300',
-          },
-          {
-            title: 'Statistiques du Bloc',
-            description: 'Nombre de foyers recensés et taux de couverture',
-            icon: Users,
-            to: '/quartier',
-            gradient: 'from-indigo-600 to-purple-700',
-            badge: 'Données',
-            badgeColor: 'bg-indigo-500/20 text-indigo-300',
+            title: 'PAIEMENTS & SERVICES MOBILES',
+            subtitle: 'Règlement instantané sécurisé par Orange, MTN, Wave ou Moov',
+            buttons: [
+              {
+                title: 'Payer mon\nLoyer',
+                icon: CreditCard,
+                colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
+                glowClass: 'shadow-emerald-500/30',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'INSTANTANÉ',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Orange\nMoney',
+                icon: Smartphone,
+                colorClass: 'bg-gradient-to-tr from-orange-500 to-amber-600 text-white',
+                glowClass: 'shadow-orange-500/25',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'OM',
+                badgeBg: 'bg-orange-500 text-white',
+              },
+              {
+                title: 'MTN\nMoMo',
+                icon: Smartphone,
+                colorClass: 'bg-gradient-to-tr from-yellow-400 to-amber-500 text-black',
+                glowClass: 'shadow-yellow-500/25',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'MoMo',
+                badgeBg: 'bg-yellow-400 text-black',
+              },
+              {
+                title: 'Wave &\nMoov',
+                icon: Smartphone,
+                colorClass: 'bg-gradient-to-tr from-sky-500 to-blue-600 text-white',
+                glowClass: 'shadow-sky-500/25',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'WAVE',
+                badgeBg: 'bg-sky-400 text-black',
+              },
+              {
+                title: 'Factures &\nÉchéances',
+                icon: Wallet,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/portal/invoices',
+              },
+              {
+                title: 'Alertes du\nQuartier',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-indigo-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/quartier',
+                badge: 'INFOS',
+                badgeBg: 'bg-purple-300 text-black',
+              },
+            ],
           },
         ];
 
       case 'AGENT':
         return [
           {
-            title: 'Marketplace Publique',
-            description: 'Consulter et diffuser des annonces exclusives',
-            icon: Building2,
-            to: '/marketplace',
-            gradient: 'from-amber-600 to-orange-700',
-            badge: 'Marketplace',
-            badgeColor: 'bg-amber-500/20 text-amber-300',
+            title: 'MANDATS & MARKETPLACE',
+            subtitle: 'Diffusion de biens vérifiés, suivi des acquéreurs et visites',
+            buttons: [
+              {
+                title: 'Marketplace\nPublique',
+                icon: Store,
+                colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/marketplace',
+                badge: 'VITRINE',
+                badgeBg: 'bg-amber-400 text-black',
+              },
+              {
+                title: 'Mes Mandats\nExclusifs',
+                icon: Briefcase,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/agent',
+                badge: 'EXCLUSIFS',
+                badgeBg: 'bg-blue-300 text-black',
+              },
+              {
+                title: 'Publier une\nAnnonce',
+                icon: Plus,
+                colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-700 text-white',
+                glowClass: 'shadow-emerald-500/25',
+                to: '/marketplace',
+                badge: 'NOUVEAU',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Visites &\nPlanning',
+                icon: Calendar,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/agent',
+              },
+              {
+                title: 'Prospects &\nOffres',
+                icon: Users,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-cyan-700 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/agent',
+              },
+              {
+                title: 'Estimation de\nPrix IA',
+                icon: Sparkles,
+                colorClass: 'bg-gradient-to-tr from-fuchsia-600 to-pink-600 text-white',
+                glowClass: 'shadow-fuchsia-500/25',
+                to: '/ai',
+                badge: 'IA',
+                badgeBg: 'bg-fuchsia-400 text-black',
+              },
+            ],
           },
           {
-            title: 'Mes Mandats de Vente & Gestion',
-            description: 'Gérer mon portefeuille de mandats exclusifs',
-            icon: Briefcase,
-            to: '/agent',
-            gradient: 'from-blue-600 to-indigo-700',
-            badge: 'Portefeuille',
-            badgeColor: 'bg-blue-500/20 text-blue-300',
-          },
-          {
-            title: 'Mes Commissions & Factures',
-            description: 'Suivre les honoraires perçus et les règlements',
-            icon: Wallet,
-            to: '/agent',
-            gradient: 'from-emerald-600 to-teal-700',
-            badge: 'Revenus',
-            badgeColor: 'bg-emerald-500/20 text-emerald-300',
-          },
-          {
-            title: 'KadtEstate AI Assistant',
-            description: 'Rédiger des annonces attractives et évaluer des biens',
-            icon: Bot,
-            to: '/ai',
-            gradient: 'from-purple-600 to-violet-700',
-            badge: 'Intelligence IA',
-            badgeColor: 'bg-purple-500/20 text-purple-300',
+            title: 'COMMISSIONS & ENCAISSEMENTS',
+            subtitle: 'Calcul des honoraires d’agence et retraits Mobile Money',
+            buttons: [
+              {
+                title: 'Mes\nCommissions',
+                icon: Wallet,
+                colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
+                glowClass: 'shadow-emerald-500/30',
+                to: '/agent',
+                badge: 'DISPONIBLE',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Retrait\nIkeepay',
+                icon: CreditCard,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-cyan-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'H2H',
+                badgeBg: 'bg-teal-300 text-black',
+              },
+              {
+                title: 'Factures\nd’Honoraires',
+                icon: Receipt,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-sky-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/payments',
+              },
+              {
+                title: 'Performance &\nVentes',
+                icon: TrendingUp,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/analytics',
+              },
+            ],
           },
         ];
 
       case 'RESIDENT':
         return [
           {
-            title: 'Mon Attestation de Résidence',
-            description: 'Télécharger mon certificat avec QR Code certifié par le Chef',
-            icon: FileText,
-            to: '/quartier',
-            gradient: 'from-rose-600 to-pink-700',
-            badge: 'Document Officiel',
-            badgeColor: 'bg-rose-500/20 text-rose-300',
+            title: 'MA CITOYENNETÉ & RÉSIDENCE',
+            subtitle: 'Enrôlement communal, attestation de résidence et contacts chefferie',
+            buttons: [
+              {
+                title: 'Attestation de\nRésidence',
+                icon: FileText,
+                colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-700 text-white',
+                glowClass: 'shadow-emerald-500/25',
+                to: '/quartier',
+                badge: 'QR OFFICIEL',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Mon Foyer &\nQuartier',
+                icon: Home,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/quartier',
+                badge: 'ENRÔLÉ',
+                badgeBg: 'bg-rose-400 text-black',
+              },
+              {
+                title: 'Mon Chef\nde Bloc',
+                icon: ShieldCheck,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-blue-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/quartier',
+              },
+              {
+                title: 'Chefferie de\nQuartier',
+                icon: Crown,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/quartier',
+              },
+              {
+                title: 'Actualités &\nVie Locale',
+                icon: Newspaper,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/quartier',
+              },
+            ],
           },
           {
-            title: 'Signaler un Incident de Sécurité',
-            description: 'Alerter le Chef de Bloc en cas d’urgence ou anomalie',
-            icon: AlertTriangle,
-            to: '/quartier',
-            gradient: 'from-amber-600 to-red-600',
-            badge: 'Alerte Rapide',
-            badgeColor: 'bg-amber-500/20 text-amber-300',
-          },
-          {
-            title: 'Alertes du Quartier',
-            description: 'Consulter les annonces et travaux de la chefferie',
-            icon: Bell,
-            to: '/quartier',
-            gradient: 'from-blue-600 to-cyan-700',
-            badge: 'Informations',
-            badgeColor: 'bg-blue-500/20 text-blue-300',
+            title: 'SÉCURITÉ & SOLIDARITÉ',
+            subtitle: 'Signalements instantanés et consignes d’urgence du secteur',
+            buttons: [
+              {
+                title: 'Signaler une\nUrgence SOS',
+                icon: AlertTriangle,
+                colorClass: 'bg-gradient-to-tr from-red-600 to-rose-700 text-white',
+                glowClass: 'shadow-red-500/30',
+                to: '/quartier',
+                badge: 'SOS ALERTE',
+                badgeBg: 'bg-red-500 text-white',
+              },
+              {
+                title: 'Déclarer un\nIncident',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-orange-600 to-amber-700 text-white',
+                glowClass: 'shadow-orange-500/25',
+                to: '/quartier',
+              },
+              {
+                title: 'Consignes de\nSécurité',
+                icon: Shield,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/quartier',
+              },
+              {
+                title: 'Marketplace\nLocale',
+                icon: Store,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/marketplace',
+              },
+            ],
           },
         ];
 
-      default: // OWNER / General
+      default: // OWNER / Propriétaire
         return [
           {
-            title: 'Mes Propriétés & Immeubles',
-            description: 'Consulter, ajouter et gérer mes biens fonciers et bâtis',
-            icon: Building2,
-            to: '/properties',
-            gradient: 'from-blue-600 to-indigo-700',
-            badge: 'Patrimoine',
-            badgeColor: 'bg-blue-500/20 text-blue-300',
+            title: 'PATRIMOINE & GESTION LOCATIVE',
+            subtitle: 'Pilotage de vos résidences, logements, baux et locataires',
+            buttons: [
+              {
+                title: 'Mes Propriétés\n& Immeubles',
+                icon: Building2,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/properties',
+                badge: 'ACTIF',
+                badgeBg: 'bg-blue-400 text-black',
+              },
+              {
+                title: 'Logements &\nLots',
+                icon: Home,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-teal-600 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/units',
+              },
+              {
+                title: 'Contrats de\nBaux',
+                icon: KeyRound,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/leases',
+                badge: 'JURIDIQUE',
+                badgeBg: 'bg-purple-300 text-black',
+              },
+              {
+                title: 'Répertoire\nLocataires',
+                icon: Users,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-600 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/tenants',
+              },
+              {
+                title: 'Maintenance\n& Pannes',
+                icon: Wrench,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/maintenance',
+                badge: 'TICKETS',
+                badgeBg: 'bg-amber-400 text-black',
+              },
+              {
+                title: 'KadtEstate\nAI Copilot',
+                icon: Sparkles,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/ai',
+                badge: 'IA',
+                badgeBg: 'bg-fuchsia-400 text-black',
+              },
+            ],
           },
           {
-            title: 'Logements & Lots Disponibles',
-            description: 'Inventaire des appartements, studios et bureaux',
-            icon: Home,
-            to: '/units',
-            gradient: 'from-cyan-600 to-teal-700',
-            badge: 'Disponibilités',
-            badgeColor: 'bg-cyan-500/20 text-cyan-300',
-          },
-          {
-            title: 'Contrats de Baux',
-            description: 'Créer, renouveler et résilier les contrats locatifs',
-            icon: KeyRound,
-            to: '/leases',
-            gradient: 'from-purple-600 to-violet-700',
-            badge: 'Juridique',
-            badgeColor: 'bg-purple-500/20 text-purple-300',
-          },
-          {
-            title: 'Locataires & Dossiers',
-            description: 'Répertoire des occupants et historique des paiements',
-            icon: Users,
-            to: '/tenants',
-            gradient: 'from-emerald-600 to-teal-700',
-            badge: 'Occupants',
-            badgeColor: 'bg-emerald-500/20 text-emerald-300',
-          },
-          {
-            title: 'Encaissement & Loyers',
-            description: 'Échéances en cours, relances et quittances',
-            icon: Receipt,
-            to: '/rent',
-            gradient: 'from-amber-600 to-orange-700',
-            badge: 'Finances',
-            badgeColor: 'bg-amber-500/20 text-amber-300',
-          },
-          {
-            title: 'Paiement Rapide Ikeepay',
-            description: 'Effectuer ou tester un encaissement Mobile Money direct',
-            icon: CreditCard,
-            onClick: () => setIkeepayPayinOpen(true),
-            gradient: 'from-emerald-500 to-green-600',
-            badge: 'Ikeepay H2H',
-            badgeColor: 'bg-emerald-500/20 text-emerald-300',
-          },
-          {
-            title: 'Dépenses & Charges',
-            description: 'Factures d’eau, électricité, syndic et travaux',
-            icon: TrendingDown,
-            to: '/expenses',
-            gradient: 'from-rose-600 to-pink-700',
-            badge: 'Comptabilité',
-            badgeColor: 'bg-rose-500/20 text-rose-300',
-          },
-          {
-            title: 'Maintenance & Tickets',
-            description: 'Suivi des pannes, devis et interventions techniques',
-            icon: Wrench,
-            to: '/maintenance',
-            gradient: 'from-slate-700 to-slate-800',
-            badge: 'Opérations',
-            badgeColor: 'bg-slate-500/20 text-slate-300',
-          },
-          {
-            title: 'KadtEstate AI Copilot',
-            description: 'Optimisation de rendements, scoring et aide rédactionnelle',
-            icon: Bot,
-            to: '/ai',
-            gradient: 'from-violet-600 to-fuchsia-700',
-            badge: 'Assistant IA',
-            badgeColor: 'bg-violet-500/20 text-violet-300',
+            title: 'FINANCES, LOYERS & PAIEMENTS',
+            subtitle: 'Encaissements Mobile Money, suivi des impayés et trésorerie',
+            buttons: [
+              {
+                title: 'Encaissement\ndes Loyers',
+                icon: Wallet,
+                colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
+                glowClass: 'shadow-emerald-500/30',
+                to: '/rent',
+                badge: 'MOBILE MONEY',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Paiement\nIkeepay H2H',
+                icon: CreditCard,
+                colorClass: 'bg-gradient-to-tr from-green-600 to-teal-700 text-white',
+                glowClass: 'shadow-green-500/25',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'H2H',
+                badgeBg: 'bg-teal-300 text-black',
+              },
+              {
+                title: 'Quittances &\nFactures',
+                icon: Receipt,
+                colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/payments',
+              },
+              {
+                title: 'Dépenses &\nCharges',
+                icon: TrendingDown,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/expenses',
+              },
+              {
+                title: 'Trésorerie &\nBilan',
+                icon: TrendingUp,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/analytics',
+              },
+              {
+                title: 'Marketplace\nVente',
+                icon: Store,
+                colorClass: 'bg-gradient-to-tr from-orange-500 to-amber-600 text-white',
+                glowClass: 'shadow-orange-500/25',
+                to: '/marketplace',
+              },
+            ],
           },
         ];
     }
   };
 
-  const currentCards = getActionCards(activeTabRole);
+  const sections = getSectionsForRole(activeTabRole);
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-16">
       
-      {/* 1. Header Bar with Universal Back Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-6">
+      {/* 1. Top Bar with Universal Back Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/70 pb-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <BackButton to="/" label="Retour à l'accueil" />
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-              KadtEstate Pro
+          <div className="flex items-center gap-2.5">
+            <BackButton to="/" label="Accueil KadtEstate" />
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              KadtEstate Pro • Version 2.0
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-            Tableau de Bord Interactif
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+            Tableau de Bord des Fonctionnalités
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Bienvenue, <strong className="text-foreground">{user?.displayName || 'Utilisateur'}</strong> ({activeOrganization?.name || 'KadtEstate'})
+          <p className="text-xs text-muted-foreground">
+            Connecté en tant que <strong className="text-foreground">{user?.displayName || 'Utilisateur'}</strong> ({activeOrganization?.name || 'KadtEstate'})
           </p>
         </div>
 
-        {/* Global Action Modals Trigger */}
-        <div className="flex items-center gap-2.5">
+        {/* Global Quick Action CTAs */}
+        <div className="flex items-center gap-2">
           <Button
+            size="sm"
             onClick={() => setIkeepayPayinOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md flex items-center gap-1.5"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-md flex items-center gap-1.5"
           >
             <CreditCard className="size-4" />
-            <span>Payer par Mobile Money</span>
+            <span>Payer Mobile Money</span>
           </Button>
 
-          {isSuperAdmin && (
+          {activeTabRole === 'SUPER_ADMIN' && (
             <Button
+              size="sm"
               variant="outline"
               onClick={() => setIkeepaySettingsOpen(true)}
-              className="text-xs font-medium border-border flex items-center gap-1.5"
+              className="text-xs font-semibold border-border flex items-center gap-1.5"
             >
               <Settings className="size-4 text-emerald-500" />
               <span>Clés Ikeepay</span>
@@ -473,28 +861,28 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* 2. Interactive Role Switcher Pills (Allows testing or multi-role exploration) */}
-      <div className="bg-card/50 border border-border p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <Sparkles className="size-4 text-emerald-500" />
-          <span>Vue Rôle Actuelle :</span>
+      {/* 2. Role Switcher Bar: Allows previewing and switching between any role immediately */}
+      <div className="bg-card border border-border p-2.5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-2.5 shadow-sm">
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground px-2">
+          <Sparkles className="size-3.5 text-emerald-500" />
+          <span>Profil / Perspective active :</span>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1">
           {[
+            { id: 'SUPER_ADMIN', label: 'Super Admin' },
+            { id: 'NEIGHBORHOOD_LEADER', label: 'Chef de Quartier' },
+            { id: 'BLOCK_LEADER', label: 'Chef de Bloc' },
             { id: 'OWNER', label: 'Propriétaire' },
             { id: 'TENANT', label: 'Locataire' },
             { id: 'AGENT', label: 'Agent Immobilier' },
-            { id: 'NEIGHBORHOOD_LEADER', label: 'Chef de Quartier' },
-            { id: 'BLOCK_LEADER', label: 'Chef de Bloc' },
             { id: 'RESIDENT', label: 'Résident' },
-            { id: 'SUPER_ADMIN', label: 'Super Admin' },
           ].map((r) => (
             <button
               key={r.id}
               onClick={() => setActiveTabRole(r.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 activeTabRole === r.id
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? 'bg-primary text-primary-foreground shadow-sm scale-105'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
@@ -504,129 +892,169 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* 3. Real-Time Stats Overview Cards */}
+      {/* 3. KPI Quick Metrics Bar */}
       {data && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 rounded-2xl bg-card border border-border shadow-sm space-y-1">
-            <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-              <span>Revenus du mois</span>
-              <Receipt className="size-4 text-emerald-500" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-3.5 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium">Revenus validés</p>
+              <p className="text-base sm:text-lg font-black text-foreground">{data.incomeMinor.toLocaleString('fr-FR')} FCFA</p>
             </div>
-            <p className="text-xl font-bold text-foreground">{data.incomeMinor.toLocaleString('fr-FR')} FCFA</p>
-            <p className="text-[11px] text-muted-foreground">Encaissements validés</p>
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
+              <Receipt className="size-4" />
+            </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-card border border-border shadow-sm space-y-1">
-            <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-              <span>Impayés & Retards</span>
-              <TrendingDown className="size-4 text-rose-500" />
+          <div className="p-3.5 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium">Impayés du mois</p>
+              <p className="text-base sm:text-lg font-black text-rose-500">{data.arrearsMinor.toLocaleString('fr-FR')} FCFA</p>
             </div>
-            <p className="text-xl font-bold text-rose-500">{data.arrearsMinor.toLocaleString('fr-FR')} FCFA</p>
-            <p className="text-[11px] text-muted-foreground">Échéances en souffrance</p>
+            <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500">
+              <TrendingDown className="size-4" />
+            </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-card border border-border shadow-sm space-y-1">
-            <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-              <span>Taux d'occupation</span>
-              <KeyRound className="size-4 text-blue-500" />
+          <div className="p-3.5 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium">Taux d'occupation</p>
+              <p className="text-base sm:text-lg font-black text-foreground">{data.occupancyRate} %</p>
             </div>
-            <p className="text-xl font-bold text-foreground">{data.occupancyRate}%</p>
-            <p className="text-[11px] text-muted-foreground">{data.availableUnits} logements vacants</p>
+            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
+              <KeyRound className="size-4" />
+            </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-card border border-border shadow-sm space-y-1">
-            <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-              <span>Maintenance active</span>
-              <Wrench className="size-4 text-amber-500" />
+          <div className="p-3.5 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium">Maintenance active</p>
+              <p className="text-base sm:text-lg font-black text-foreground">{data.openMaintenance} tickets</p>
             </div>
-            <p className="text-xl font-bold text-foreground">{data.openMaintenance} tickets</p>
-            <p className="text-[11px] text-muted-foreground">Interventions en cours</p>
+            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
+              <Wrench className="size-4" />
+            </div>
           </div>
         </div>
       )}
 
-      {/* 4. App Launcher: Interactive Feature Buttons Grid */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-            <span>Actions & Modules KadtEstate</span>
-            <span className="text-xs font-normal text-muted-foreground">({currentCards.length} modules disponibles)</span>
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {currentCards.map((card, idx) => {
-            const Icon = card.icon;
-
-            const content = (
-              <div className="h-full p-6 rounded-3xl bg-card border border-border hover:border-primary/40 hover:shadow-xl transition-all duration-300 group flex flex-col justify-between relative overflow-hidden">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className={`p-3.5 rounded-2xl bg-gradient-to-br ${card.gradient} text-white shadow-md group-hover:scale-105 transition-transform`}>
-                      <Icon className="size-6" />
-                    </div>
-                    {card.badge && (
-                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${card.badgeColor}`}>
-                        {card.badge}
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                      <span>{card.title}</span>
-                      <ArrowUpRight className="size-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                      {card.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-4 mt-4 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground group-hover:text-foreground font-medium">
-                  <span>Accéder au module</span>
-                  <div className="size-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <ArrowUpRight className="size-3.5" />
-                  </div>
-                </div>
+      {/* 4. Categorized Feature Sections with Circular Buttons (Conforming to Screenshot) */}
+      <div className="space-y-6">
+        {sections.map((section, sIdx) => (
+          <div key={sIdx} className="space-y-3">
+            
+            {/* Section Header */}
+            <div className="px-1 flex items-baseline justify-between">
+              <div>
+                <h2 className="text-xs sm:text-sm font-extrabold tracking-wider text-muted-foreground uppercase">
+                  {section.title}
+                </h2>
+                {section.subtitle && (
+                  <p className="text-[11px] text-muted-foreground/80 mt-0.5">{section.subtitle}</p>
+                )}
               </div>
-            );
+              <span className="text-[10px] font-bold text-muted-foreground/60">
+                {section.buttons.length} actions
+              </span>
+            </div>
 
-            if (card.onClick) {
-              return (
-                <button
-                  type="button"
-                  key={idx}
-                  onClick={card.onClick}
-                  className="text-left w-full h-full focus:outline-none"
-                >
-                  {content}
-                </button>
-              );
-            }
+            {/* Elevated Section Card with 3-col on Mobile, 6-col on Desktop */}
+            <div className="rounded-3xl bg-card border border-border/80 p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-y-7 gap-x-3 sm:gap-x-4">
+                {section.buttons.map((btn, bIdx) => {
+                  const Icon = btn.icon;
 
-            return (
-              <Link key={idx} to={card.to || '#'} className="block h-full focus:outline-none">
-                {content}
-              </Link>
-            );
-          })}
-        </div>
+                  const buttonContent = (
+                    <div className="flex flex-col items-center text-center group cursor-pointer focus:outline-none">
+                      
+                      {/* Circular Button Container with Floating Badge */}
+                      <div className="relative mb-2.5">
+                        
+                        {/* Floating Badge (e.g., NOUVEAU, OFFICIEL, PROMO) */}
+                        {btn.badge && (
+                          <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap">
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm tracking-tight ${btn.badgeBg || 'bg-amber-400 text-black'}`}>
+                              {btn.badge}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Circular Action Button */}
+                        <div
+                          className={`size-16 sm:size-18 rounded-full flex items-center justify-center transition-all duration-300 transform group-hover:scale-110 group-active:scale-95 shadow-lg ${btn.colorClass} ${btn.glowClass}`}
+                        >
+                          <Icon className="size-7 sm:size-8" />
+                        </div>
+                      </div>
+
+                      {/* Label under button */}
+                      <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors leading-tight max-w-[95px] line-clamp-2">
+                        {btn.title.split('\n').map((line, lIdx) => (
+                          <span key={lIdx} className="block">{line}</span>
+                        ))}
+                      </span>
+                    </div>
+                  );
+
+                  if (btn.onClick) {
+                    return (
+                      <button
+                        type="button"
+                        key={bIdx}
+                        onClick={btn.onClick}
+                        className="focus:outline-none w-full flex justify-center"
+                      >
+                        {buttonContent}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={bIdx}
+                      to={btn.to || '#'}
+                      className="focus:outline-none w-full flex justify-center"
+                    >
+                      {buttonContent}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+          </div>
+        ))}
       </div>
 
-      {/* 5. Mobile Money Gateway (Ikeepay) Modal */}
+      {/* 5. Mobile Floating Action Shortcuts (like in the screenshot) */}
+      <div className="fixed bottom-6 right-4 z-40 flex flex-col gap-2.5 sm:hidden">
+        <button
+          onClick={() => setIkeepayPayinOpen(true)}
+          className="size-12 rounded-full bg-emerald-500 text-slate-950 shadow-xl flex items-center justify-center active:scale-95 transition-transform"
+          title="Paiement Mobile Money"
+        >
+          <CreditCard className="size-6" />
+        </button>
+        <Link
+          to="/quartier"
+          className="size-12 rounded-full bg-purple-600 text-white shadow-xl flex items-center justify-center active:scale-95 transition-transform"
+          title="Chefferie & Foncier"
+        >
+          <Crown className="size-6" />
+        </Link>
+      </div>
+
+      {/* 6. Modals */}
       <IkeepayModal
         isOpen={ikeepayPayinOpen}
         onClose={() => setIkeepayPayinOpen(false)}
         amount={250000}
-        title="Règlement Immédiat Mobile Money (Ikeepay)"
+        title="Règlement Mobile Money Ikeepay"
         onPaymentSuccess={(ref: string) => {
           setIkeepayPayinOpen(false);
           alert(`Paiement Mobile Money validé avec succès ! Référence : ${ref}`);
         }}
       />
 
-      {/* 6. Admin Ikeepay Settings Modal */}
       <IkeepaySettingsModal
         isOpen={ikeepaySettingsOpen}
         onClose={() => setIkeepaySettingsOpen(false)}

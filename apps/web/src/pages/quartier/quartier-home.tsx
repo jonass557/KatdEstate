@@ -33,72 +33,78 @@ export function QuartierHomePage() {
         </div>
 
         {/* View Switcher Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-background p-1 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border bg-card/80 p-1.5 text-xs shadow-sm">
           <button
             type="button"
             onClick={() => setActiveView('chefferie')}
-            className={`rounded-lg px-2.5 py-1.5 font-semibold transition-colors ${
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
               activeView === 'chefferie'
-                ? 'bg-amber-600 text-white shadow-sm'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            👑 Chefferie & Foncier
+            <span>👑</span>
+            <span>Chefferie & Foncier</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveView('resident')}
-            className={`rounded-lg px-2.5 py-1.5 font-semibold transition-colors ${
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
               activeView === 'resident'
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            Habitant / Résident
+            <span>👥</span>
+            <span>Espace Résident</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveView('block-leader')}
-            className={`rounded-lg px-2.5 py-1.5 font-semibold transition-colors ${
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
               activeView === 'block-leader'
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/20'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            Chef de Bloc
+            <span>🛡️</span>
+            <span>Chef de Bloc</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveView('neighborhood-leader')}
-            className={`rounded-lg px-2.5 py-1.5 font-semibold transition-colors ${
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
               activeView === 'neighborhood-leader'
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            Chef de Quartier
+            <span>🏛️</span>
+            <span>Chef de Quartier</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveView('map')}
-            className={`rounded-lg px-2.5 py-1.5 font-semibold transition-colors ${
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
               activeView === 'map'
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            Carte
+            <span>🗺️</span>
+            <span>Carte Interactive</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveView('admin')}
-            className={`rounded-lg px-2.5 py-1.5 font-semibold transition-colors ${
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
               activeView === 'admin'
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'bg-slate-800 text-white shadow-md'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            Super Admin
+            <span>⚙️</span>
+            <span>Super Admin</span>
           </button>
         </div>
       </div>

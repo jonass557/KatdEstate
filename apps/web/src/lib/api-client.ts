@@ -19,7 +19,13 @@ import type { ApiErrorBody, ApiErrorDetail, ApiSuccess, PaginationMeta } from '@
  *  3. normaliser toute erreur en `ApiError` typée, y compris une panne réseau.
  */
 
-export const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api/v1';
+export const API_BASE_URL: string =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== 'undefined' &&
+  window.location.hostname !== 'localhost' &&
+  window.location.hostname !== '127.0.0.1'
+    ? 'https://kadtestate-api.onrender.com/api/v1'
+    : 'http://localhost:4000/api/v1');
 
 /** Délai au-delà duquel une requête est considérée comme perdue. */
 const REQUEST_TIMEOUT_MS = 20_000;
