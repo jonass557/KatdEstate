@@ -1,0 +1,26 @@
+# MongoDB local pour le développement de RentFlow Africa.
+#
+#   docker compose up -d mongo
+#
+# ATTENTION : cette configuration est réservée au DÉVELOPPEMENT LOCAL.
+# Aucune authentification n'est activée et le port est exposé sur la machine.
+# Ne jamais l'utiliser en staging ou en production — utiliser un MongoDB managé
+# avec TLS, authentification, sauvegardes chiffrées et réseau privé.
+services:
+  mongo:
+    image: mongo:7
+    container_name: rentflow-mongo
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:27017:27017'
+    volumes:
+      - rentflow-mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  rentflow-mongo-data:

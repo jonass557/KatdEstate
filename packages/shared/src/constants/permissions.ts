@@ -1,0 +1,514 @@
+import type { Role } from './roles.js';
+
+/**
+ * Central permission catalogue.
+ *
+ * This file is the single source of truth for authorization. Routes declare the
+ * permission they require; roles map to permissions here; business code never
+ * hardcodes role names. Adding a capability means adding one entry below and
+ * mapping it to the relevant roles — nothing else.
+ *
+ * Naming convention: `<domain>.<action>` in lowerCamelCase for the domain.
+ */
+
+export const PERMISSION_DOMAINS = [
+  'organization',
+  'users',
+  'roles',
+  'properties',
+  'buildings',
+  'units',
+  'tenants',
+  'leases',
+  'rent',
+  'invoices',
+  'payments',
+  'receipts',
+  'deposits',
+  'expenses',
+  'maintenance',
+  'vendors',
+  'meters',
+  'documents',
+  'notifications',
+  'messages',
+  'reports',
+  'accounting',
+  'automations',
+  'integrations',
+  'subscriptions',
+  'audit',
+  'settings',
+  'listings',
+  'mandates',
+  'leads',
+  'viewings',
+  'offers',
+  'commissions',
+  'agentSubscriptions',
+  'quartier',
+] as const;
+
+export type PermissionDomain = (typeof PERMISSION_DOMAINS)[number];
+
+export const PERMISSIONS = [
+  // Organization & team
+  'organizations.view',
+  'organizations.update',
+  'organizations.delete',
+  'users.view',
+  'users.invite',
+  'users.manage',
+  'users.remove',
+  'roles.view',
+  'roles.manage',
+
+  // Real-estate portfolio
+  'properties.view',
+  'properties.create',
+  'properties.update',
+  'properties.delete',
+  'buildings.view',
+  'buildings.create',
+  'buildings.update',
+  'buildings.delete',
+  'units.view',
+  'units.create',
+  'units.update',
+  'units.delete',
+
+  // Tenants & leases
+  'tenants.view',
+  'tenants.create',
+  'tenants.update',
+  'tenants.delete',
+  'leases.view',
+  'leases.create',
+  'leases.update',
+  'leases.terminate',
+
+  // Finance
+  'rentSchedules.view',
+  'rentSchedules.manage',
+  'invoices.view',
+  'invoices.create',
+  'invoices.update',
+  'invoices.cancel',
+  'payments.view',
+  'payments.create',
+  'payments.refund',
+  'receipts.view',
+  'receipts.generate',
+  'deposits.view',
+  'deposits.manage',
+  'expenses.view',
+  'expenses.create',
+  'expenses.update',
+  'expenses.delete',
+  'accounting.view',
+  'accounting.manage',
+
+  // Operations
+  'maintenance.view',
+  'maintenance.create',
+  'maintenance.manage',
+  'vendors.view',
+  'vendors.manage',
+  'meters.view',
+  'meters.read',
+  'meters.manage',
+  'documents.view',
+  'documents.upload',
+  'documents.delete',
+
+  // Communication
+  'notifications.view',
+  'notifications.manage',
+  'tenants.viewSensitive',
+  'messages.view',
+  'messages.send',
+
+  // Insights & platform
+  'reports.view',
+  'reports.export',
+  'automations.view',
+  'automations.manage',
+  'integrations.view',
+  'integrations.manage',
+  'subscriptions.view',
+  'subscriptions.manage',
+  'audit.view',
+  'settings.manage',
+
+  // Marketplace & Real Estate Agent Module
+  'listings.view',
+  'listings.create',
+  'listings.update',
+  'listings.edit',
+  'listings.delete',
+  'listings.publish',
+  'listings.moderate',
+  'listings.manage',
+  'mandates.view',
+  'mandates.create',
+  'mandates.update',
+  'mandates.manage',
+  'mandates.revoke',
+  'mandates.accept',
+  'leads.view',
+  'leads.create',
+  'leads.update',
+  'leads.manage',
+  'leads.delete',
+  'viewings.view',
+  'viewings.create',
+  'viewings.update',
+  'viewings.manage',
+  'offers.view',
+  'offers.create',
+  'offers.update',
+  'offers.decide',
+  'offers.manage',
+  'commissions.view',
+  'commissions.manage',
+  'agentSubscriptions.view',
+  'agentSubscriptions.manage',
+
+  // DOMORA QUARTIER — Recensement & Sécurité Communautaire
+  'quartier.view',
+  'quartier.manageSectors',
+  'quartier.manageLeaders',
+  'quartier.viewCensus',
+  'quartier.registerCensus',
+  'quartier.validateCensus',
+  'quartier.viewIncidents',
+  'quartier.reportIncidents',
+  'quartier.manageIncidents',
+  'quartier.viewAnnouncements',
+  'quartier.sendAnnouncements',
+  'quartier.viewSubscriptions',
+  'quartier.manageSubscriptions',
+  'quartier.viewStats',
+  'quartier.manageCommissions',
+  'quartier.viewTransactions',
+  'quartier.createTransactions',
+  'quartier.issueCertificates',
+  'quartier.verifyCertificates',
+  'quartier.admin',
+] as const;
+
+export type Permission = (typeof PERMISSIONS)[number];
+
+/** Permission domain prefix, e.g. `properties.create` → `properties`. */
+export function permissionDomain(permission: Permission): PermissionDomain {
+  const [domain] = permission.split('.');
+  return domain as PermissionDomain;
+}
+
+export function isPermission(value: string): value is Permission {
+  return (PERMISSIONS as readonly string[]).includes(value);
+}
+
+export function hasPermission(granted: readonly Permission[], required: Permission): boolean {
+  return granted.includes(required);
+}
+
+export function hasAnyPermission(
+  granted: readonly Permission[],
+  required: readonly Permission[],
+): boolean {
+  return required.some((permission) => granted.includes(permission));
+}
+
+export function hasAllPermissions(
+  granted: readonly Permission[],
+  required: readonly Permission[],
+): boolean {
+  return required.every((permission) => granted.includes(permission));
+}
+
+/**
+ * Default role → permission mapping. This is the documented starting policy, not
+ * a substitute for server-side checks: the API re-evaluates permissions on every
+ * request from the active membership.
+ */
+export const DEFAULT_ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
+  SUPER_ADMIN: PERMISSIONS,
+
+  ADMIN: PERMISSIONS,
+
+  OWNER: [
+    'organizations.view',
+    'properties.view',
+    'buildings.view',
+    'units.view',
+    'tenants.view',
+    'leases.view',
+    'rentSchedules.view',
+    'invoices.view',
+    'payments.view',
+    'receipts.view',
+    'deposits.view',
+    'expenses.view',
+    'maintenance.view',
+    'meters.view',
+    'documents.view',
+    'messages.view',
+    'messages.send',
+    'reports.view',
+    'reports.export',
+    'accounting.view',
+    'audit.view',
+    'listings.view',
+    'listings.create',
+    'listings.update',
+    'listings.delete',
+    'listings.publish',
+    'mandates.view',
+    'mandates.create',
+    'mandates.update',
+    'mandates.revoke',
+    'viewings.view',
+    'viewings.update',
+    'offers.view',
+    'offers.decide',
+    'commissions.view',
+  ],
+
+  PROPERTY_MANAGER: [
+    'organizations.view',
+    'users.view',
+    'properties.view',
+    'properties.create',
+    'properties.update',
+    'buildings.view',
+    'buildings.create',
+    'buildings.update',
+    'units.view',
+    'units.create',
+    'units.update',
+    'units.delete',
+    'tenants.view',
+    'tenants.viewSensitive',
+    'tenants.create',
+    'tenants.update',
+    'leases.view',
+    'leases.create',
+    'leases.update',
+    'leases.terminate',
+    'rentSchedules.view',
+    'rentSchedules.manage',
+    'invoices.view',
+    'invoices.create',
+    'payments.view',
+    'payments.create',
+    'receipts.view',
+    'receipts.generate',
+    'deposits.view',
+    'maintenance.view',
+    'maintenance.create',
+    'maintenance.manage',
+    'vendors.view',
+    'vendors.manage',
+    'meters.view',
+    'meters.read',
+    'meters.manage',
+    'documents.view',
+    'documents.upload',
+    'notifications.view',
+    'messages.view',
+    'messages.send',
+    'reports.view',
+    'reports.export',
+    'listings.view',
+    'listings.create',
+    'listings.update',
+    'listings.delete',
+    'listings.publish',
+    'mandates.view',
+    'mandates.create',
+    'mandates.update',
+    'mandates.revoke',
+    'mandates.accept',
+    'leads.view',
+    'leads.create',
+    'leads.update',
+    'viewings.view',
+    'viewings.create',
+    'viewings.update',
+    'viewings.manage',
+    'offers.view',
+    'offers.decide',
+    'commissions.view',
+  ],
+
+  ACCOUNTANT: [
+    'organizations.view',
+    'tenants.view',
+    'leases.view',
+    'rentSchedules.view',
+    'rentSchedules.manage',
+    'invoices.view',
+    'invoices.create',
+    'invoices.update',
+    'payments.view',
+    'payments.create',
+    'payments.refund',
+    'receipts.view',
+    'receipts.generate',
+    'deposits.view',
+    'deposits.manage',
+    'expenses.view',
+    'expenses.create',
+    'expenses.update',
+    'accounting.view',
+    'accounting.manage',
+    'tenants.viewSensitive',
+    'reports.view',
+    'reports.export',
+    'documents.view',
+    'documents.upload',
+    'notifications.view',
+    'notifications.manage',
+    'audit.view',
+  ],
+
+  AGENT: [
+    'properties.view',
+    'buildings.view',
+    'units.view',
+    'tenants.view',
+    'tenants.create',
+    'tenants.update',
+    'leases.view',
+    'invoices.view',
+    'maintenance.view',
+    'maintenance.create',
+    'vendors.view',
+    'meters.view',
+    'meters.read',
+    'documents.view',
+    'documents.upload',
+    'notifications.view',
+    'messages.view',
+    'messages.send',
+    'listings.view',
+    'listings.create',
+    'listings.update',
+    'listings.delete',
+    'listings.publish',
+    'mandates.view',
+    'mandates.accept',
+    'leads.view',
+    'leads.create',
+    'leads.update',
+    'leads.delete',
+    'viewings.view',
+    'viewings.create',
+    'viewings.update',
+    'viewings.manage',
+    'offers.view',
+    'offers.create',
+    'offers.update',
+    'commissions.view',
+    'agentSubscriptions.view',
+  ],
+
+  TENANT: [
+    'properties.view',
+    'units.view',
+    'leases.view',
+    'invoices.view',
+    'payments.view',
+    'payments.create',
+    'receipts.view',
+    'documents.view',
+    'maintenance.view',
+    'maintenance.create',
+    'notifications.view',
+    'messages.view',
+    'messages.send',
+    'quartier.view',
+    'quartier.viewCensus',
+    'quartier.registerCensus',
+    'quartier.viewIncidents',
+    'quartier.reportIncidents',
+    'quartier.viewAnnouncements',
+  ],
+
+  NEIGHBORHOOD_LEADER: [
+    'quartier.view',
+    'quartier.manageSectors',
+    'quartier.manageLeaders',
+    'quartier.viewCensus',
+    'quartier.viewIncidents',
+    'quartier.manageIncidents',
+    'quartier.viewAnnouncements',
+    'quartier.sendAnnouncements',
+    'quartier.viewSubscriptions',
+    'quartier.manageSubscriptions',
+    'quartier.viewStats',
+    'quartier.manageCommissions',
+    'quartier.viewTransactions',
+    'quartier.createTransactions',
+    'quartier.issueCertificates',
+    'quartier.verifyCertificates',
+    'notifications.view',
+    'messages.view',
+    'messages.send',
+  ],
+
+  BLOCK_LEADER: [
+    'quartier.view',
+    'quartier.viewCensus',
+    'quartier.registerCensus',
+    'quartier.validateCensus',
+    'quartier.viewIncidents',
+    'quartier.manageIncidents',
+    'quartier.viewAnnouncements',
+    'quartier.sendAnnouncements',
+    'quartier.viewSubscriptions',
+    'quartier.manageSubscriptions',
+    'quartier.viewStats',
+    'quartier.viewTransactions',
+    'quartier.createTransactions',
+    'quartier.issueCertificates',
+    'quartier.verifyCertificates',
+    'notifications.view',
+    'messages.view',
+    'messages.send',
+  ],
+
+  RESIDENT: [
+    'quartier.view',
+    'quartier.viewCensus',
+    'quartier.registerCensus',
+    'quartier.viewIncidents',
+    'quartier.reportIncidents',
+    'quartier.viewAnnouncements',
+    'quartier.verifyCertificates',
+    'notifications.view',
+    'messages.view',
+    'messages.send',
+  ],
+};
+
+export function permissionsForRole(role: Role): readonly Permission[] {
+  return DEFAULT_ROLE_PERMISSIONS[role];
+}
+
+/**
+ * Effective permissions = role baseline ∪ extra grants, minus explicit revokes.
+ * `SUPER_ADMIN` always resolves to the full catalogue.
+ */
+export function resolvePermissions(
+  role: Role,
+  options: { granted?: readonly Permission[]; revoked?: readonly Permission[] } = {},
+): Permission[] {
+  if (role === 'SUPER_ADMIN') return [...PERMISSIONS];
+
+  const base = new Set<Permission>(DEFAULT_ROLE_PERMISSIONS[role]);
+  for (const permission of options.granted ?? []) base.add(permission);
+  for (const permission of options.revoked ?? []) base.delete(permission);
+  return [...base];
+}

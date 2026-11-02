@@ -1,0 +1,20 @@
+node_modules/
+dist/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.local
+.mongodb/
+
+# Fichiers temporaires générés par Vitest lors du chargement de sa configuration.
+vitest.config.ts.timestamp-*
+*.tsbuildinfo
+
+# Fichiers uploadés : stockage privé local, jamais versionné.
+storage/
