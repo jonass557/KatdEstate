@@ -5,7 +5,7 @@
   "description": "RentFlow Africa - foundation workspace for a multi-tenant rental management SaaS.",
   "type": "module",
   "engines": {
-    "node": ">=22.0.0"
+    "node": "22.x"
   },
   "workspaces": [
     "apps/*",
@@ -47,5 +47,9 @@
     "prettier": "^3.4.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.63.3",
+    "@rollup/rollup-linux-x64-musl": "4.63.3"
   }
 }
