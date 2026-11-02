@@ -22,7 +22,7 @@ Ce guide détaille les étapes simples pour déployer **KadtEstate** en producti
    - **Runtime** : `Node`
    - **Build Command** :
      ```bash
-     npm install && npm run build --workspace @rentflow/shared
+     npm install --include=dev && npm run build --workspace @rentflow/shared
      ```
    - **Start Command** :
      ```bash

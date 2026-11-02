@@ -7,7 +7,7 @@ services:
     plan: starter
     region: frankfurt
     rootDir: .
-    buildCommand: npm install && npm run build --workspace @rentflow/shared
+    buildCommand: npm install --include=dev && npm run build --workspace @rentflow/shared
     startCommand: npm run api:start
     healthCheckPath: /api/health
     autoDeploy: true
