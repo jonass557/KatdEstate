@@ -102,7 +102,7 @@ function createLocalDemoSession(email: string, roleOverride?: string, nameOverri
   };
 }
 
-function saveLocalSession(session: AuthSession) {
+export function saveLocalSession(session: AuthSession) {
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(session));
@@ -115,7 +115,7 @@ function saveLocalSession(session: AuthSession) {
   }
 }
 
-function getSavedLocalSession(): AuthSession | null {
+export function getSavedLocalSession(): AuthSession | null {
   try {
     if (typeof localStorage !== 'undefined') {
       const stored = localStorage.getItem(STORAGE_SESSION_KEY);
@@ -131,7 +131,7 @@ function getSavedLocalSession(): AuthSession | null {
   return null;
 }
 
-function clearSavedLocalSession() {
+export function clearSavedLocalSession() {
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(STORAGE_SESSION_KEY);
@@ -158,6 +158,7 @@ export async function signInRequest(payload: SignInPayload): Promise<SignInResul
     // Si l'API est en cours de démarrage, bloquée par des cookies tiers ou hors ligne,
     // créer une session locale résiliente pour garantir l'accès sans blocage
     const mockSession = createLocalDemoSession(payload.email);
+    setAccessToken(`demo-token-${mockSession.user.id}`);
     saveLocalSession(mockSession);
     return { session: mockSession };
   }
@@ -178,6 +179,7 @@ export async function registerRequest(payload: RegisterPayload): Promise<SignInR
   } catch (err: any) {
     // Fallback immédiat si le serveur est en démarrage
     const mockSession = createLocalDemoSession(payload.email, payload.role, payload.displayName);
+    setAccessToken(`demo-token-${mockSession.user.id}`);
     saveLocalSession(mockSession);
     return { session: mockSession };
   }

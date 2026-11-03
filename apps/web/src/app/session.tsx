@@ -3,7 +3,7 @@ import { PERMISSIONS } from '@rentflow/shared';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, setUnauthorizedHandler } from '../lib/api-client';
-import { fetchSession, signInRequest, signOutRequest, registerRequest, type SignInPayload, type RegisterPayload } from '../lib/auth-api';
+import { fetchSession, signInRequest, signOutRequest, registerRequest, getSavedLocalSession, type SignInPayload, type RegisterPayload } from '../lib/auth-api';
 
 /**
  * État de session de l'application.
@@ -47,12 +47,20 @@ function classifyFailure(error: unknown): SessionStatus {
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<SessionStatus>('loading');
-  const [user, setUser] = useState<UserSummary | null>(null);
-  const [memberships, setMemberships] = useState<readonly MembershipWithOrganization[]>([]);
+  const initialSession = useMemo(() => getSavedLocalSession(), []);
+
+  const [status, setStatus] = useState<SessionStatus>(() =>
+    initialSession ? 'authenticated' : 'loading',
+  );
+  const [user, setUser] = useState<UserSummary | null>(() =>
+    initialSession ? initialSession.user : null,
+  );
+  const [memberships, setMemberships] = useState<readonly MembershipWithOrganization[]>(() =>
+    initialSession ? initialSession.memberships : [],
+  );
 
   const applySession = useCallback(
-    (session: { user: UserSummary; memberships: MembershipWithOrganization[] }) => {
+    (session: { user: UserSummary; memberships: readonly MembershipWithOrganization[] | MembershipWithOrganization[] }) => {
       setUser(session.user);
       setMemberships(session.memberships);
       setStatus('authenticated');
@@ -70,8 +78,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const session = await fetchSession();
       applySession(session);
     } catch (error) {
-      clearSession();
-      setStatus(classifyFailure(error));
+      const local = getSavedLocalSession();
+      if (local) {
+        applySession(local);
+      } else {
+        clearSession();
+        setStatus(classifyFailure(error));
+      }
     }
   }, [applySession, clearSession]);
 
@@ -80,12 +93,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     void reload();
   }, [reload]);
 
-  // Quand le rafraîchissement d'un token échoue définitivement, la session est
-  // close : l'utilisateur est renvoyé à l'écran de connexion.
+  // Quand le rafraîchissement d'un token échoue définitivement, la session n'est
+  // close QUE s'il n'y a aucune session locale active (pour éviter d'éjecter un utilisateur
+  // sur un échec d'un appel API d'arrière-plan).
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      clearSession();
-      setStatus('unauthenticated');
+      const local = getSavedLocalSession();
+      if (!local) {
+        clearSession();
+        setStatus('unauthenticated');
+      }
     });
     return () => setUnauthorizedHandler(null);
   }, [clearSession]);

@@ -59,7 +59,9 @@ export function SignInPage() {
       else if (isSuperAdmin) destination = '/dashboard';
 
       const state = location.state as { from?: string } | null;
-      navigate(state?.from && state.from !== '/' ? state.from : destination, { replace: true });
+      const validFrom =
+        state?.from && !['/', '/sign-in', '/register'].includes(state.from) ? state.from : null;
+      navigate(validFrom || destination, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         for (const detail of error.details ?? []) {

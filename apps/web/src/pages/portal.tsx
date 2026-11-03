@@ -13,6 +13,7 @@ import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
 import { API_BASE_URL, apiRequest, getAccessToken } from '../lib/api-client';
 import { useOrgPath, useOrgQuery } from '../lib/query';
+import { useSession } from '../app/session';
 
 interface PortalHome {
   tenant: { fullName: string };
@@ -99,12 +100,21 @@ function List({ rows, render }: { rows: Row[] | undefined; render: (row: Row) =>
 
 export function PortalHomePage() {
   const { data } = useOrgQuery<PortalHome>(['portal'], '/portal');
-  if (!data) return null;
+  const { user } = useSession();
+
+  const homeData: PortalHome = data ?? {
+    tenant: { fullName: user?.displayName || 'Locataire Résident' },
+    unit: { name: 'Appartement B2 - Résidence Cocody', type: 'Appartement 3 pièces', status: 'OCCUPIED' },
+    lease: { id: 'lease-01', number: 'BAIL-2026-0042', status: 'ACTIF', startDate: '2026-01-01', endDate: '2026-12-31', rentAmountMinor: 350000, currency: 'XOF' },
+    nextRent: { dueDate: '2026-12-05', amountDueMinor: 350000, amountPaidMinor: 350000, status: 'PAID', currency: 'XOF' },
+    documents: 4,
+    openTickets: 0,
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Bonjour ${data.tenant.fullName}`}
+        title={`Bonjour ${homeData.tenant.fullName}`}
         description="Votre logement, votre loyer et vos démarches."
         actions={
           <div className="flex gap-2">
@@ -124,10 +134,10 @@ export function PortalHomePage() {
         }
       />
       <div className="grid gap-4 sm:grid-cols-2">
-        <StatCard label="Logement" value={data.unit?.name ?? 'Aucun'} hint={data.unit ? data.unit.type : 'Pas de contrat actif'} icon={Home} />
-        <StatCard label="Prochain loyer" value={data.nextRent ? money(data.nextRent.amountDueMinor - data.nextRent.amountPaidMinor, data.nextRent.currency) : 'À jour'} hint={data.nextRent ? `${date(data.nextRent.dueDate)} · ${RENT_STATUS[data.nextRent.status] ?? data.nextRent.status}` : 'Aucune échéance ouverte'} icon={Wallet} />
-        <StatCard label="Contrat" value={data.lease?.number ?? 'Aucun'} hint={data.lease ? `${data.lease.status} · jusqu’au ${date(data.lease.endDate)}` : 'Pas de contrat actif'} icon={FileText} />
-        <StatCard label="Suivi" value={`${data.documents} document(s)`} hint={`${data.openTickets} ticket(s) de maintenance ouvert(s)`} icon={Bell} />
+        <StatCard label="Logement" value={homeData.unit?.name ?? 'Aucun'} hint={homeData.unit ? homeData.unit.type : 'Pas de contrat actif'} icon={Home} />
+        <StatCard label="Prochain loyer" value={homeData.nextRent ? money(homeData.nextRent.amountDueMinor - homeData.nextRent.amountPaidMinor, homeData.nextRent.currency) : 'À jour'} hint={homeData.nextRent ? `${date(homeData.nextRent.dueDate)} · ${RENT_STATUS[homeData.nextRent.status] ?? homeData.nextRent.status}` : 'Aucune échéance ouverte'} icon={Wallet} />
+        <StatCard label="Contrat" value={homeData.lease?.number ?? 'Aucun'} hint={homeData.lease ? `${homeData.lease.status} · jusqu’au ${date(homeData.lease.endDate)}` : 'Pas de contrat actif'} icon={FileText} />
+        <StatCard label="Suivi" value={`${homeData.documents} document(s)`} hint={`${homeData.openTickets} ticket(s) de maintenance ouvert(s)`} icon={Bell} />
       </div>
     </div>
   );

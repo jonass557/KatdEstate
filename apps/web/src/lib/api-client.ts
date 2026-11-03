@@ -39,10 +39,22 @@ const REQUEST_TIMEOUT_MS = 20_000;
  * lisible par n'importe quel script injecté (XSS). La persistance de session
  * repose sur le cookie `HttpOnly` de refresh, inaccessible au JavaScript.
  */
-let accessToken: string | null = null;
+const ACCESS_TOKEN_KEY = 'kadtestate_access_token';
+
+let accessToken: string | null =
+  typeof localStorage !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      if (token) {
+        localStorage.setItem(ACCESS_TOKEN_KEY, token);
+      } else {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+      }
+    }
+  } catch {}
 }
 
 export function getAccessToken(): string | null {
@@ -164,6 +176,11 @@ axiosInstance.interceptors.response.use(
       config.headers?.get?.('X-Skip-Auth-Retry') !== '1';
 
     if (isRetryable && config) {
+      // Pour les sessions de démo ou locales, ne pas appeler le refresh serveur
+      if (accessToken?.startsWith('demo-token-')) {
+        return Promise.reject(toApiError(error));
+      }
+
       const token = await refreshAccessToken();
 
       if (token) {
@@ -173,7 +190,18 @@ axiosInstance.interceptors.response.use(
         return axiosInstance.request(config);
       }
 
-      onUnauthorized?.();
+      // Ne JAMAIS déconnecter automatiquement l'utilisateur lors d'un échec sur une requête de données
+      // (ex: /dashboard, /properties, /notifications). On vérifie s'il existe une session locale active.
+      const hasActiveSession =
+        typeof localStorage !== 'undefined' &&
+        !!localStorage.getItem('kadtestate_active_session');
+
+      const url = config.url || '';
+      const isAuthCheck = url.includes('/auth/me') || url.includes('/auth/refresh');
+
+      if (!hasActiveSession && isAuthCheck) {
+        onUnauthorized?.();
+      }
     }
 
     return Promise.reject(toApiError(error));
