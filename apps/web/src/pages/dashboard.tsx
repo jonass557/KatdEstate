@@ -73,9 +73,8 @@ export function DashboardPage() {
   const { user, memberships } = useSession();
   const { data } = useOrgQuery<Overview>(['dashboard'], '/dashboard');
 
-  // Detect active role
-  const detectedRole = memberships?.[0]?.role || (user as any)?.platformRole || 'OWNER';
-  const [activeTabRole, setActiveTabRole] = useState<string>(detectedRole);
+  // Détection stricte du rôle de l'utilisateur connecté — isolation totale entre profils
+  const userRole = memberships?.[0]?.role || (user as any)?.platformRole || 'OWNER';
 
   // Modals state
   const [ikeepayPayinOpen, setIkeepayPayinOpen] = useState(false);
@@ -814,7 +813,20 @@ export function DashboardPage() {
     }
   };
 
-  const sections = getSectionsForRole(activeTabRole);
+  const sections = getSectionsForRole(userRole);
+
+  const ROLE_NAMES: Record<string, { label: string; icon: any; color: string }> = {
+    SUPER_ADMIN: { label: 'Direction Super Admin', icon: Crown, color: 'text-amber-400 bg-amber-400/10 border-amber-400/30' },
+    NEIGHBORHOOD_LEADER: { label: 'Chef de Quartier (Coutumier & Foncier)', icon: Crown, color: 'text-purple-400 bg-purple-400/10 border-purple-400/30' },
+    BLOCK_LEADER: { label: 'Chef de Bloc (Recensement de Proximité)', icon: ShieldCheck, color: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/30' },
+    OWNER: { label: 'Propriétaire & Bailleur Foncier', icon: Building2, color: 'text-blue-400 bg-blue-400/10 border-blue-400/30' },
+    TENANT: { label: 'Locataire Résident', icon: Home, color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30' },
+    AGENT: { label: 'Agent Immobilier Agréé', icon: Briefcase, color: 'text-orange-400 bg-orange-400/10 border-orange-400/30' },
+    RESIDENT: { label: 'Résident & Citoyen', icon: Users, color: 'text-rose-400 bg-rose-400/10 border-rose-400/30' },
+  };
+
+  const currentRoleInfo = ROLE_NAMES[userRole] || { label: userRole, icon: ShieldCheck, color: 'text-primary bg-primary/10 border-primary/30' };
+  const RoleIcon = currentRoleInfo.icon;
 
   return (
     <div className="space-y-6 pb-16">
@@ -847,7 +859,7 @@ export function DashboardPage() {
             <span>Payer Mobile Money</span>
           </Button>
 
-          {activeTabRole === 'SUPER_ADMIN' && (
+          {userRole === 'SUPER_ADMIN' && (
             <Button
               size="sm"
               variant="outline"
@@ -861,34 +873,28 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* 2. Role Switcher Bar: Allows previewing and switching between any role immediately */}
-      <div className="bg-card border border-border p-2.5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-2.5 shadow-sm">
-        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground px-2">
-          <Sparkles className="size-3.5 text-emerald-500" />
-          <span>Profil / Perspective active :</span>
+      {/* 2. Exclusive Role Profile Status Card (Strict Role Isolation - No unauthorized role switching) */}
+      <div className="bg-card border border-border/80 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="size-11 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold shadow-inner">
+            <RoleIcon className="size-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Espace Réservé & Certifié</span>
+              <span className={`text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full border ${currentRoleInfo.color}`}>
+                {currentRoleInfo.label}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Accès strictement restreint à vos attributions et prérogatives officielles.
+            </p>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1">
-          {[
-            { id: 'SUPER_ADMIN', label: 'Super Admin' },
-            { id: 'NEIGHBORHOOD_LEADER', label: 'Chef de Quartier' },
-            { id: 'BLOCK_LEADER', label: 'Chef de Bloc' },
-            { id: 'OWNER', label: 'Propriétaire' },
-            { id: 'TENANT', label: 'Locataire' },
-            { id: 'AGENT', label: 'Agent Immobilier' },
-            { id: 'RESIDENT', label: 'Résident' },
-          ].map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setActiveTabRole(r.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                activeTabRole === r.id
-                  ? 'bg-primary text-primary-foreground shadow-sm scale-105'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
+
+        <div className="flex items-center gap-2">
+          <span className="size-2 rounded-full bg-primary animate-pulse" />
+          <span className="text-xs font-semibold text-foreground">Session Cloisonnée</span>
         </div>
       </div>
 

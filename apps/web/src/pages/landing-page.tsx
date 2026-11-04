@@ -20,7 +20,6 @@ import {
   Send, 
   Menu, 
   X,
-  ChevronRight,
   ExternalLink,
   DollarSign
 } from 'lucide-react';
@@ -167,24 +166,24 @@ export function LandingPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-slate-950">
+    <div className="min-h-screen bg-[#110222] text-slate-100 selection:bg-[#00e676] selection:text-slate-950">
       
       {/* 1. Ticker Banner (Bannière Défilante Administrateur) */}
-      <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 border-b border-emerald-500/20 py-2.5 px-4 overflow-hidden relative">
+      <div className="bg-gradient-to-r from-purple-950 via-[#1e053a] to-emerald-950 border-b border-purple-800/40 py-2.5 px-4 overflow-hidden relative">
         <div className="max-w-7xl mx-auto flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full shrink-0 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#00e676] bg-[#00e676]/10 border border-[#00e676]/30 px-3 py-1 rounded-full shrink-0 uppercase tracking-wider">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00e676] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00e676]"></span>
             </span>
             Annonces Officielles
           </div>
           <div className="overflow-hidden whitespace-nowrap w-full">
-            <div className="inline-block animate-marquee text-xs text-slate-300 font-medium">
+            <div className="inline-block animate-marquee text-xs text-purple-200 font-medium">
               {tickerMessages.map((msg, idx) => (
                 <span key={idx} className="mx-6 inline-flex items-center gap-2">
                   <span>{msg}</span>
-                  <span className="text-emerald-500">•</span>
+                  <span className="text-[#00e676]">•</span>
                 </span>
               ))}
             </div>
@@ -192,37 +191,37 @@ export function LandingPage() {
         </div>
       </div>
 
-      {/* 2. Top Navigation Bar */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80">
+      {/* 2. Top Navigation Bar (Style KadtEstate PRO) */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#16042d]/90 border-b border-purple-900/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
-          {/* Logo & Brand */}
+          {/* Logo & Brand matching screenshot */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="size-11 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 p-0.5 shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Building2 className="size-5 text-emerald-400" />
+            <div className="size-11 rounded-2xl bg-gradient-to-tr from-[#00e676] via-teal-500 to-purple-600 p-0.5 shadow-lg shadow-[#00e676]/20 group-hover:shadow-[#00e676]/40 transition-all">
+              <div className="w-full h-full bg-[#16042d] rounded-[14px] flex items-center justify-center">
+                <Building2 className="size-5 text-[#00e676]" />
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <span className="text-2xl font-black tracking-tight text-white font-mono">
-                  Kadt<span className="text-emerald-400">Estate</span>
+                  KadtEstate
                 </span>
-                <span className="text-[10px] uppercase font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded">
-                  Pro
+                <span className="text-[11px] uppercase font-black bg-[#00e676] text-slate-950 px-2 py-0.5 rounded-full shadow-sm">
+                  PRO
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 tracking-wider">Plateforme Immobilière & Sécurité Urbaine</p>
+              <p className="text-[10px] text-purple-300/80 tracking-wider font-medium">Plateforme Immobilière & Sécurité Urbaine</p>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-            <a href="#marketplace" className="hover:text-emerald-400 transition-colors">Marketplace</a>
-            <a href="#roles" className="hover:text-emerald-400 transition-colors">Profils & Rôles</a>
-            <a href="#features" className="hover:text-emerald-400 transition-colors">Fonctionnalités</a>
-            <a href="#chefferie" className="hover:text-emerald-400 transition-colors">Chefferie & Foncier</a>
-            <a href="#contact" className="hover:text-emerald-400 transition-colors">Contact</a>
+          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-purple-200">
+            <a href="#marketplace" className="hover:text-[#00e676] transition-colors">Marketplace</a>
+            <a href="#roles" className="hover:text-[#00e676] transition-colors">Profils & Rôles</a>
+            <a href="#features" className="hover:text-[#00e676] transition-colors">Fonctionnalités</a>
+            <a href="#chefferie" className="hover:text-[#00e676] transition-colors">Chefferie & Foncier</a>
+            <a href="#contact" className="hover:text-[#00e676] transition-colors">Contact</a>
           </nav>
 
           {/* Action CTAs */}
@@ -230,7 +229,7 @@ export function LandingPage() {
             {isAuthenticated ? (
               <Button
                 onClick={() => navigate('/dashboard')}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2"
+                className="bg-[#00e676] hover:bg-[#00c853] text-slate-950 font-black px-6 py-2.5 rounded-xl shadow-lg shadow-[#00e676]/20 flex items-center gap-2"
               >
                 <span>Accéder au Dashboard</span>
                 <ArrowRight className="size-4" />
@@ -239,25 +238,25 @@ export function LandingPage() {
               <>
                 <Link
                   to="/sign-in"
-                  className="text-sm font-semibold text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 px-4 py-2.5 rounded-xl transition-all"
+                  className="text-sm font-semibold text-purple-200 hover:text-white bg-purple-950/60 hover:bg-purple-900/60 border border-purple-800/60 px-4 py-2.5 rounded-xl transition-all"
                 >
                   Se connecter
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-sm px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
+                  className="bg-[#00e676] hover:bg-[#00c853] text-slate-950 font-black text-sm px-5 py-2.5 rounded-xl shadow-lg shadow-[#00e676]/20 transition-all flex items-center gap-2"
                 >
                   <Sparkles className="size-4" />
-                  <span>Créer un compte</span>
+                  <span>Commencer</span>
                 </Link>
               </>
             )}
           </div>
 
-          {/* Mobile menu button */}
+          {/* Mobile menu button with neon green border */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
+            className="md:hidden p-2 rounded-2xl bg-purple-950/60 border border-[#00e676]/60 text-[#00e676] hover:bg-purple-900/60"
           >
             {mobileMenuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
           </button>
@@ -265,19 +264,19 @@ export function LandingPage() {
 
         {/* Mobile Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-b border-slate-800 bg-slate-950 px-4 py-5 space-y-4">
-            <div className="flex flex-col gap-3 font-medium text-slate-300">
-              <a href="#marketplace" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-emerald-400">Marketplace</a>
-              <a href="#roles" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-emerald-400">Profils & Rôles</a>
-              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-emerald-400">Fonctionnalités</a>
-              <a href="#chefferie" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-emerald-400">Chefferie & Foncier</a>
-              <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-emerald-400">Contact</a>
+          <div className="md:hidden border-b border-purple-900/50 bg-[#16042d] px-4 py-5 space-y-4">
+            <div className="flex flex-col gap-3 font-medium text-purple-200">
+              <a href="#marketplace" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-[#00e676]">Marketplace</a>
+              <a href="#roles" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-[#00e676]">Profils & Rôles</a>
+              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-[#00e676]">Fonctionnalités</a>
+              <a href="#chefferie" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-[#00e676]">Chefferie & Foncier</a>
+              <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-[#00e676]">Contact</a>
             </div>
-            <div className="pt-4 border-t border-slate-800 flex flex-col gap-2.5">
+            <div className="pt-4 border-t border-purple-900/60 flex flex-col gap-2.5">
               {isAuthenticated ? (
                 <Link
                   to="/dashboard"
-                  className="w-full text-center bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl"
+                  className="w-full text-center bg-[#00e676] text-slate-950 font-black py-3 rounded-xl"
                 >
                   Accéder au Dashboard
                 </Link>
@@ -285,13 +284,13 @@ export function LandingPage() {
                 <>
                   <Link
                     to="/sign-in"
-                    className="w-full text-center bg-slate-900 border border-slate-700 py-3 rounded-xl font-semibold"
+                    className="w-full text-center bg-purple-950/80 border border-purple-800/80 py-3 rounded-xl font-semibold text-purple-200"
                   >
                     Se connecter
                   </Link>
                   <Link
                     to="/register"
-                    className="w-full text-center bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl"
+                    className="w-full text-center bg-[#00e676] text-slate-950 font-black py-3 rounded-xl"
                   >
                     Créer un compte
                   </Link>
@@ -302,63 +301,78 @@ export function LandingPage() {
         )}
       </header>
 
-      {/* 3. Hero Section */}
-      <section className="relative pt-16 pb-24 lg:pt-24 lg:pb-32 overflow-hidden">
-        {/* Glow Effects */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-emerald-600/20 to-teal-500/20 blur-[130px] rounded-full pointer-events-none -z-10" />
-        <div className="absolute top-1/3 left-1/4 w-[400px] h-[250px] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+      {/* 3. Hero Section (Conforme à la maquette KadtEstate PRO) */}
+      <section className="relative pt-12 pb-20 lg:pt-16 lg:pb-28 overflow-hidden bg-gradient-to-b from-[#180436] via-[#2d075a] to-[#120226]">
+        {/* Ambient Glows */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[380px] bg-purple-600/25 blur-[140px] rounded-full pointer-events-none -z-10" />
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[500px] h-[250px] bg-[#00e676]/15 blur-[120px] rounded-full pointer-events-none -z-10" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/90 border border-emerald-500/30 text-emerald-400 text-xs sm:text-sm font-medium shadow-xl shadow-emerald-500/5">
-            <span className="flex size-2 rounded-full bg-emerald-400 animate-pulse" />
-            Plateforme Intégrée d'Afrique Francophone
-            <ChevronRight className="size-4 text-emerald-400" />
-          </div>
-
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1] max-w-5xl mx-auto">
-            L'Immobilier, la Chefferie et la Sécurité de Quartier <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">Réunis en un Clic.</span>
+          {/* Main Title matching the screenshot */}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.18] max-w-4xl mx-auto">
+            L'Immobilier,<br />
+            la Chefferie et la<br />
+            Sécurité de Quartier<br />
+            <span className="mt-4 inline-block bg-[#00e676] text-[#053724] font-black px-6 sm:px-8 py-2 sm:py-2.5 rounded-2xl text-2xl sm:text-4xl shadow-2xl shadow-[#00e676]/35 tracking-tight transform hover:scale-105 transition-transform">
+              Réunis en un Clic.
+            </span>
           </h1>
 
-          <p className="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
-            Gérez vos parcs locatifs, sécurisez vos ventes de terrains et maisons avec l'autorité coutumière, encaissez via Mobile Money <strong className="text-white">Ikeepay</strong> et coordonnez le recensement de votre quartier.
+          {/* Visual Showcase Card with Hero Graphic */}
+          <div className="relative mx-auto max-w-xs sm:max-w-md my-6 rounded-3xl overflow-hidden shadow-2xl shadow-purple-950/90 border border-purple-500/30 group">
+            <img
+              src="/hero-banner.jpg"
+              alt="KadtEstate - L'Immobilier, la Chefferie et la Sécurité de Quartier Réunis en un Clic"
+              className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-500"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#120226]/80 via-transparent to-transparent pointer-events-none" />
+          </div>
+
+          {/* Curved wave tagline */}
+          <p className="text-base sm:text-xl text-purple-100 max-w-2xl mx-auto leading-relaxed font-medium">
+            Gérez vos parcelles, <strong className="text-[#00e676] font-black">sécurisez</strong> vos ventes et construisons ensemble <strong className="text-[#00e676] font-black">une communauté organisée</strong>.
           </p>
 
-          {/* Hero CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          {/* Pill CTA Button (Commencer ->) */}
+          <div className="pt-2">
+            <Link
+              to="/register"
+              className="inline-flex items-center justify-center gap-3 bg-[#00e676] hover:bg-[#00c853] text-slate-950 font-black text-lg sm:text-xl px-10 py-4 sm:py-4.5 rounded-full shadow-2xl shadow-[#00e676]/40 transition-all transform hover:scale-105 active:scale-95"
+            >
+              <span>Commencer</span>
+              <ArrowRight className="size-6 text-slate-950" />
+            </Link>
+          </div>
+
+          {/* Capsule Scroll Indicator */}
+          <div className="pt-4 flex justify-center">
             <a
               href="#roles"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-extrabold px-8 py-4 rounded-2xl shadow-xl shadow-emerald-500/25 transition-all text-base transform hover:-translate-y-0.5"
+              className="w-7 h-12 rounded-full border-2 border-purple-400/60 flex items-center justify-center text-[#00e676] hover:border-[#00e676] transition-colors"
+              title="Découvrir les fonctionnalités"
             >
-              <span>Choisir mon Rôle & S'inscrire</span>
-              <ArrowRight className="size-5" />
-            </a>
-            <a
-              href="#marketplace"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-slate-900/90 hover:bg-slate-800 text-white font-bold px-8 py-4 rounded-2xl border border-slate-700/80 transition-all text-base hover:border-slate-600"
-            >
-              <Search className="size-5 text-emerald-400" />
-              <span>Explorer la Marketplace</span>
+              <div className="w-1.5 h-3 bg-[#00e676] rounded-full animate-bounce" />
             </a>
           </div>
 
-          {/* Social Proof / Key Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-12 max-w-5xl mx-auto">
-            <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800 backdrop-blur-md text-center space-y-1">
-              <p className="text-3xl sm:text-4xl font-black text-emerald-400">99.4%</p>
-              <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Recouvrement des Loyers</p>
+          {/* Social Proof Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-10 max-w-5xl mx-auto">
+            <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-900/60 backdrop-blur-md text-center space-y-1">
+              <p className="text-3xl sm:text-4xl font-black text-[#00e676]">99.4%</p>
+              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">Recouvrement des Loyers</p>
             </div>
-            <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800 backdrop-blur-md text-center space-y-1">
-              <p className="text-3xl sm:text-4xl font-black text-teal-400">100%</p>
-              <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Certificats Infalsifiables</p>
+            <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-900/60 backdrop-blur-md text-center space-y-1">
+              <p className="text-3xl sm:text-4xl font-black text-teal-300">100%</p>
+              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">Certificats Infalsifiables</p>
             </div>
-            <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800 backdrop-blur-md text-center space-y-1">
-              <p className="text-3xl sm:text-4xl font-black text-cyan-400">15 000+</p>
-              <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Résidences Recensées</p>
+            <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-900/60 backdrop-blur-md text-center space-y-1">
+              <p className="text-3xl sm:text-4xl font-black text-cyan-300">15 000+</p>
+              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">Résidences Recensées</p>
             </div>
-            <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800 backdrop-blur-md text-center space-y-1">
-              <p className="text-3xl sm:text-4xl font-black text-amber-400">4 Opérateurs</p>
-              <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Ikeepay Mobile Money</p>
+            <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-900/60 backdrop-blur-md text-center space-y-1">
+              <p className="text-3xl sm:text-4xl font-black text-amber-300">4 Opérateurs</p>
+              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">Ikeepay Mobile Money</p>
             </div>
           </div>
 
