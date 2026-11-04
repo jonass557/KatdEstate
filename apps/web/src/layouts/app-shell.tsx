@@ -158,6 +158,16 @@ export function AppShell() {
               <OrganizationSwitcher />
             </div>
             <NavLinks onNavigate={() => setMobileNavOpen(false)} />
+            <div className="space-y-2 border-t border-border p-3">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="flex w-full items-center gap-2 rounded-lg bg-rose-500/10 px-2.5 py-2 text-sm font-semibold text-rose-500 transition hover:bg-rose-500 hover:text-white"
+              >
+                <LogOut className="size-4 shrink-0" aria-hidden />
+                Se déconnecter
+              </button>
+            </div>
           </aside>
         </div>
       ) : null}
@@ -207,6 +217,15 @@ export function AppShell() {
             >
               {userInitials}
             </span>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-semibold text-rose-400 transition hover:bg-rose-500 hover:text-white"
+              title="Se déconnecter pour changer de compte"
+            >
+              <LogOut className="size-3.5 shrink-0" aria-hidden />
+              <span className="hidden sm:inline">Déconnexion</span>
+            </button>
           </div>
         </header>
 

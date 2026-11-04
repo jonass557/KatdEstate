@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Building2, 
   Home, 
@@ -19,7 +19,6 @@ import {
   MapPin, 
   Bell, 
   AlertTriangle, 
-  TrendingUp,
   Wallet,
   Globe,
   Plus,
@@ -29,7 +28,10 @@ import {
   Smartphone,
   Store,
   FolderOpen,
-  Shield
+  Shield,
+  LogOut,
+  Gauge,
+  BarChart3
 } from 'lucide-react';
 import { useOrganization } from '../app/organization';
 import { useSession } from '../app/session';
@@ -69,9 +71,19 @@ interface AppSection {
 }
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const { activeOrganization } = useOrganization();
-  const { user, memberships } = useSession();
+  const { user, memberships, signOut } = useSession();
   const { data } = useOrgQuery<Overview>(['dashboard'], '/dashboard');
+
+  // Déconnexion rapide en 1 clic pour changer de compte
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } finally {
+      navigate('/sign-in', { replace: true });
+    }
+  };
 
   // Détection stricte du rôle de l'utilisateur connecté — isolation totale entre profils
   const userRole = memberships?.[0]?.role || (user as any)?.platformRole || 'OWNER';
@@ -86,8 +98,8 @@ export function DashboardPage() {
       case 'SUPER_ADMIN':
         return [
           {
-            title: 'AUTORITÉS & GOUVERNANCE TERRITORIALE',
-            subtitle: 'Supervision des chefferies coutumières, découpage des secteurs et audit',
+            title: 'GOUVERNANCE TERRITORIALE & AUDIT',
+            subtitle: 'Supervision des chefferies coutumières, découpage des secteurs et audit plateforme',
             buttons: [
               {
                 title: 'Chefferie &\nFoncier',
@@ -116,19 +128,12 @@ export function DashboardPage() {
               },
               {
                 title: 'Modération\nMarketplace',
-                icon: Building2,
+                icon: ShieldCheck,
                 colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-600 text-white',
                 glowClass: 'shadow-amber-500/25',
                 to: '/admin-marketplace',
-                badge: 'VALIDATION',
+                badge: 'MODÉRATION',
                 badgeBg: 'bg-yellow-400 text-black',
-              },
-              {
-                title: 'Parc\nImmobilier',
-                icon: Home,
-                colorClass: 'bg-gradient-to-tr from-indigo-600 to-violet-600 text-white',
-                glowClass: 'shadow-indigo-500/25',
-                to: '/properties',
               },
               {
                 title: 'Audit &\nSécurité',
@@ -136,11 +141,70 @@ export function DashboardPage() {
                 colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
                 glowClass: 'shadow-slate-500/25',
                 to: '/platform',
+                badge: 'SYSTÈME',
+                badgeBg: 'bg-slate-400 text-black',
+              },
+              {
+                title: 'Équipe &\nRôles',
+                icon: Users,
+                colorClass: 'bg-gradient-to-tr from-indigo-700 to-purple-800 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/team',
               },
             ],
           },
           {
-            title: 'COMMERCE, MARCHÉ & PAIEMENTS',
+            title: 'PARC IMMOBILIER, LOTS & LOCATIONS',
+            subtitle: 'Gestion globale des patrimoines, logements, contrats et répertoire locataires',
+            buttons: [
+              {
+                title: 'Propriétés &\nImmeubles',
+                icon: Building2,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-violet-600 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/properties',
+                badge: 'PARC',
+                badgeBg: 'bg-indigo-400 text-black',
+              },
+              {
+                title: 'Logements\n& Lots',
+                icon: Home,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-cyan-600 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/units',
+              },
+              {
+                title: 'Baux &\nContrats',
+                icon: KeyRound,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-purple-700 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/leases',
+              },
+              {
+                title: 'Répertoire\nLocataires',
+                icon: Users,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-600 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/tenants',
+              },
+              {
+                title: 'Espace\nPropriétaire',
+                icon: Briefcase,
+                colorClass: 'bg-gradient-to-tr from-sky-600 to-blue-700 text-white',
+                glowClass: 'shadow-sky-500/25',
+                to: '/owner-portal',
+              },
+              {
+                title: 'Espace\nAgent',
+                icon: Briefcase,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/agent',
+              },
+            ],
+          },
+          {
+            title: 'FINANCES, MARCHÉ & IKEEPAY H2H',
             subtitle: 'Flux financiers, passerelle Ikeepay H2H et intelligence économique',
             buttons: [
               {
@@ -162,29 +226,49 @@ export function DashboardPage() {
                 badgeBg: 'bg-teal-300 text-black',
               },
               {
-                title: 'Marketplace\nNationale',
-                icon: Store,
-                colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
-                glowClass: 'shadow-amber-500/25',
-                to: '/marketplace',
-              },
-              {
                 title: 'Suivi des\nLoyers',
                 icon: Wallet,
                 colorClass: 'bg-gradient-to-tr from-green-600 to-emerald-700 text-white',
                 glowClass: 'shadow-green-500/25',
                 to: '/rent',
-                badge: 'RÉSEAU',
-                badgeBg: 'bg-green-400 text-black',
               },
               {
-                title: 'Statistiques\nGlobales',
-                icon: TrendingUp,
+                title: 'Paiements &\nFlux',
+                icon: Receipt,
+                colorClass: 'bg-gradient-to-tr from-teal-500 to-cyan-600 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/payments',
+              },
+              {
+                title: 'Charges &\nDépenses',
+                icon: TrendingDown,
                 colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
                 glowClass: 'shadow-rose-500/25',
+                to: '/expenses',
+              },
+              {
+                title: 'Analytique &\nBilan',
+                icon: BarChart3,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
+                glowClass: 'shadow-indigo-500/25',
                 to: '/analytics',
                 badge: 'EN DIRECT',
                 badgeBg: 'bg-rose-400 text-black',
+              },
+            ],
+          },
+          {
+            title: 'OPÉRATIONS, OUTILS & INTELLIGENCE ARTIFICIELLE',
+            subtitle: 'Marketplace, maintenance technique, documents, compteurs et KadtEstate AI',
+            buttons: [
+              {
+                title: 'Marketplace\nPublique',
+                icon: Store,
+                colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/marketplace',
+                badge: 'VITRINE',
+                badgeBg: 'bg-amber-400 text-black',
               },
               {
                 title: 'KadtEstate\nAI Copilot',
@@ -195,6 +279,48 @@ export function DashboardPage() {
                 badge: 'IA V2',
                 badgeBg: 'bg-fuchsia-400 text-black',
               },
+              {
+                title: 'Maintenance\n& Pannes',
+                icon: Wrench,
+                colorClass: 'bg-gradient-to-tr from-orange-600 to-amber-600 text-white',
+                glowClass: 'shadow-orange-500/25',
+                to: '/maintenance',
+              },
+              {
+                title: 'Documents &\nArchives',
+                icon: FolderOpen,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/documents',
+              },
+              {
+                title: 'Messagerie &\nCanaux',
+                icon: MessageSquare,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/messages',
+              },
+              {
+                title: 'Compteurs\nd’Énergie',
+                icon: Gauge,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-teal-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/utilities',
+              },
+              {
+                title: 'Notifications\nSystème',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-pink-600 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/notifications',
+              },
+              {
+                title: 'Paramètres\nGénéraux',
+                icon: Settings,
+                colorClass: 'bg-gradient-to-tr from-slate-600 to-slate-800 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/settings',
+              },
             ],
           },
         ];
@@ -202,7 +328,7 @@ export function DashboardPage() {
       case 'NEIGHBORHOOD_LEADER':
         return [
           {
-            title: 'FONCIER & ACTES COUTUMIERS',
+            title: 'FONCIER & ACTES COUTUMIERS DU CHEF',
             subtitle: 'Enregistrement légal des transactions et délivrance des actes officiels',
             buttons: [
               {
@@ -224,11 +350,11 @@ export function DashboardPage() {
                 badgeBg: 'bg-blue-300 text-black',
               },
               {
-                title: 'Locations &\nBaux',
+                title: 'Locations &\nBaux Secteur',
                 icon: KeyRound,
                 colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-600 text-white',
                 glowClass: 'shadow-emerald-500/25',
-                to: '/quartier',
+                to: '/leases',
               },
               {
                 title: 'Certificats QR\nOfficiels',
@@ -240,6 +366,13 @@ export function DashboardPage() {
                 badgeBg: 'bg-yellow-400 text-black',
               },
               {
+                title: 'Registre\nFoncier',
+                icon: FileText,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-sky-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/quartier',
+              },
+              {
                 title: 'Commissions\nChefferie',
                 icon: Wallet,
                 colorClass: 'bg-gradient-to-tr from-green-600 to-emerald-700 text-white',
@@ -248,17 +381,10 @@ export function DashboardPage() {
                 badge: 'DROITS',
                 badgeBg: 'bg-green-400 text-black',
               },
-              {
-                title: 'Registre\nFoncier',
-                icon: FileText,
-                colorClass: 'bg-gradient-to-tr from-cyan-600 to-sky-700 text-white',
-                glowClass: 'shadow-cyan-500/25',
-                to: '/quartier',
-              },
             ],
           },
           {
-            title: 'ORGANISATION & SÉCURITÉ DU QUARTIER',
+            title: 'SÉCURITÉ, REPASSEMENT & CHEFS DE BLOC',
             subtitle: 'Coordination des chefs de bloc, recensement des foyers et alertes',
             buttons: [
               {
@@ -273,7 +399,7 @@ export function DashboardPage() {
                 icon: Users,
                 colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
                 glowClass: 'shadow-rose-500/25',
-                to: '/quartier',
+                to: '/tenants',
                 badge: '15 000+',
                 badgeBg: 'bg-rose-400 text-black',
               },
@@ -287,11 +413,11 @@ export function DashboardPage() {
                 badgeBg: 'bg-red-500 text-white',
               },
               {
-                title: 'Communications\nHabitants',
-                icon: MessageSquare,
-                colorClass: 'bg-gradient-to-tr from-violet-600 to-indigo-700 text-white',
-                glowClass: 'shadow-violet-500/25',
-                to: '/messages',
+                title: 'Incidents &\nSignalements',
+                icon: Wrench,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/maintenance',
               },
               {
                 title: 'Carte\nInteractive',
@@ -301,11 +427,63 @@ export function DashboardPage() {
                 to: '/quartier',
               },
               {
+                title: 'Communications\nHabitants',
+                icon: MessageSquare,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-indigo-700 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/messages',
+              },
+            ],
+          },
+          {
+            title: 'COMMERCE, FINANCES & OUTILS',
+            subtitle: 'Marketplace du quartier, quittances, Ikeepay et KadtEstate AI',
+            buttons: [
+              {
                 title: 'Marketplace\nLocale',
                 icon: Store,
                 colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
                 glowClass: 'shadow-amber-500/25',
                 to: '/marketplace',
+              },
+              {
+                title: 'Paiement Droits\nIkeepay H2H',
+                icon: CreditCard,
+                colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
+                glowClass: 'shadow-emerald-500/30',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'MOBILE MONEY',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Documents &\nActes',
+                icon: FolderOpen,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/documents',
+              },
+              {
+                title: 'Notifications\nChefferie',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/notifications',
+              },
+              {
+                title: 'KadtEstate\nAI Juridique',
+                icon: Sparkles,
+                colorClass: 'bg-gradient-to-tr from-fuchsia-600 to-purple-600 text-white',
+                glowClass: 'shadow-fuchsia-500/25',
+                to: '/ai',
+                badge: 'IA',
+                badgeBg: 'bg-fuchsia-400 text-black',
+              },
+              {
+                title: 'Compteurs\ndu Secteur',
+                icon: Gauge,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-teal-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/utilities',
               },
             ],
           },
@@ -314,8 +492,8 @@ export function DashboardPage() {
       case 'BLOCK_LEADER':
         return [
           {
-            title: 'RECENSEMENT DE PROXIMITÉ',
-            subtitle: 'Enrôlement terrain des habitations, immeubles et familles',
+            title: 'RECENSEMENT DE PROXIMITÉ DU BLOC',
+            subtitle: 'Enrôlement terrain des habitations, immeubles, lots et familles',
             buttons: [
               {
                 title: 'Enrôler une\nMaison',
@@ -340,7 +518,7 @@ export function DashboardPage() {
                 icon: Users,
                 colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
                 glowClass: 'shadow-blue-500/25',
-                to: '/quartier',
+                to: '/tenants',
               },
               {
                 title: 'Immeubles &\nLogements',
@@ -350,22 +528,27 @@ export function DashboardPage() {
                 to: '/units',
               },
               {
-                title: 'Statistiques\ndu Bloc',
-                icon: TrendingUp,
-                colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
-                glowClass: 'shadow-indigo-500/25',
-                to: '/quartier',
-                badge: 'DONNÉES',
-                badgeBg: 'bg-indigo-300 text-black',
+                title: 'Contrats de\nProximité',
+                icon: KeyRound,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/leases',
+              },
+              {
+                title: 'Relevé des\nCompteurs',
+                icon: Gauge,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-yellow-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/utilities',
               },
             ],
           },
           {
-            title: 'SÉCURITÉ & VIE DU BLOC',
-            subtitle: 'Gestion des signalements de proximité et liaisons d’urgence',
+            title: 'SÉCURITÉ, ALERTES & VIE DU BLOC',
+            subtitle: 'Gestion des signalements de proximité, urgences et liaisons',
             buttons: [
               {
-                title: 'Signaler un\nIncident',
+                title: 'Signaler un\nIncident SOS',
                 icon: AlertTriangle,
                 colorClass: 'bg-gradient-to-tr from-red-600 to-rose-700 text-white',
                 glowClass: 'shadow-red-500/25',
@@ -390,6 +573,20 @@ export function DashboardPage() {
                 to: '/messages',
               },
               {
+                title: 'Maintenance\n& Dépannages',
+                icon: Wrench,
+                colorClass: 'bg-gradient-to-tr from-orange-600 to-amber-700 text-white',
+                glowClass: 'shadow-orange-500/25',
+                to: '/maintenance',
+              },
+              {
+                title: 'Documents &\nFiches Bloc',
+                icon: FolderOpen,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/documents',
+              },
+              {
                 title: 'Permanence\nde Garde',
                 icon: ShieldCheck,
                 colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
@@ -398,13 +595,49 @@ export function DashboardPage() {
               },
             ],
           },
+          {
+            title: 'COMMUNICATION, COTISATIONS & COMMERCE',
+            subtitle: 'Messagerie du bloc, paiements Ikeepay et marketplace',
+            buttons: [
+              {
+                title: 'Messagerie &\nRésidents',
+                icon: MessageSquare,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/messages',
+              },
+              {
+                title: 'Cotisation\nIkeepay H2H',
+                icon: CreditCard,
+                colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
+                glowClass: 'shadow-emerald-500/30',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'MOBILE MONEY',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Marketplace\nLocale',
+                icon: Store,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/marketplace',
+              },
+              {
+                title: 'Notifications\ndu Bloc',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-fuchsia-700 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/notifications',
+              },
+            ],
+          },
         ];
 
       case 'TENANT':
         return [
           {
-            title: 'MON LOGEMENT & BAIL',
-            subtitle: 'Contrat certifié, inventaire et assistance technique',
+            title: 'MON LOGEMENT & MON CONTRAT',
+            subtitle: 'Contrat certifié, inventaire, quittances et assistance technique',
             buttons: [
               {
                 title: 'Mon Contrat\nde Bail',
@@ -457,11 +690,11 @@ export function DashboardPage() {
             ],
           },
           {
-            title: 'PAIEMENTS & SERVICES MOBILES',
+            title: 'PAIEMENTS & SERVICES MOBILES IKEEPAY',
             subtitle: 'Règlement instantané sécurisé par Orange, MTN, Wave ou Moov',
             buttons: [
               {
-                title: 'Payer mon\nLoyer',
+                title: 'Payer mon\nLoyer Mobile',
                 icon: CreditCard,
                 colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
                 glowClass: 'shadow-emerald-500/30',
@@ -504,13 +737,47 @@ export function DashboardPage() {
                 to: '/portal/invoices',
               },
               {
-                title: 'Alertes du\nQuartier',
-                icon: Bell,
+                title: 'Suivi de mes\nPaiements',
+                icon: Receipt,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-cyan-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/portal/payments',
+              },
+            ],
+          },
+          {
+            title: 'QUARTIER, COMPTEURS & MARKETPLACE',
+            subtitle: 'Attestation de résidence, sécurité citoyenne et relève des compteurs',
+            buttons: [
+              {
+                title: 'Chefferie &\nQuartier',
+                icon: Crown,
                 colorClass: 'bg-gradient-to-tr from-purple-600 to-indigo-700 text-white',
                 glowClass: 'shadow-purple-500/25',
                 to: '/quartier',
-                badge: 'INFOS',
+                badge: 'CITOYEN',
                 badgeBg: 'bg-purple-300 text-black',
+              },
+              {
+                title: 'Mes Compteurs\nEau & Elec',
+                icon: Gauge,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-teal-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/utilities',
+              },
+              {
+                title: 'Marketplace\nBiens & Locs',
+                icon: Store,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/marketplace',
+              },
+              {
+                title: 'Notifications\nLocataire',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/portal/notifications',
               },
             ],
           },
@@ -519,8 +786,8 @@ export function DashboardPage() {
       case 'AGENT':
         return [
           {
-            title: 'MANDATS & MARKETPLACE',
-            subtitle: 'Diffusion de biens vérifiés, suivi des acquéreurs et visites',
+            title: 'MANDATS & MARKETPLACE IMMOBILIÈRE',
+            subtitle: 'Diffusion de biens vérifiés, suivi des acquéreurs et visites terrain',
             buttons: [
               {
                 title: 'Marketplace\nPublique',
@@ -532,7 +799,7 @@ export function DashboardPage() {
                 badgeBg: 'bg-amber-400 text-black',
               },
               {
-                title: 'Mes Mandats\nExclusifs',
+                title: 'Espace Agent\n& Mandats',
                 icon: Briefcase,
                 colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
                 glowClass: 'shadow-blue-500/25',
@@ -550,6 +817,13 @@ export function DashboardPage() {
                 badgeBg: 'bg-emerald-400 text-black',
               },
               {
+                title: 'Mes Annonces\n& Mandats',
+                icon: Building2,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-violet-700 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/owner-listings',
+              },
+              {
                 title: 'Visites &\nPlanning',
                 icon: Calendar,
                 colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
@@ -563,20 +837,11 @@ export function DashboardPage() {
                 glowClass: 'shadow-indigo-500/25',
                 to: '/agent',
               },
-              {
-                title: 'Estimation de\nPrix IA',
-                icon: Sparkles,
-                colorClass: 'bg-gradient-to-tr from-fuchsia-600 to-pink-600 text-white',
-                glowClass: 'shadow-fuchsia-500/25',
-                to: '/ai',
-                badge: 'IA',
-                badgeBg: 'bg-fuchsia-400 text-black',
-              },
             ],
           },
           {
-            title: 'COMMISSIONS & ENCAISSEMENTS',
-            subtitle: 'Calcul des honoraires d’agence et retraits Mobile Money',
+            title: 'COMMISSIONS, HONORAIRES & FINANCES',
+            subtitle: 'Calcul des honoraires d’agence et retraits Mobile Money via Ikeepay',
             buttons: [
               {
                 title: 'Mes\nCommissions',
@@ -588,7 +853,7 @@ export function DashboardPage() {
                 badgeBg: 'bg-emerald-400 text-black',
               },
               {
-                title: 'Retrait\nIkeepay',
+                title: 'Retrait\nIkeepay H2H',
                 icon: CreditCard,
                 colorClass: 'bg-gradient-to-tr from-teal-600 to-cyan-700 text-white',
                 glowClass: 'shadow-teal-500/25',
@@ -604,11 +869,75 @@ export function DashboardPage() {
                 to: '/payments',
               },
               {
-                title: 'Performance &\nVentes',
-                icon: TrendingUp,
+                title: 'Performance &\nStatistiques',
+                icon: BarChart3,
                 colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
                 glowClass: 'shadow-rose-500/25',
                 to: '/analytics',
+              },
+              {
+                title: 'Estimation de\nPrix IA',
+                icon: Sparkles,
+                colorClass: 'bg-gradient-to-tr from-fuchsia-600 to-pink-600 text-white',
+                glowClass: 'shadow-fuchsia-500/25',
+                to: '/ai',
+                badge: 'IA',
+                badgeBg: 'bg-fuchsia-400 text-black',
+              },
+              {
+                title: 'Baux &\nContrats',
+                icon: KeyRound,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-purple-700 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/leases',
+              },
+            ],
+          },
+          {
+            title: 'PATRIMOINE, DOCUMENTS & CONTACTS',
+            subtitle: 'Propriétés mandatées, documents administratifs et messagerie',
+            buttons: [
+              {
+                title: 'Propriétés &\nMandats',
+                icon: Building2,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-cyan-600 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/properties',
+              },
+              {
+                title: 'Lots &\nLogements',
+                icon: Home,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-600 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/units',
+              },
+              {
+                title: 'Documents &\nMandats PDF',
+                icon: FolderOpen,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/documents',
+              },
+              {
+                title: 'Messagerie &\nAcquéreurs',
+                icon: MessageSquare,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-indigo-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/messages',
+              },
+              {
+                title: 'Notifications\nActivité',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/notifications',
+              },
+              {
+                title: 'Chefferie &\nQuartier',
+                icon: Crown,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/quartier',
               },
             ],
           },
@@ -659,11 +988,18 @@ export function DashboardPage() {
                 glowClass: 'shadow-blue-500/25',
                 to: '/quartier',
               },
+              {
+                title: 'Documents &\nQuittances',
+                icon: FolderOpen,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/documents',
+              },
             ],
           },
           {
-            title: 'SÉCURITÉ & SOLIDARITÉ',
-            subtitle: 'Signalements instantanés et consignes d’urgence du secteur',
+            title: 'SÉCURITÉ, SOLIDARITÉ & COMMERCE',
+            subtitle: 'Signalements instantanés, cotisations citoyennes et marketplace locale',
             buttons: [
               {
                 title: 'Signaler une\nUrgence SOS',
@@ -689,11 +1025,34 @@ export function DashboardPage() {
                 to: '/quartier',
               },
               {
+                title: 'Cotisation\nIkeepay H2H',
+                icon: CreditCard,
+                colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
+                glowClass: 'shadow-emerald-500/30',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'MOBILE MONEY',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
                 title: 'Marketplace\nLocale',
                 icon: Store,
                 colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-700 text-white',
                 glowClass: 'shadow-teal-500/25',
                 to: '/marketplace',
+              },
+              {
+                title: 'Messagerie &\nVoisins',
+                icon: MessageSquare,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-indigo-700 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/messages',
+              },
+              {
+                title: 'Notifications\nCitoyennes',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/notifications',
               },
             ],
           },
@@ -738,28 +1097,24 @@ export function DashboardPage() {
                 to: '/tenants',
               },
               {
-                title: 'Maintenance\n& Pannes',
-                icon: Wrench,
-                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-600 text-white',
-                glowClass: 'shadow-amber-500/25',
-                to: '/maintenance',
-                badge: 'TICKETS',
-                badgeBg: 'bg-amber-400 text-black',
+                title: 'Espace\nPropriétaire',
+                icon: Briefcase,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/owner-portal',
               },
               {
-                title: 'KadtEstate\nAI Copilot',
-                icon: Sparkles,
-                colorClass: 'bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white',
-                glowClass: 'shadow-violet-500/25',
-                to: '/ai',
-                badge: 'IA',
-                badgeBg: 'bg-fuchsia-400 text-black',
+                title: 'Mes Annonces\n& Mandats',
+                icon: Building2,
+                colorClass: 'bg-gradient-to-tr from-sky-600 to-blue-700 text-white',
+                glowClass: 'shadow-sky-500/25',
+                to: '/owner-listings',
               },
             ],
           },
           {
-            title: 'FINANCES, LOYERS & PAIEMENTS',
-            subtitle: 'Encaissements Mobile Money, suivi des impayés et trésorerie',
+            title: 'FINANCES, LOYERS & PAIEMENTS IKEEPAY',
+            subtitle: 'Encaissements Mobile Money, suivi des impayés, charges et trésorerie',
             buttons: [
               {
                 title: 'Encaissement\ndes Loyers',
@@ -780,7 +1135,7 @@ export function DashboardPage() {
                 badgeBg: 'bg-teal-300 text-black',
               },
               {
-                title: 'Quittances &\nFactures',
+                title: 'Quittances &\nPaiements',
                 icon: Receipt,
                 colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
                 glowClass: 'shadow-amber-500/25',
@@ -795,17 +1150,83 @@ export function DashboardPage() {
               },
               {
                 title: 'Trésorerie &\nBilan',
-                icon: TrendingUp,
+                icon: BarChart3,
                 colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
                 glowClass: 'shadow-indigo-500/25',
                 to: '/analytics',
               },
               {
-                title: 'Marketplace\nVente',
+                title: 'Marketplace\nVente & Loc',
                 icon: Store,
                 colorClass: 'bg-gradient-to-tr from-orange-500 to-amber-600 text-white',
                 glowClass: 'shadow-orange-500/25',
                 to: '/marketplace',
+              },
+            ],
+          },
+          {
+            title: 'OPÉRATIONS, COMPTEURS & INTELLIGENCE ARTIFICIELLE',
+            subtitle: 'Maintenance technique, documents d’archive, compteurs, IA et chefferie',
+            buttons: [
+              {
+                title: 'Maintenance\n& Pannes',
+                icon: Wrench,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/maintenance',
+                badge: 'TICKETS',
+                badgeBg: 'bg-amber-400 text-black',
+              },
+              {
+                title: 'KadtEstate\nAI Copilot',
+                icon: Sparkles,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/ai',
+                badge: 'IA',
+                badgeBg: 'bg-fuchsia-400 text-black',
+              },
+              {
+                title: 'Documents &\nArchives',
+                icon: FolderOpen,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/documents',
+              },
+              {
+                title: 'Messagerie &\nLocataires',
+                icon: MessageSquare,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/messages',
+              },
+              {
+                title: 'Relevé des\nCompteurs',
+                icon: Gauge,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-teal-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/utilities',
+              },
+              {
+                title: 'Chefferie &\nQuartier',
+                icon: Crown,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-indigo-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/quartier',
+              },
+              {
+                title: 'Notifications\nde Gestion',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/notifications',
+              },
+              {
+                title: 'Paramètres\ndu Compte',
+                icon: Settings,
+                colorClass: 'bg-gradient-to-tr from-slate-600 to-slate-800 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/settings',
               },
             ],
           },
@@ -849,7 +1270,7 @@ export function DashboardPage() {
         </div>
 
         {/* Global Quick Action CTAs */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             onClick={() => setIkeepayPayinOpen(true)}
@@ -870,6 +1291,17 @@ export function DashboardPage() {
               <span>Clés Ikeepay</span>
             </Button>
           )}
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleLogout}
+            className="bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border-rose-500/30 font-bold text-xs px-3.5 py-2 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            title="Se déconnecter pour pouvoir se reconnecter à un autre compte"
+          >
+            <LogOut className="size-4" />
+            <span>Déconnexion</span>
+          </Button>
         </div>
       </div>
 

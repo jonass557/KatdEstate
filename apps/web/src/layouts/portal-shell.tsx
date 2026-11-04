@@ -50,9 +50,14 @@ export function PortalShell() {
               <p className="text-xs text-muted-foreground">{user?.displayName}</p>
             </div>
           </div>
-          <button type="button" onClick={() => void signOut()} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-            <LogOut className="size-4" aria-hidden />
-            Sortir
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-400 transition hover:bg-rose-500 hover:text-white"
+            title="Se déconnecter pour changer de compte"
+          >
+            <LogOut className="size-3.5" aria-hidden />
+            <span>Déconnexion</span>
           </button>
         </div>
         <nav className="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-3 pb-2">
