@@ -5,27 +5,27 @@ export interface LeaseContractData {
   leaseNumber: string;
   propertyName: string;
   propertyAddress: string;
-  propertyZone?: string;
+  propertyZone?: string | undefined;
   propertyCity: string;
   unitName: string;
   unitType: string;
-  unitNumber?: string;
-  floor?: number;
+  unitNumber?: string | undefined;
+  floor?: number | undefined;
   tenantName: string;
-  tenantPhone?: string;
-  tenantEmail?: string;
-  tenantIdNumber?: string;
+  tenantPhone?: string | undefined;
+  tenantEmail?: string | undefined;
+  tenantIdNumber?: string | undefined;
   ownerName: string;
-  ownerPhone?: string;
-  ownerEmail?: string;
+  ownerPhone?: string | undefined;
+  ownerEmail?: string | undefined;
   startDate: string;
   endDate: string;
   dueDay: number;
   rentAmountMinor: number;
-  chargesAmountMinor?: number;
-  depositAmountMinor?: number;
-  currency?: string;
-  terms?: string;
+  chargesAmountMinor?: number | undefined;
+  depositAmountMinor?: number | undefined;
+  currency?: string | undefined;
+  terms?: string | undefined;
 }
 
 interface LeaseContractModalProps {

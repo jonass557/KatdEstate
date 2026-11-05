@@ -37,6 +37,11 @@ export function createPlatformRouter(config: AppConfig) {
   router.use(createAuthenticate(config), requireSuperAdmin);
 
   router.get('/overview', respond(service.overview));
+  router.get('/owners', respond(service.listOwners));
+  router.post('/owners/:id/suspend', respond(service.suspendOwner));
+  router.post('/owners/:id/reactivate', respond(service.reactivateOwner));
+  router.delete('/owners/:id', respond(service.deleteOwner));
+  router.patch('/owners/:id/subscription', respond(service.updateOwnerSubscription));
   router.get('/organizations', respond(service.listOrganizations));
   router.post('/organizations/:id/suspend', validateRequest(z.object({ id: objectIdSchema }), 'params'), respond(service.suspendOrganization));
   router.post('/organizations/:id/reactivate', validateRequest(z.object({ id: objectIdSchema }), 'params'), respond(service.reactivateOrganization));

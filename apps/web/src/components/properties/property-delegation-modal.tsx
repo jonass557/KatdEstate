@@ -8,23 +8,23 @@ export interface DelegationData {
   managerName: string;
   managerEmail: string;
   managerPhone: string;
-  agencyName?: string;
+  agencyName?: string | undefined;
   scope: 'ALL_PORTFOLIO' | 'PROPERTY';
   permissions: string[];
   commissionRate: number;
-  startDate?: string;
-  endDate?: string;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
   status: 'ACTIVE' | 'SUSPENDED' | 'REVOKED';
-  notes?: string;
+  notes?: string | undefined;
 }
 
 interface PropertyDelegationModalProps {
   propertyName: string;
   propertyId: string;
-  initial?: DelegationData;
+  initial?: DelegationData | null | undefined;
   onSave: (data: DelegationData) => void;
   onClose: () => void;
-  isSubmitting?: boolean;
+  isSubmitting?: boolean | undefined;
 }
 
 export function PropertyDelegationModal({

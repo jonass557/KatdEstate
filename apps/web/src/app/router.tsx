@@ -37,6 +37,7 @@ import { MarketplacePage } from '../pages/marketplace';
 import { AgentPage } from '../pages/agent';
 import { OwnerListingsPage } from '../pages/owner-listings';
 import { AdminMarketplacePage } from '../pages/admin-marketplace';
+import { AdminOwnersPage } from '../pages/admin-owners';
 import { QuartierHomePage } from '../pages/quartier/quartier-home';
 import type { ReactNode } from 'react';
 
@@ -154,6 +155,8 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'admin/owners', element: <AdminOwnersPage /> },
+      { path: 'platform/owners', element: <AdminOwnersPage /> },
       { path: 'properties/new', element: <RequirePermission permission="properties.create"><PropertyFormPage mode="create" /></RequirePermission> },
       { path: 'properties/:id', element: <RequirePermission permission="properties.view"><PropertyDetailPage /></RequirePermission> },
       { path: 'properties/:id/edit', element: <RequirePermission permission="properties.update"><PropertyFormPage mode="edit" /></RequirePermission> },

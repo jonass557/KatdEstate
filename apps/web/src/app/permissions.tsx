@@ -1,5 +1,5 @@
 import type { Permission } from '@rentflow/shared';
-import { hasAnyPermission, hasPermission, resolvePermissions } from '@rentflow/shared';
+import { PERMISSIONS, hasAnyPermission, hasPermission, resolvePermissions } from '@rentflow/shared';
 import { useCallback, useMemo } from 'react';
 import { useOrganization } from './organization';
 import { PREVIEW_PERMISSIONS, useSession } from './session';
@@ -16,19 +16,29 @@ import { PREVIEW_PERMISSIONS, useSession } from './session';
  * une frontière de sécurité, l'API revalidant chaque requête.
  */
 export function usePermissions(): readonly Permission[] {
-  const { memberships, isPreview } = useSession();
+  const { user, memberships, isPreview } = useSession();
   const { activeOrganizationId } = useOrganization();
 
   return useMemo(() => {
     if (isPreview) return PREVIEW_PERMISSIONS;
 
-    const membership = memberships.find((entry) => entry.organizationId === activeOrganizationId);
+    const role =
+      (user as unknown as { role?: string; platformRole?: string })?.role ||
+      (user as unknown as { role?: string; platformRole?: string })?.platformRole ||
+      memberships[0]?.role;
+
+    if (role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'OWNER') {
+      return PERMISSIONS;
+    }
+
+    const membership =
+      memberships.find((entry) => entry.organizationId === activeOrganizationId) ?? memberships[0];
     if (!membership) return [];
 
     return membership.permissions.length > 0
       ? membership.permissions
       : resolvePermissions(membership.role);
-  }, [memberships, activeOrganizationId, isPreview]);
+  }, [memberships, activeOrganizationId, isPreview, user]);
 }
 
 /** Test d'une permission unique. */

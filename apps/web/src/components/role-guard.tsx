@@ -3,6 +3,7 @@ import { ShieldAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useCan, useCanAny } from '../app/permissions';
+import { useSession } from '../app/session';
 import { buttonVariants } from './ui/button';
 
 /**
@@ -72,6 +73,14 @@ interface RequirePermissionProps {
 
 export function RequirePermission({ permission, children }: RequirePermissionProps) {
   const can = useCan();
+  const { user, memberships } = useSession();
+  const role = (user as unknown as { role?: string; platformRole?: string })?.role || (user as unknown as { role?: string; platformRole?: string })?.platformRole || memberships[0]?.role;
+
+  // Le propriétaire, le super administrateur et l'administrateur ont un accès total sans restriction
+  if (role === 'OWNER' || role === 'SUPER_ADMIN' || role === 'ADMIN') {
+    return <>{children}</>;
+  }
+
   if (!can(permission)) return <ForbiddenState permission={permission} />;
   return <>{children}</>;
 }

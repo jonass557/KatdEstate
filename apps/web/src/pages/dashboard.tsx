@@ -145,6 +145,15 @@ export function DashboardPage() {
                 badgeBg: 'bg-slate-400 text-black',
               },
               {
+                title: 'Gestion des\nPropriétaires',
+                icon: Building2,
+                colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-700 text-white',
+                glowClass: 'shadow-emerald-500/25',
+                to: '/admin/owners',
+                badge: 'BAILLEURS',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
                 title: 'Équipe &\nRôles',
                 icon: Users,
                 colorClass: 'bg-gradient-to-tr from-indigo-700 to-purple-800 text-white',

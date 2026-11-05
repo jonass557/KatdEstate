@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { tenantInputSchema, type TenantInput } from '@rentflow/shared';
+import { tenantInputSchema } from '@rentflow/shared';
 import { PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -80,12 +80,12 @@ interface TenantAccessCard {
   email: string;
   password: string;
   phone?: string | undefined;
-  propertyName?: string;
-  unitName?: string;
-  unitNumber?: string;
-  dueDay?: number;
-  rentAmount?: number;
-  leaseNumber?: string;
+  propertyName?: string | undefined;
+  unitName?: string | undefined;
+  unitNumber?: string | undefined;
+  dueDay?: number | undefined;
+  rentAmount?: number | undefined;
+  leaseNumber?: string | undefined;
 }
 
 const STORAGE_CREDENTIALS_KEY = 'katdestate_tenant_credentials';
@@ -116,10 +116,12 @@ export function TenantsPage() {
 
   // Déclenchement automatique des alertes d'échéances et d'expiration
   const triggerRemindersMutation = useMutation({
-    mutationFn: () =>
-      apiRequest(`${base}/notifications/trigger-reminders`, {
+    mutationFn: async () => {
+      const res = await apiRequest(`${base}/notifications/trigger-reminders`, {
         method: 'POST',
-      }),
+      });
+      return res as { message?: string; dispatchedCount?: number };
+    },
     onSuccess: (data: { message?: string; dispatchedCount?: number }) => {
       void client.invalidateQueries();
       toast({
@@ -128,7 +130,7 @@ export function TenantsPage() {
         variant: 'success',
       });
     },
-    onError: (err: Error) => {
+    onError: (_err: Error) => {
       // Fallback si l'endpoint spécifique n'est pas encore redémarré
       toast({
         title: 'Vérification effectuée avec succès',
@@ -165,7 +167,7 @@ export function TenantsPage() {
     window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
-  const handleSendSingleReminder = (tenant: Tenant, propName?: string, unitNum?: string, dueDay: number = 5, rentAmount: number = 100000) => {
+  const handleSendSingleReminder = (tenant: Tenant, _propName?: string, _unitNum?: string, _dueDay: number = 5, _rentAmount: number = 100000) => {
     toast({
       title: 'Alerte email d’échéance envoyée',
       description: `Notification email d’échéance de loyer transmise à ${tenant.fullName} (${tenant.email || 'locataire@katdestate.immo'}) et au propriétaire.`,

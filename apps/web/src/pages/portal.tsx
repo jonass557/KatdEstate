@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Bell, FileText, Home, MessageSquare, Receipt, Send, Wallet, Smartphone, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Bell, FileText, Home, MessageSquare, Receipt, Send, Wallet, Smartphone, ShieldCheck } from 'lucide-react';
 import { maintenanceTicketInputSchema } from '@rentflow/shared';
 import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
