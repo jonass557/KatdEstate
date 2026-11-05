@@ -40,7 +40,7 @@ export function InteractiveQuartierMap() {
         {/* Filters */}
         <div className="grid gap-3 sm:grid-cols-3 pt-3">
           <Input
-            placeholder="Rechercher par adresse ou ID KadtEstate..."
+            placeholder="Rechercher par adresse ou ID KatdEstate..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -117,7 +117,7 @@ export function InteractiveQuartierMap() {
 
         {/* Bottom Legend */}
         <div className="relative z-10 text-[11px] text-white/70 flex items-center justify-between border-t border-white/10 pt-2">
-          <span>Secteurs géographiques couverts par KadtEstate Quartier & Chefferie</span>
+          <span>Secteurs géographiques couverts par KatdEstate Quartier & Chefferie</span>
           <span>Précision cadastrale locale sécurisée</span>
         </div>
       </div>

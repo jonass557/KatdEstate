@@ -16,7 +16,7 @@ const marketingSettingsSchema = new Schema(
     organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', index: true },
     tickerBanners: { type: [bannerItemSchema], default: [] },
     contactInfo: {
-      email: { type: String, default: 'contact@kadtestate.immo' },
+      email: { type: String, default: 'contact@katdestate.immo' },
       phone: { type: String, default: '+225 07 00 00 00 00' },
       whatsapp: { type: String, default: '+225 07 00 00 00 00' },
       address: { type: String, default: 'Abidjan, Cocody Riviera Palmeraie & Dakar, Plateau' },

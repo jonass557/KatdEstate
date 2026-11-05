@@ -24,7 +24,7 @@ export const API_BASE_URL: string =
   (typeof window !== 'undefined' &&
   window.location.hostname !== 'localhost' &&
   window.location.hostname !== '127.0.0.1'
-    ? 'https://kadtestate-api.onrender.com/api/v1'
+    ? 'https://katdestate-api.onrender.com/api/v1'
     : 'http://localhost:4000/api/v1');
 
 /** Délai au-delà duquel une requête est considérée comme perdue. */
@@ -39,7 +39,7 @@ const REQUEST_TIMEOUT_MS = 20_000;
  * lisible par n'importe quel script injecté (XSS). La persistance de session
  * repose sur le cookie `HttpOnly` de refresh, inaccessible au JavaScript.
  */
-const ACCESS_TOKEN_KEY = 'kadtestate_access_token';
+const ACCESS_TOKEN_KEY = 'katdestate_access_token';
 
 let accessToken: string | null =
   typeof localStorage !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
@@ -194,7 +194,7 @@ axiosInstance.interceptors.response.use(
       // (ex: /dashboard, /properties, /notifications). On vérifie s'il existe une session locale active.
       const hasActiveSession =
         typeof localStorage !== 'undefined' &&
-        !!localStorage.getItem('kadtestate_active_session');
+        !!localStorage.getItem('katdestate_active_session');
 
       const url = config.url || '';
       const isAuthCheck = url.includes('/auth/me') || url.includes('/auth/refresh');

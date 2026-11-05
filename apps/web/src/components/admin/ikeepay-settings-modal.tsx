@@ -193,7 +193,7 @@ export function IkeepaySettingsModal({
                 <span>URL de Webhook à renseigner chez Ikeepay :</span>
               </div>
               <code className="block bg-slate-200/70 dark:bg-slate-800 p-1.5 rounded text-[11px] select-all font-mono">
-                https://kadtestate-api.onrender.com/api/v1/payments/ikeepay/webhook
+                https://katdestate-api.onrender.com/api/v1/payments/ikeepay/webhook
               </code>
             </div>
 

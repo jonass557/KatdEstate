@@ -18,7 +18,8 @@ import {
   Phone,
   Mail,
   User,
-  Lock
+  Lock,
+  Search
 } from 'lucide-react';
 import { useSession } from '../app/session';
 import { Button } from '../components/ui/button';
@@ -28,7 +29,7 @@ import { ApiError } from '../lib/api-client';
 type RegisterFormValues = z.input<typeof registerSchema>;
 
 interface RoleCard {
-  id: 'OWNER' | 'TENANT' | 'AGENT' | 'NEIGHBORHOOD_LEADER' | 'BLOCK_LEADER' | 'RESIDENT';
+  id: 'OWNER' | 'TENANT' | 'AGENT' | 'NEIGHBORHOOD_LEADER' | 'BLOCK_LEADER' | 'RESIDENT' | 'USER';
   title: string;
   badge: string;
   icon: typeof Building2;
@@ -38,6 +39,15 @@ interface RoleCard {
 }
 
 const ROLES_LIST: RoleCard[] = [
+  {
+    id: 'USER',
+    title: 'Client / Chercheur de Biens',
+    badge: 'Achat & Location',
+    icon: Search,
+    gradient: 'from-emerald-500 to-teal-700',
+    description: 'Trouvez un logement, meublé, studio ou parcelle et contactez directement les bailleurs et agents.',
+    features: ['Accès complet aux coordonnées', 'Messagerie instantanée directe', 'Demandes de visite & alertes'],
+  },
   {
     id: 'OWNER',
     title: 'Propriétaire / Bailleur',
@@ -181,7 +191,7 @@ export function RegisterPage() {
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium tracking-wide">
             <Sparkles className="size-3.5" />
-            Inscription Officielle KadtEstate
+            Inscription Officielle KatdEstate
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
             Rejoignez l'écosystème immobilier de référence
@@ -361,7 +371,7 @@ export function RegisterPage() {
               </Button>
 
               <p className="text-center text-[11px] text-slate-500">
-                En créant un compte, vous acceptez les conditions d'utilisation de la plateforme KadtEstate et la charte de confidentialité foncière.
+                En créant un compte, vous acceptez les conditions d'utilisation de la plateforme KatdEstate et la charte de confidentialité foncière.
               </p>
             </form>
           </div>

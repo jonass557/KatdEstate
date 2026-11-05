@@ -8,7 +8,7 @@ export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   displayName: displayNameSchema,
-  role: z.enum(['OWNER', 'TENANT', 'AGENT', 'NEIGHBORHOOD_LEADER', 'BLOCK_LEADER', 'RESIDENT']).optional(),
+  role: z.enum(['OWNER', 'TENANT', 'AGENT', 'NEIGHBORHOOD_LEADER', 'BLOCK_LEADER', 'RESIDENT', 'USER', 'CLIENT']).optional(),
   phone: z.string().max(32).optional(),
 }).strict();
 export const refreshTokenSchema = z.object({ refreshToken: z.string().min(20).max(4096).optional() }).strict();

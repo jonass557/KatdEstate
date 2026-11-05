@@ -46,7 +46,7 @@ export async function uploadToCloudinary(
   }
 
   const result = await cloudinary.uploader.upload(fileSource, {
-    folder: options.folder ?? 'kadtestate',
+    folder: options.folder ?? 'katdestate',
     public_id: options.publicId,
     resource_type: options.resourceType ?? 'auto',
   });

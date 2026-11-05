@@ -53,7 +53,7 @@ export const NAVIGATION: readonly NavSection[] = [
       },
       {
         path: '/ai',
-        label: 'KadtEstate AI',
+        label: 'KatdEstate AI',
         icon: Sparkles,
         phase: 'Livré',
         permission: 'reports.view',
@@ -68,7 +68,7 @@ export const NAVIGATION: readonly NavSection[] = [
     ],
   },
   {
-    label: 'KadtEstate Quartier & Chefferie',
+    label: 'KatdEstate Quartier & Chefferie',
     items: [
       {
         path: '/quartier',

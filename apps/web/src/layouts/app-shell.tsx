@@ -1,11 +1,9 @@
-import { LogOut, Menu, Search, X } from 'lucide-react';
+import { LayoutDashboard, LogOut, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useOrganization } from '../app/organization';
-import { useCan } from '../app/permissions';
 import { useSession } from '../app/session';
 import { useSocket } from '../app/socket';
-import { NAVIGATION } from '../lib/navigation';
 import { initials } from '../lib/format';
 import { cn } from '../lib/utils';
 import { CommandPalette } from '../components/command-palette';
@@ -13,81 +11,45 @@ import { OrganizationSwitcher } from '../components/organization-switcher';
 import { ThemeToggle } from '../components/theme-toggle';
 import { Badge } from '../components/ui/badge';
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
-  const can = useCan();
-
-  const sections = NAVIGATION.map((section) => ({
-    label: section.label,
-    items: section.items.filter((item) => !item.permission || can(item.permission)),
-  })).filter((section) => section.items.length > 0);
-
-  return (
-    <nav className="flex flex-1 flex-col gap-5 overflow-y-auto scrollbar-thin px-3 py-4">
-      {sections.map((section) => (
-        <div key={section.label} className="space-y-1">
-          <p className="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {section.label}
-          </p>
-          <ul className="space-y-0.5">
-            {section.items.map((item) => (
-              <li key={item.path}>
-                <NavLink
-                  to={item.path}
-                  end={item.path === '/'}
-                  onClick={onNavigate}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition',
-                      isActive
-                        ? 'bg-accent text-accent-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )
-                  }
-                >
-                  <item.icon className="size-4 shrink-0" aria-hidden />
-                  <span className="truncate">{item.label}</span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </nav>
-  );
-}
-
 function Brand() {
   return (
-    <Link to="/" className="flex items-center gap-2.5 px-3 pt-5 group cursor-pointer" title="Retour à l'accueil KadtEstate">
-      <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground group-hover:scale-105 transition-transform">
+    <Link to="/dashboard" className="flex items-center gap-2 group cursor-pointer" title="Retour au tableau de bord KatdEstate">
+      <span className="flex size-9 items-center justify-center rounded-xl bg-emerald-500 text-slate-950 text-sm font-black shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
         KE
       </span>
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold tracking-tight group-hover:text-primary transition-colors">KadtEstate</span>
-        <span className="block truncate text-[11px] text-muted-foreground">Immobilier & Chefferie</span>
-      </span>
+      <div className="flex flex-col">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-black tracking-tight text-foreground group-hover:text-emerald-400 transition-colors">
+            KatdEstate
+          </span>
+          <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            PRO
+          </span>
+        </div>
+        <span className="text-[10px] text-muted-foreground leading-none hidden sm:block">
+          Plateforme Immobilière & Sécurité Urbaine
+        </span>
+      </div>
     </Link>
   );
 }
 
 export function AppShell() {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const location = useLocation();
   const { activeOrganization } = useOrganization();
-  const { isPreview, user, signOut } = useSession();
+  const { user, signOut } = useSession();
   const { isConnected } = useSocket();
 
-  const userInitials = user ? initials(user.displayName) : 'AP';
+  const userInitials = user ? initials(user.displayName) : 'KE';
 
-  const handleSignOut = () => {
-    void signOut();
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } finally {
+      navigate('/sign-in', { replace: true });
+    }
   };
-
-  // Close the mobile drawer whenever the route changes.
-  useEffect(() => {
-    setMobileNavOpen(false);
-  }, [location.pathname]);
 
   // Global command palette shortcut.
   useEffect(() => {
@@ -102,7 +64,7 @@ export function AppShell() {
   }, []);
 
   return (
-    <div className="flex min-h-dvh bg-background">
+    <div className="min-h-dvh bg-background text-foreground flex flex-col">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
@@ -110,132 +72,91 @@ export function AppShell() {
         Aller au contenu principal
       </a>
 
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-card lg:flex">
-        <Brand />
-        <div className="px-3 pt-4">
-          <OrganizationSwitcher />
+      {/* Header unifié sans menu déroulant / hamburger : navigation exclusivement sur le tableau de bord */}
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-border/80 bg-background/95 px-4 backdrop-blur-md sm:px-6">
+        
+        {/* Logo Brand + Organisation */}
+        <div className="flex items-center gap-3">
+          <Brand />
+          <div className="hidden md:block border-l border-border/60 pl-3">
+            <OrganizationSwitcher />
+          </div>
         </div>
-        <NavLinks />
-        <div className="space-y-2 border-t border-border p-3">
-          {isPreview ? (
-            <p className="rounded-lg bg-amber-500/10 px-2.5 py-2 text-[11px] leading-snug text-amber-700 dark:text-amber-400">
-              Mode aperçu — l’API d’identité est indisponible, aucune session réelle n’est ouverte.
-            </p>
-          ) : null}
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            <LogOut className="size-4 shrink-0" aria-hidden />
-            Se déconnecter
-          </button>
-        </div>
-      </aside>
 
-      {/* Mobile drawer */}
-      {mobileNavOpen ? (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div
-            className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-            onClick={() => setMobileNavOpen(false)}
-            aria-hidden
-          />
-          <aside className="animate-in absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col border-r border-border bg-card">
-            <div className="flex items-center justify-between pr-3">
-              <Brand />
-              <button
-                type="button"
-                onClick={() => setMobileNavOpen(false)}
-                className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                aria-label="Fermer la navigation"
-              >
-                <X className="size-4" aria-hidden />
-              </button>
-            </div>
-            <div className="px-3 pt-4">
-              <OrganizationSwitcher />
-            </div>
-            <NavLinks onNavigate={() => setMobileNavOpen(false)} />
-            <div className="space-y-2 border-t border-border p-3">
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="flex w-full items-center gap-2 rounded-lg bg-rose-500/10 px-2.5 py-2 text-sm font-semibold text-rose-500 transition hover:bg-rose-500 hover:text-white"
-              >
-                <LogOut className="size-4 shrink-0" aria-hidden />
-                Se déconnecter
-              </button>
-            </div>
-          </aside>
-        </div>
-      ) : null}
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur sm:px-6">
-          <button
-            type="button"
-            onClick={() => setMobileNavOpen(true)}
-            className="inline-flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground lg:hidden"
-            aria-label="Ouvrir la navigation"
+        {/* Centre : Raccourci vers Dashboard & Recherche */}
+        <div className="flex items-center gap-2 flex-1 max-w-md justify-center">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all shadow-sm"
+            title="Revenir au tableau de bord des fonctionnalités"
           >
-            <Menu className="size-4" aria-hidden />
-          </button>
+            <LayoutDashboard className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Tableau de bord</span>
+          </Link>
 
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}
-            className="flex h-9 flex-1 items-center gap-2 rounded-lg border border-border px-3 text-left text-sm text-muted-foreground transition hover:bg-muted sm:max-w-sm"
+            className="flex h-9 flex-1 items-center gap-2 rounded-xl border border-border/80 bg-card/60 px-3 text-left text-xs text-muted-foreground transition hover:bg-muted"
           >
-            <Search className="size-4 shrink-0" aria-hidden />
-            <span className="truncate">Rechercher…</span>
-            <kbd className="ml-auto hidden shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] sm:block">
+            <Search className="size-3.5 shrink-0" aria-hidden />
+            <span className="truncate">Rechercher une action…</span>
+            <kbd className="ml-auto hidden shrink-0 rounded border border-border px-1.5 py-0.5 text-[9px] sm:block">
               Ctrl K
             </kbd>
           </button>
+        </div>
 
-          <div className="ml-auto flex items-center gap-2">
+        {/* Droite : Statut, Thème, Profil et Déconnexion immédiate */}
+        <div className="flex items-center gap-2">
+          <span
+            className="hidden items-center gap-1.5 text-xs text-muted-foreground lg:flex"
+            title={isConnected ? 'Temps réel connecté' : 'Temps réel inactif'}
+          >
             <span
-              className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex"
-              title={isConnected ? 'Temps réel connecté' : 'Temps réel inactif'}
-            >
-              <span
-                className={cn(
-                  'size-2 rounded-full',
-                  isConnected ? 'bg-emerald-500' : 'bg-muted-foreground/50',
-                )}
-                aria-hidden
-              />
-              {isConnected ? 'Temps réel' : 'Hors ligne'}
-            </span>
-            <Badge className="hidden md:inline-flex">{activeOrganization.currency}</Badge>
-            <ThemeToggle />
-            <span
-              className="flex size-9 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground"
-              title={user?.displayName ?? 'Mode aperçu'}
-            >
-              {userInitials}
-            </span>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-semibold text-rose-400 transition hover:bg-rose-500 hover:text-white"
-              title="Se déconnecter pour changer de compte"
-            >
-              <LogOut className="size-3.5 shrink-0" aria-hidden />
-              <span className="hidden sm:inline">Déconnexion</span>
-            </button>
-          </div>
-        </header>
+              className={cn(
+                'size-2 rounded-full',
+                isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/50',
+              )}
+              aria-hidden
+            />
+            {isConnected ? 'En direct' : 'Hors ligne'}
+          </span>
 
-        <main
-          id="main-content"
-          className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8"
-        >
-          <Outlet />
-        </main>
-      </div>
+          {activeOrganization?.currency && (
+            <Badge className="hidden sm:inline-flex bg-card border-border text-[11px] font-bold">
+              {activeOrganization.currency}
+            </Badge>
+          )}
+
+          <ThemeToggle />
+
+          <span
+            className="flex size-8.5 items-center justify-center rounded-xl bg-primary/20 text-primary border border-primary/30 text-xs font-black"
+            title={user?.displayName ?? 'Profil'}
+          >
+            {userInitials}
+          </span>
+
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-400 transition hover:bg-rose-500 hover:text-white shadow-sm"
+            title="Se déconnecter pour changer de compte"
+          >
+            <LogOut className="size-3.5 shrink-0" aria-hidden />
+            <span className="hidden sm:inline">Déconnexion</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Contenu principal plein écran sans barre latérale parasite */}
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8"
+      >
+        <Outlet />
+      </main>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>

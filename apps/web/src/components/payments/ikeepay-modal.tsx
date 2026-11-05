@@ -69,7 +69,7 @@ export function IkeepayModal({
           otp: otp || undefined,
           purpose,
           referenceId,
-          description: description || `Paiement ${purpose} sur KadtEstate`,
+          description: description || `Paiement ${purpose} sur KatdEstate`,
         },
       });
 

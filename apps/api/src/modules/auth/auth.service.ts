@@ -94,7 +94,7 @@ export async function register(
   });
   const slug = `${input.displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'organisation'}-${String(user._id).slice(-6)}`;
   const organization = await Organization.create({
-    name: `${input.displayName} — Espace KadtEstate`,
+    name: `${input.displayName} — Espace KatdEstate`,
     slug,
     country: 'CI',
     currency: 'XOF',

@@ -41,7 +41,7 @@ import { QuartierHomePage } from '../pages/quartier/quartier-home';
 import type { ReactNode } from 'react';
 
 /**
- * Table de routage KadtEstate.
+ * Table de routage KatdEstate.
  */
 const PAGES: Record<string, ReactNode> = {
   '/dashboard': <DashboardPage />,
@@ -81,7 +81,7 @@ const moduleRoutes = NAV_ITEMS.filter((item) => item.path !== '/' && item.path !
 });
 
 const router = createBrowserRouter([
-  // Page d'accueil publique KadtEstate
+  // Page d'accueil publique KatdEstate
   {
     path: '/',
     element: <LandingPage />,

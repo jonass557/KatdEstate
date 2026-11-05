@@ -179,7 +179,7 @@ export function ChefferieDashboard() {
             </span>
             <h1 className="text-xl font-black text-foreground">Chefferie Traditionnelle & Immobilière</h1>
             <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-              KadtEstate Chefferie
+              KatdEstate Chefferie
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -1190,7 +1190,7 @@ export function ChefferieDashboard() {
             {/* Verification Footer */}
             <div className="flex items-center justify-between pt-2 text-[10px] text-slate-500 border-t border-slate-200 font-mono">
               <span>Code vérification : {selectedCertificate.verificationCode}</span>
-              <span>Plateforme KadtEstate</span>
+              <span>Plateforme KatdEstate</span>
             </div>
 
             {/* Action buttons */}

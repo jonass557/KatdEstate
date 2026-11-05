@@ -84,7 +84,7 @@ export function AdminQuartierPage() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">
-            Administration KadtEstate Quartier & Chefferie
+            Administration KatdEstate Quartier & Chefferie
           </h1>
           <p className="text-xs text-muted-foreground">
             Découpage territorial, nomination des chefs de secteur, abonnements et supervision nationale.

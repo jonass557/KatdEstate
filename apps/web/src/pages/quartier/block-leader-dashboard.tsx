@@ -427,7 +427,7 @@ export function BlockLeaderDashboard() {
             <table className="w-full text-left text-xs">
               <thead className="bg-muted/50 border-b border-border font-semibold text-muted-foreground">
                 <tr>
-                  <th className="p-3">ID KadtEstate</th>
+                  <th className="p-3">ID KatdEstate</th>
                   <th className="p-3">Adresse & Repère</th>
                   <th className="p-3">Type</th>
                   <th className="p-3">Logements</th>

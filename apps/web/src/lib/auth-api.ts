@@ -32,22 +32,22 @@ interface AuthTokensResponse {
 }
 
 const DEMO_PROFILES: Record<string, { role: string; name: string; orgName: string; platformRole?: string }> = {
-  'admin@kadtestate.immo': { role: 'SUPER_ADMIN', name: 'Direction Super Admin', orgName: 'KadtEstate Siège', platformRole: 'SUPER_ADMIN' },
-  'chef.quartier@kadtestate.immo': { role: 'NEIGHBORHOOD_LEADER', name: 'Nanan Kouamé N\'Guessan', orgName: 'Chefferie de Cocody' },
-  'chef.bloc@kadtestate.immo': { role: 'BLOCK_LEADER', name: 'M. Bakary Diarra', orgName: 'Bloc Riviera Palmeraie 2' },
-  'proprietaire@kadtestate.immo': { role: 'OWNER', name: 'M. Amadou Diallo', orgName: 'Patrimoine & SCI Diallo' },
-  'locataire@kadtestate.immo': { role: 'TENANT', name: 'Mme Aïssatou Traoré', orgName: 'Résidence Palmeraie' },
-  'agent@kadtestate.immo': { role: 'AGENT', name: 'M. Koffi N\'Dri', orgName: 'Agence Immobilière Ivoire' },
-  'resident@kadtestate.immo': { role: 'RESIDENT', name: 'M. Yao Konan', orgName: 'Foyer Citoyen Konan' },
+  'admin@katdestate.immo': { role: 'SUPER_ADMIN', name: 'Direction Super Admin', orgName: 'KatdEstate Siège', platformRole: 'SUPER_ADMIN' },
+  'chef.quartier@katdestate.immo': { role: 'NEIGHBORHOOD_LEADER', name: 'Nanan Kouamé N\'Guessan', orgName: 'Chefferie de Cocody' },
+  'chef.bloc@katdestate.immo': { role: 'BLOCK_LEADER', name: 'M. Bakary Diarra', orgName: 'Bloc Riviera Palmeraie 2' },
+  'proprietaire@katdestate.immo': { role: 'OWNER', name: 'M. Amadou Diallo', orgName: 'Patrimoine & SCI Diallo' },
+  'locataire@katdestate.immo': { role: 'TENANT', name: 'Mme Aïssatou Traoré', orgName: 'Résidence Palmeraie' },
+  'agent@katdestate.immo': { role: 'AGENT', name: 'M. Koffi N\'Dri', orgName: 'Agence Immobilière Ivoire' },
+  'resident@katdestate.immo': { role: 'RESIDENT', name: 'M. Yao Konan', orgName: 'Foyer Citoyen Konan' },
 };
 
-const STORAGE_SESSION_KEY = 'kadtestate_active_session';
+const STORAGE_SESSION_KEY = 'katdestate_active_session';
 
 function guessRoleFromEmail(email: string): { role: string; name: string; orgName: string; platformRole?: string } {
   const lower = email.toLowerCase();
   if (DEMO_PROFILES[lower]) return DEMO_PROFILES[lower];
   if (lower.includes('admin')) {
-    return { role: 'SUPER_ADMIN', name: 'Administrateur Principal', orgName: 'KadtEstate Siège', platformRole: 'SUPER_ADMIN' };
+    return { role: 'SUPER_ADMIN', name: 'Administrateur Principal', orgName: 'KatdEstate Siège', platformRole: 'SUPER_ADMIN' };
   }
   if (lower.includes('quartier') || lower.includes('chefferie')) {
     return { role: 'NEIGHBORHOOD_LEADER', name: 'Chef de Quartier', orgName: 'Chefferie Territoriale' };
@@ -56,7 +56,7 @@ function guessRoleFromEmail(email: string): { role: string; name: string; orgNam
     return { role: 'BLOCK_LEADER', name: 'Chef de Bloc', orgName: 'Bloc Résidentiel' };
   }
   if (lower.includes('locat') || lower.includes('tenant')) {
-    return { role: 'TENANT', name: 'Locataire Résident', orgName: 'Résidence KadtEstate' };
+    return { role: 'TENANT', name: 'Locataire Résident', orgName: 'Résidence KatdEstate' };
   }
   if (lower.includes('agent')) {
     return { role: 'AGENT', name: 'Agent Foncier & Immobilier', orgName: 'Agence Partenaire' };

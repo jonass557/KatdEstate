@@ -40,7 +40,7 @@ export function QuartierHomePage() {
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-600 text-white font-bold text-xs shadow-sm">
               KE
             </span>
-            <h1 className="text-xl font-black text-foreground">KadtEstate Quartier & Chefferie</h1>
+            <h1 className="text-xl font-black text-foreground">KatdEstate Quartier & Chefferie</h1>
             <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
               Recensement, Foncier, Actes & Sécurité
             </span>

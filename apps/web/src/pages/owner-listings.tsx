@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Home,
   UserCheck,
+  Plus
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -10,12 +11,14 @@ import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
 import { apiRequest } from '../lib/api-client';
 import { useOrgPath, useOrgQuery } from '../lib/query';
+import { PublishListingModal } from '../components/marketplace/publish-listing-modal';
 
 export function OwnerListingsPage() {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'listings' | 'mandates' | 'offers' | 'new-mandate'>('listings');
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
 
   // Queries
   const { data: listings } = useOrgQuery<any[]>(['owner-listings'], '/owner/listings');
@@ -71,6 +74,14 @@ export function OwnerListingsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={() => setPublishModalOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5"
+          >
+            <Plus className="size-3.5" />
+            <span>+ Publier une annonce</span>
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setActiveTab('new-mandate')}>
             <UserCheck className="mr-1.5 h-3.5 w-3.5" /> Mandater un agent
           </Button>
@@ -326,6 +337,15 @@ export function OwnerListingsPage() {
           </CardContent>
         </Card>
       )}
+
+      <PublishListingModal
+        isOpen={publishModalOpen}
+        onClose={() => setPublishModalOpen(false)}
+        onPublished={() => {
+          void client.invalidateQueries({ queryKey: ['owner-listings'] });
+          setActiveTab('listings');
+        }}
+      />
     </div>
   );
 }

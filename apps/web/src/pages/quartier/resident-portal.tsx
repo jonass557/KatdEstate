@@ -110,7 +110,7 @@ export function ResidentPortal() {
       <div className="rounded-2xl border border-border bg-card p-5 space-y-2 text-center sm:text-left">
         <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
           <ShieldCheck className="h-3.5 w-3.5" />
-          Espace Habitant & Citoyenneté — KadtEstate Quartier
+          Espace Habitant & Citoyenneté — KatdEstate Quartier
         </div>
         <h1 className="text-2xl font-black text-foreground">Portail Résident & Sécurité Communautaire</h1>
         <p className="text-xs sm:text-sm text-muted-foreground">

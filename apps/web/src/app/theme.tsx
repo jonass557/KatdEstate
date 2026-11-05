@@ -16,7 +16,7 @@ function resolveInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'dark';
   const stored = window.localStorage.getItem(STORAGE_KEY);
   if (stored === 'light' || stored === 'dark') return stored;
-  // Dark mode by default for KadtEstate
+  // Dark mode by default for KatdEstate
   return 'dark';
 }
 

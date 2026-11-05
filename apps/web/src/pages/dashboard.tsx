@@ -259,7 +259,7 @@ export function DashboardPage() {
           },
           {
             title: 'OPÉRATIONS, OUTILS & INTELLIGENCE ARTIFICIELLE',
-            subtitle: 'Marketplace, maintenance technique, documents, compteurs et KadtEstate AI',
+            subtitle: 'Marketplace, maintenance technique, documents, compteurs et KatdEstate AI',
             buttons: [
               {
                 title: 'Marketplace\nPublique',
@@ -271,7 +271,7 @@ export function DashboardPage() {
                 badgeBg: 'bg-amber-400 text-black',
               },
               {
-                title: 'KadtEstate\nAI Copilot',
+                title: 'KatdEstate\nAI Copilot',
                 icon: Sparkles,
                 colorClass: 'bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white',
                 glowClass: 'shadow-violet-500/25',
@@ -437,7 +437,7 @@ export function DashboardPage() {
           },
           {
             title: 'COMMERCE, FINANCES & OUTILS',
-            subtitle: 'Marketplace du quartier, quittances, Ikeepay et KadtEstate AI',
+            subtitle: 'Marketplace du quartier, quittances, Ikeepay et KatdEstate AI',
             buttons: [
               {
                 title: 'Marketplace\nLocale',
@@ -470,7 +470,7 @@ export function DashboardPage() {
                 to: '/notifications',
               },
               {
-                title: 'KadtEstate\nAI Juridique',
+                title: 'KatdEstate\nAI Juridique',
                 icon: Sparkles,
                 colorClass: 'bg-gradient-to-tr from-fuchsia-600 to-purple-600 text-white',
                 glowClass: 'shadow-fuchsia-500/25',
@@ -1058,6 +1058,121 @@ export function DashboardPage() {
           },
         ];
 
+      case 'USER':
+      case 'CLIENT':
+        return [
+          {
+            title: 'RECHERCHE & IMMOBILIER EN LIGNE',
+            subtitle: 'Explorez la marketplace, trouvez des meublés, studios et appartements vérifiés',
+            buttons: [
+              {
+                title: 'Marketplace\nPublique',
+                icon: Store,
+                colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/marketplace',
+                badge: 'OFFRES',
+                badgeBg: 'bg-amber-400 text-black',
+              },
+              {
+                title: 'Chambres &\nStudios Meublés',
+                icon: Home,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-teal-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/marketplace',
+                badge: 'NUITÉE',
+                badgeBg: 'bg-cyan-400 text-black',
+              },
+              {
+                title: 'Appartements\n& Villas',
+                icon: Building2,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/marketplace',
+              },
+              {
+                title: 'Messagerie avec\nBailleurs / Agents',
+                icon: MessageSquare,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-purple-700 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/messages',
+                badge: 'DIRECT',
+                badgeBg: 'bg-purple-300 text-black',
+              },
+              {
+                title: 'Mes Demandes\nde Visites',
+                icon: Calendar,
+                colorClass: 'bg-gradient-to-tr from-pink-600 to-rose-700 text-white',
+                glowClass: 'shadow-pink-500/25',
+                to: '/portal/messages',
+              },
+              {
+                title: 'Estimation de\nPrix par IA',
+                icon: Sparkles,
+                colorClass: 'bg-gradient-to-tr from-fuchsia-600 to-purple-600 text-white',
+                glowClass: 'shadow-fuchsia-500/25',
+                to: '/ai',
+                badge: 'IA',
+                badgeBg: 'bg-fuchsia-400 text-black',
+              },
+            ],
+          },
+          {
+            title: 'SERVICES DE QUARTIER & PAIEMENTS',
+            subtitle: 'Chefferie locale, sécurité, attestation et règlements sécurisés Ikeepay',
+            buttons: [
+              {
+                title: 'Chefferie &\nQuartier',
+                icon: Crown,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-indigo-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/quartier',
+                badge: 'OFFICIEL',
+                badgeBg: 'bg-amber-400 text-black',
+              },
+              {
+                title: 'Paiement\nMobile Money',
+                icon: CreditCard,
+                colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
+                glowClass: 'shadow-emerald-500/30',
+                onClick: () => setIkeepayPayinOpen(true),
+                badge: 'IKEEPAY',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+              {
+                title: 'Alertes &\nSécurité SOS',
+                icon: AlertTriangle,
+                colorClass: 'bg-gradient-to-tr from-red-600 to-rose-700 text-white',
+                glowClass: 'shadow-red-500/25',
+                to: '/quartier',
+                badge: 'SOS',
+                badgeBg: 'bg-red-500 text-white',
+              },
+              {
+                title: 'Mon Profil\nUtilisateur',
+                icon: Users,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-cyan-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/portal/profile',
+              },
+              {
+                title: 'Notifications\n& Alertes',
+                icon: Bell,
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/notifications',
+              },
+              {
+                title: 'Documents &\nReçus',
+                icon: FolderOpen,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/documents',
+              },
+            ],
+          },
+        ];
+
       default: // OWNER / Propriétaire
         return [
           {
@@ -1178,7 +1293,7 @@ export function DashboardPage() {
                 badgeBg: 'bg-amber-400 text-black',
               },
               {
-                title: 'KadtEstate\nAI Copilot',
+                title: 'KatdEstate\nAI Copilot',
                 icon: Sparkles,
                 colorClass: 'bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white',
                 glowClass: 'shadow-violet-500/25',
@@ -1244,6 +1359,8 @@ export function DashboardPage() {
     TENANT: { label: 'Locataire Résident', icon: Home, color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30' },
     AGENT: { label: 'Agent Immobilier Agréé', icon: Briefcase, color: 'text-orange-400 bg-orange-400/10 border-orange-400/30' },
     RESIDENT: { label: 'Résident & Citoyen', icon: Users, color: 'text-rose-400 bg-rose-400/10 border-rose-400/30' },
+    USER: { label: 'Client / Chercheur de Biens', icon: Users, color: 'text-teal-400 bg-teal-400/10 border-teal-400/30' },
+    CLIENT: { label: 'Client / Chercheur de Biens', icon: Users, color: 'text-teal-400 bg-teal-400/10 border-teal-400/30' },
   };
 
   const currentRoleInfo = ROLE_NAMES[userRole] || { label: userRole, icon: ShieldCheck, color: 'text-primary bg-primary/10 border-primary/30' };
@@ -1256,16 +1373,16 @@ export function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/70 pb-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
-            <BackButton to="/" label="Accueil KadtEstate" />
+            <BackButton to="/" label="Accueil KatdEstate" />
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              KadtEstate Pro • Version 2.0
+              KatdEstate Pro • Version 2.0
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
             Tableau de Bord des Fonctionnalités
           </h1>
           <p className="text-xs text-muted-foreground">
-            Connecté en tant que <strong className="text-foreground">{user?.displayName || 'Utilisateur'}</strong> ({activeOrganization?.name || 'KadtEstate'})
+            Connecté en tant que <strong className="text-foreground">{user?.displayName || 'Utilisateur'}</strong> ({activeOrganization?.name || 'KatdEstate'})
           </p>
         </div>
 

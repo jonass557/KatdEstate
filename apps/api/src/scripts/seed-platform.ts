@@ -22,16 +22,16 @@ async function seed() {
   console.log('✅ Connected to MongoDB Atlas');
 
   // 1. Organisation principale
-  let org = await Organization.findOne({ slug: 'kadtestate-global' });
+  let org = await Organization.findOne({ slug: 'katdestate-global' });
   if (!org) {
     org = await Organization.create({
-      name: 'KadtEstate Global',
-      slug: 'kadtestate-global',
+      name: 'KatdEstate Global',
+      slug: 'katdestate-global',
       country: 'CI',
       currency: 'XOF',
       status: 'ACTIVE',
     });
-    console.log('Created Organization: KadtEstate Global');
+    console.log('Created Organization: KatdEstate Global');
   }
 
   const defaultPassword = 'Password123!';
@@ -40,38 +40,38 @@ async function seed() {
   // 2. Utilisateurs de test pour CHAQUE rôle
   const testUsers = [
     {
-      emailNormalized: 'admin@kadtestate.immo',
+      emailNormalized: 'admin@katdestate.immo',
       displayName: 'Valdès Administrateur',
       platformRole: 'SUPER_ADMIN',
       orgRole: 'ADMIN',
     },
     {
-      emailNormalized: 'proprietaire@kadtestate.immo',
+      emailNormalized: 'proprietaire@katdestate.immo',
       displayName: 'Koffi Propriétaire',
       orgRole: 'OWNER',
     },
     {
-      emailNormalized: 'locataire@kadtestate.immo',
+      emailNormalized: 'locataire@katdestate.immo',
       displayName: 'Amadou Locataire',
       orgRole: 'TENANT',
     },
     {
-      emailNormalized: 'agent@kadtestate.immo',
+      emailNormalized: 'agent@katdestate.immo',
       displayName: 'Marc Agent Immobilier',
       orgRole: 'AGENT',
     },
     {
-      emailNormalized: 'chef.quartier@kadtestate.immo',
+      emailNormalized: 'chef.quartier@katdestate.immo',
       displayName: 'Nanan Kouassi (Chef de Quartier & Chefferie)',
       orgRole: 'ADMIN', // Ou accès quartier
     },
     {
-      emailNormalized: 'chef.bloc@kadtestate.immo',
+      emailNormalized: 'chef.bloc@katdestate.immo',
       displayName: 'Ibrahim Chef de Bloc',
       orgRole: 'ADMIN',
     },
     {
-      emailNormalized: 'resident@kadtestate.immo',
+      emailNormalized: 'resident@katdestate.immo',
       displayName: 'Fatou Résidente',
       orgRole: 'TENANT',
     },
@@ -99,7 +99,7 @@ async function seed() {
     }
     createdUserMap[u.emailNormalized] = user;
 
-    // Membership dans KadtEstate Global
+    // Membership dans KatdEstate Global
     await Membership.findOneAndUpdate(
       { organizationId: org._id, userId: user._id },
       {
@@ -113,7 +113,7 @@ async function seed() {
   }
 
   // 3. Profil Agent Immobilier
-  const agentUser = createdUserMap['agent@kadtestate.immo'];
+  const agentUser = createdUserMap['agent@katdestate.immo'];
   if (agentUser) {
     await AgentProfile.findOneAndUpdate(
       { userId: agentUser._id },
@@ -123,11 +123,11 @@ async function seed() {
           firstName: 'Marc',
           lastName: 'Yao',
           phone: '+225 07 11 22 33 44',
-          email: 'agent@kadtestate.immo',
+          email: 'agent@katdestate.immo',
           city: 'Abidjan',
           country: 'CI',
           activityZone: 'Cocody, Marcory, Plateau',
-          bio: 'Agent immobilier agréé KadtEstate avec plus de 8 ans d’expérience dans l’immobilier résidentiel et commercial de prestige.',
+          bio: 'Agent immobilier agréé KatdEstate avec plus de 8 ans d’expérience dans l’immobilier résidentiel et commercial de prestige.',
           experienceYears: 8,
           specialties: ['Villas de luxe', 'Terrains titrés', 'Appartements haut standing'],
           agencyName: 'Kadt Prestige Immobilier',
@@ -204,7 +204,7 @@ async function seed() {
   );
 
   // Affectation des chefs de secteur
-  const chefQuartier = createdUserMap['chef.quartier@kadtestate.immo'];
+  const chefQuartier = createdUserMap['chef.quartier@katdestate.immo'];
   if (chefQuartier) {
     await SectorAssignment.findOneAndUpdate(
       { userId: chefQuartier._id, neighborhoodId: neighborhood._id },
@@ -221,7 +221,7 @@ async function seed() {
     );
   }
 
-  const chefBloc = createdUserMap['chef.bloc@kadtestate.immo'];
+  const chefBloc = createdUserMap['chef.bloc@katdestate.immo'];
   if (chefBloc) {
     await SectorAssignment.findOneAndUpdate(
       { userId: chefBloc._id, blockId: block._id },
@@ -240,7 +240,7 @@ async function seed() {
   }
 
   // 5. Propriétés et Listings Marketplace
-  const proprietaire = createdUserMap['proprietaire@kadtestate.immo'];
+  const proprietaire = createdUserMap['proprietaire@katdestate.immo'];
 
   const seedListings = [
     {
@@ -367,10 +367,10 @@ async function seed() {
           { text: '🛡️ Sécurité de Quartier : Enrôlement par QR code et signalements d’incidents confidentiels actifs', tag: 'COMMUNAUTÉ', isActive: true },
         ],
         contactInfo: {
-          email: 'contact@kadtestate.immo',
+          email: 'contact@katdestate.immo',
           phone: '+225 07 00 00 00 00',
           whatsapp: '+225 07 00 00 00 00',
-          address: 'Siège KadtEstate : Abidjan Cocody Riviera Palmeraie & Dakar Plateau',
+          address: 'Siège KatdEstate : Abidjan Cocody Riviera Palmeraie & Dakar Plateau',
           openingHours: 'Lundi - Samedi : 08h00 - 19h00 (Urgences 24/7)',
           supportNote: 'Support téléphonique et assistance chefferie disponible sans interruption.',
         },
@@ -384,18 +384,18 @@ async function seed() {
     { organizationId: org._id },
     {
       $set: {
-        publicKey: 'ikp_pub_live_kadtestate_001',
+        publicKey: 'ikp_pub_live_katdestate_001',
         secretKey: 'ikp_sec_live_9a8b7c6d5e4f3a2b1c',
         environment: 'LIVE',
         isActive: true,
-        webhookSecret: 'ikp_whsec_secret_signature_kadtestate',
+        webhookSecret: 'ikp_whsec_secret_signature_katdestate',
       },
     },
     { upsert: true },
   );
 
   console.log('\n======================================================');
-  console.log('🎉 SEED KADTESTATE RÉUSSI AVEC SUCCÈS SUR ATLAS !');
+  console.log('🎉 SEED KATDESTATE RÉUSSI AVEC SUCCÈS SUR ATLAS !');
   console.log('======================================================');
   console.log('Mot de passe universel de test : Password123!\n');
   console.log('LISTE DES IDENTIFIANTS PAR RÔLE :');

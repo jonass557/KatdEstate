@@ -126,7 +126,7 @@ const envSchema = z
     CLOUDINARY_CLOUD_NAME: optionalStringSchema,
     CLOUDINARY_API_KEY: optionalStringSchema,
     CLOUDINARY_API_SECRET: optionalStringSchema,
-    CLOUDINARY_FOLDER: z.string().trim().default('kadtestate'),
+    CLOUDINARY_FOLDER: z.string().trim().default('katdestate'),
   })
   .superRefine((value, ctx) => {
     const isProduction = value.NODE_ENV === 'production';

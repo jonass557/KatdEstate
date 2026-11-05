@@ -44,7 +44,7 @@ export function PortalShell() {
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <BackButton to="/" label="Accueil KadtEstate" />
+            <BackButton to="/" label="Accueil KatdEstate" />
             <div>
               <p className="text-sm font-semibold">Mon espace locataire</p>
               <p className="text-xs text-muted-foreground">{user?.displayName}</p>

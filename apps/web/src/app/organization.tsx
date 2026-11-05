@@ -30,8 +30,8 @@ interface OrganizationContextValue {
 }
 
 const DEFAULT_ORGANIZATION: OrganizationSummary = {
-  id: 'org-kadtestate-default',
-  name: 'KadtEstate Espace Principal',
+  id: 'org-katdestate-default',
+  name: 'KatdEstate Espace Principal',
   location: 'Côte d’Ivoire',
   currency: 'XOF',
   timezone: 'Africa/Abidjan',

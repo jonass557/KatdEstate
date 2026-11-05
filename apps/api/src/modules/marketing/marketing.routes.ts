@@ -20,7 +20,7 @@ export function createMarketingRouter(): Router {
             { text: '🛡️ Sécurité citoyenne : Recensement cadastral et signalements confidentiels actifs', tag: 'SÉCURITÉ' },
           ],
           contactInfo: {
-            email: 'contact@kadtestate.immo',
+            email: 'contact@katdestate.immo',
             phone: '+225 07 00 00 00 00',
             whatsapp: '+225 07 00 00 00 00',
             address: 'Abidjan, Cocody Riviera Palmeraie & Dakar, Plateau',

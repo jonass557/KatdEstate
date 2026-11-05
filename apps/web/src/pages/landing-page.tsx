@@ -26,6 +26,7 @@ import {
 import { useSession } from '../app/session';
 import { apiRequest } from '../lib/api-client';
 import { Button } from '../components/ui/button';
+import { HeroCarousel } from '../components/landing/hero-carousel';
 
 interface PublicListing {
   id: string;
@@ -106,7 +107,7 @@ export function LandingPage() {
   const [tickerMessages, setTickerMessages] = useState<string[]>([
     '🏛️ Chefferie de Quartier : Enregistrement obligatoire des transactions foncières et locatives du lundi au samedi.',
     '💳 Paiements Mobile Money : Encaissez et réglez vos loyers en 1 clic via Orange Money, MTN MoMo, Wave et Moov avec la passerelle Ikeepay.',
-    '📜 Certificats Officiels KadtEstate : Documents sécurisés avec QR Code infalsifiable validé par l\'autorité coutumière.',
+    '📜 Certificats Officiels KatdEstate : Documents sécurisés avec QR Code infalsifiable validé par l\'autorité coutumière.',
     '🛡️ Recensement Communautaire : Rapprochez-vous de votre Chef de Bloc pour l\'enrôlement gratuit de votre foyer.',
   ]);
 
@@ -191,7 +192,7 @@ export function LandingPage() {
         </div>
       </div>
 
-      {/* 2. Top Navigation Bar (Style KadtEstate PRO) */}
+      {/* 2. Top Navigation Bar (Style KatdEstate PRO) */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#16042d]/90 border-b border-purple-900/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
@@ -205,7 +206,7 @@ export function LandingPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-black tracking-tight text-white font-mono">
-                  KadtEstate
+                  KatdEstate
                 </span>
                 <span className="text-[11px] uppercase font-black bg-[#00e676] text-slate-950 px-2 py-0.5 rounded-full shadow-sm">
                   PRO
@@ -301,7 +302,7 @@ export function LandingPage() {
         )}
       </header>
 
-      {/* 3. Hero Section (Conforme à la maquette KadtEstate PRO) */}
+      {/* 3. Hero Section (Conforme à la maquette KatdEstate PRO) */}
       <section className="relative pt-12 pb-20 lg:pt-16 lg:pb-28 overflow-hidden bg-gradient-to-b from-[#180436] via-[#2d075a] to-[#120226]">
         {/* Ambient Glows */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[380px] bg-purple-600/25 blur-[140px] rounded-full pointer-events-none -z-10" />
@@ -309,25 +310,15 @@ export function LandingPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           
-          {/* Main Title matching the screenshot */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.18] max-w-4xl mx-auto">
-            L'Immobilier,<br />
-            la Chefferie et la<br />
-            Sécurité de Quartier<br />
-            <span className="mt-4 inline-block bg-[#00e676] text-[#053724] font-black px-6 sm:px-8 py-2 sm:py-2.5 rounded-2xl text-2xl sm:text-4xl shadow-2xl shadow-[#00e676]/35 tracking-tight transform hover:scale-105 transition-transform">
+          {/* Slogan Pill */}
+          <div className="inline-block">
+            <span className="bg-[#00e676] text-[#053724] font-black px-6 sm:px-8 py-2 sm:py-2.5 rounded-2xl text-xl sm:text-3xl shadow-2xl shadow-[#00e676]/35 tracking-tight transform hover:scale-105 transition-transform inline-block">
               Réunis en un Clic.
             </span>
-          </h1>
-
-          {/* Visual Showcase Card with Hero Graphic */}
-          <div className="relative mx-auto max-w-xs sm:max-w-md my-6 rounded-3xl overflow-hidden shadow-2xl shadow-purple-950/90 border border-purple-500/30 group">
-            <img
-              src="/hero-banner.jpg"
-              alt="KadtEstate - L'Immobilier, la Chefferie et la Sécurité de Quartier Réunis en un Clic"
-              className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#120226]/80 via-transparent to-transparent pointer-events-none" />
           </div>
+
+          {/* Interactive Dynamic Hero Carousel managed by Super Admin */}
+          <HeroCarousel />
 
           {/* Curved wave tagline */}
           <p className="text-base sm:text-xl text-purple-100 max-w-2xl mx-auto leading-relaxed font-medium">
@@ -617,7 +608,7 @@ export function LandingPage() {
               Biens & Parcelles Vérifiés
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
-              Vitrine Marketplace KadtEstate
+              Vitrine Marketplace KatdEstate
             </h2>
             <p className="text-slate-400 max-w-xl text-sm sm:text-base">
               Explorez nos propriétés vérifiées par les autorités coutumières et les agents agréés.
@@ -728,7 +719,7 @@ export function LandingPage() {
                 Sécurisation Totale des Ventes de Terrains et Maisons
               </h2>
               <p className="text-slate-300 text-base sm:text-lg leading-relaxed">
-                KadtEstate formalise la gouvernance foncière traditionnelle en numérisant l'ensemble des opérations sous l'autorité du Chef de Quartier. Fini les doubles ventes de terrains ou les faux intermédiaires.
+                KatdEstate formalise la gouvernance foncière traditionnelle en numérisant l'ensemble des opérations sous l'autorité du Chef de Quartier. Fini les doubles ventes de terrains ou les faux intermédiaires.
               </p>
 
               <div className="space-y-4 pt-2">
@@ -819,7 +810,7 @@ export function LandingPage() {
             Support & Direction
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
-            Contactez l'Équipe KadtEstate
+            Contactez l'Équipe KatdEstate
           </h2>
           <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
             Une question sur le déploiement dans votre quartier ou sur un abonnement ? Notre équipe vous répond sous 24h.
@@ -832,7 +823,7 @@ export function LandingPage() {
           <div className="lg:col-span-5 p-8 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-6">
             <h3 className="text-xl font-bold text-white">Coordonnées Officielles</h3>
             <p className="text-sm text-slate-400 leading-relaxed">
-              KadtEstate opère en partenariat avec les chefferies communales, les syndics et les ministères en charge de la gouvernance urbaine.
+              KatdEstate opère en partenariat avec les chefferies communales, les syndics et les ministères en charge de la gouvernance urbaine.
             </p>
 
             <div className="space-y-4 text-sm text-slate-300">
@@ -1002,13 +993,13 @@ export function LandingPage() {
                 <li><span className="text-slate-300">Orange Money • MTN • Wave • Moov</span></li>
                 <li><span className="text-slate-300">Intégration H2H Ikeepay</span></li>
                 <li><a href="#contact" className="hover:text-emerald-400">Support 24/7</a></li>
-                <li><span className="text-slate-500">© 2026 KadtEstate Inc. Tous droits réservés.</span></li>
+                <li><span className="text-slate-500">© 2026 KatdEstate Inc. Tous droits réservés.</span></li>
               </ul>
             </div>
           </div>
 
           <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-            <p>KadtEstate — Déployé pour la modernisation du patrimoine et de la gouvernance locale.</p>
+            <p>KatdEstate — Déployé pour la modernisation du patrimoine et de la gouvernance locale.</p>
             <div className="flex items-center gap-4">
               <a href="#contact" className="hover:text-slate-400">Confidentialité</a>
               <span>•</span>
