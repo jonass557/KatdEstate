@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Bell, FileText, Home, MessageSquare, Receipt, Send, Wallet } from 'lucide-react';
+import { Bell, FileText, Home, MessageSquare, Receipt, Send, Wallet, Smartphone, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { maintenanceTicketInputSchema } from '@rentflow/shared';
 import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
@@ -14,6 +14,8 @@ import { useToast } from '../components/ui/toast';
 import { API_BASE_URL, apiRequest, getAccessToken } from '../lib/api-client';
 import { useOrgPath, useOrgQuery } from '../lib/query';
 import { useSession } from '../app/session';
+import { IkeepayModal } from '../components/payments/ikeepay-modal';
+import { LeaseContractModal, type LeaseContractData } from '../components/leases/lease-contract-modal';
 
 interface PortalHome {
   tenant: { fullName: string };
@@ -101,21 +103,50 @@ function List({ rows, render }: { rows: Row[] | undefined; render: (row: Row) =>
 export function PortalHomePage() {
   const { data } = useOrgQuery<PortalHome>(['portal'], '/portal');
   const { user } = useSession();
+  const [contractModalOpen, setContractModalOpen] = useState(false);
+  const [payModalOpen, setPayModalOpen] = useState(false);
 
   const homeData: PortalHome = data ?? {
     tenant: { fullName: user?.displayName || 'Locataire Résident' },
-    unit: { name: 'Appartement B2 - Résidence Cocody', type: 'Appartement 3 pièces', status: 'OCCUPIED' },
-    lease: { id: 'lease-01', number: 'BAIL-2026-0042', status: 'ACTIF', startDate: '2026-01-01', endDate: '2026-12-31', rentAmountMinor: 350000, currency: 'XOF' },
-    nextRent: { dueDate: '2026-12-05', amountDueMinor: 350000, amountPaidMinor: 350000, status: 'PAID', currency: 'XOF' },
+    unit: { name: 'Chambre Moderne Porte 3B - Résidence Katd Cocody', type: 'Chambre moderne', status: 'OCCUPIED' },
+    lease: { id: 'lease-01', number: 'BAIL-2026-0042', status: 'ACTIF', startDate: '2026-01-01', endDate: '2026-12-31', rentAmountMinor: 150000, currency: 'XOF' },
+    nextRent: { dueDate: '2026-12-05', amountDueMinor: 150000, amountPaidMinor: 0, status: 'PENDING', currency: 'XOF' },
     documents: 4,
     openTickets: 0,
+  };
+
+  const amountToPay = homeData.nextRent ? Math.max(0, homeData.nextRent.amountDueMinor - homeData.nextRent.amountPaidMinor) : 150000;
+
+  const contractDetails: LeaseContractData = {
+    leaseNumber: homeData.lease?.number || 'BAIL-2026-0042',
+    propertyName: 'Résidence Katd Les Palmiers',
+    propertyAddress: 'Boulevard de France, Cocody',
+    propertyZone: 'Cocody Palmeraie',
+    propertyCity: 'Abidjan',
+    unitName: homeData.unit?.name || 'Chambre Moderne Porte 3B',
+    unitType: homeData.unit?.type || 'Chambre moderne',
+    unitNumber: 'Porte 3B',
+    floor: 1,
+    tenantName: homeData.tenant.fullName,
+    tenantPhone: '+225 07 00 00 00 00',
+    tenantEmail: user?.email || 'locataire@katdestate.immo',
+    ownerName: 'M. Amadou Diallo (Bailleur)',
+    ownerPhone: '+225 07 10 20 30 40',
+    ownerEmail: 'proprietaire@katdestate.immo',
+    startDate: homeData.lease?.startDate || '2026-01-01',
+    endDate: homeData.lease?.endDate || '2026-12-31',
+    dueDay: 5,
+    rentAmountMinor: homeData.lease?.rentAmountMinor || 150000,
+    chargesAmountMinor: 5000,
+    depositAmountMinor: 300000,
+    currency: homeData.lease?.currency || 'FCFA',
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={`Bonjour ${homeData.tenant.fullName}`}
-        description="Votre logement, votre loyer et vos démarches."
+        description="Votre espace locataire KatdEstate : votre logement assigné, votre contrat de bail numérique et vos échéances de loyer."
         actions={
           <div className="flex gap-2">
             <Link to="/portal/invoices">
@@ -127,18 +158,108 @@ export function PortalHomePage() {
             <Link to="/portal/messages">
               <Button className="h-9 text-xs inline-flex items-center gap-1.5">
                 <MessageSquare className="size-3.5" />
-                Contacter mon gestionnaire
+                Contacter mon bailleur
               </Button>
             </Link>
           </div>
         }
       />
+
+      {/* Carte mise en avant : Mon Contrat de Bail & Mon Logement */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-card to-background border border-emerald-500/30 shadow-sm space-y-4 text-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="size-12 rounded-2xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <ShieldCheck className="size-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                  Contrat de Bail Officiel KatdEstate
+                </span>
+                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px]">
+                  {homeData.lease?.status || 'ACTIF'}
+                </Badge>
+              </div>
+              <h2 className="text-lg font-black">{homeData.unit?.name || 'Votre Logement'}</h2>
+              <p className="text-xs text-muted-foreground">
+                Réf contrat : <strong>{homeData.lease?.number || 'BAIL-2026-0042'}</strong> · Valide jusqu'au{' '}
+                <strong>{date(homeData.lease?.endDate)}</strong>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setContractModalOpen(true)}
+              className="text-xs font-bold border-border hover:bg-muted"
+            >
+              <FileText className="size-4 mr-1.5 text-primary" />
+              Consulter mon Contrat de Bail
+            </Button>
+            {amountToPay > 0 && (
+              <Button
+                onClick={() => setPayModalOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+              >
+                <Smartphone className="size-4 mr-1.5" />
+                Régler mon loyer ({amountToPay.toLocaleString('fr-FR')} FCFA)
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Détails du logement & de l'échéance */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
+          <div className="p-3 rounded-xl bg-background/80 border border-border">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">Logement assigné</span>
+            <strong className="text-foreground text-sm">{homeData.unit?.type || 'Chambre'}</strong>
+          </div>
+          <div className="p-3 rounded-xl bg-background/80 border border-border">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">N° Porte / Chambre</span>
+            <strong className="text-emerald-600 dark:text-emerald-400 text-sm font-black">Porte 3B</strong>
+          </div>
+          <div className="p-3 rounded-xl bg-background/80 border border-border">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">Loyer mensuel</span>
+            <strong className="text-foreground text-sm">{money(homeData.lease?.rentAmountMinor, homeData.lease?.currency)}</strong>
+          </div>
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 block">Date d'échéance</span>
+            <strong className="text-amber-700 dark:text-amber-300 text-sm font-black">Le 5 de chaque mois</strong>
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <StatCard label="Logement" value={homeData.unit?.name ?? 'Aucun'} hint={homeData.unit ? homeData.unit.type : 'Pas de contrat actif'} icon={Home} />
         <StatCard label="Prochain loyer" value={homeData.nextRent ? money(homeData.nextRent.amountDueMinor - homeData.nextRent.amountPaidMinor, homeData.nextRent.currency) : 'À jour'} hint={homeData.nextRent ? `${date(homeData.nextRent.dueDate)} · ${RENT_STATUS[homeData.nextRent.status] ?? homeData.nextRent.status}` : 'Aucune échéance ouverte'} icon={Wallet} />
         <StatCard label="Contrat" value={homeData.lease?.number ?? 'Aucun'} hint={homeData.lease ? `${homeData.lease.status} · jusqu’au ${date(homeData.lease.endDate)}` : 'Pas de contrat actif'} icon={FileText} />
         <StatCard label="Suivi" value={`${homeData.documents} document(s)`} hint={`${homeData.openTickets} ticket(s) de maintenance ouvert(s)`} icon={Bell} />
       </div>
+
+      {/* Modal Visualisation Contrat de Bail Certifié */}
+      {contractModalOpen && (
+        <LeaseContractModal
+          contract={contractDetails}
+          onClose={() => setContractModalOpen(false)}
+        />
+      )}
+
+      {/* Modal Paiement iKeepay */}
+      {payModalOpen && (
+        <IkeepayModal
+          isOpen={payModalOpen}
+          onClose={() => setPayModalOpen(false)}
+          amount={amountToPay}
+          purpose="RENT_PAYMENT"
+          title="Règlement de votre loyer d'habitation"
+          description={`Paiement sécurisé de votre loyer pour ${homeData.unit?.name || 'votre logement'}.`}
+          onPaymentSuccess={() => {
+            setPayModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

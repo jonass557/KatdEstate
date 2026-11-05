@@ -1173,11 +1173,13 @@ export function DashboardPage() {
           },
         ];
 
+      case 'OWNER':
+      case 'LANDLORD':
       default: // OWNER / Propriétaire
         return [
           {
             title: 'PATRIMOINE & GESTION LOCATIVE',
-            subtitle: 'Pilotage de vos résidences, logements, baux et locataires',
+            subtitle: 'Création, modification et suppression de propriétés, attribution des chambres/studios aux locataires et baux',
             buttons: [
               {
                 title: 'Mes Propriétés\n& Immeubles',
@@ -1185,41 +1187,47 @@ export function DashboardPage() {
                 colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white',
                 glowClass: 'shadow-blue-500/25',
                 to: '/properties',
-                badge: 'ACTIF',
+                badge: 'PARC IMMO',
                 badgeBg: 'bg-blue-400 text-black',
               },
               {
-                title: 'Logements &\nLots',
+                title: 'Chambres, Studios\n& Appartements',
                 icon: Home,
                 colorClass: 'bg-gradient-to-tr from-cyan-600 to-teal-600 text-white',
                 glowClass: 'shadow-cyan-500/25',
                 to: '/units',
+                badge: 'LOTS',
+                badgeBg: 'bg-cyan-300 text-black',
               },
               {
-                title: 'Contrats de\nBaux',
-                icon: KeyRound,
-                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
-                glowClass: 'shadow-purple-500/25',
-                to: '/leases',
-                badge: 'JURIDIQUE',
-                badgeBg: 'bg-purple-300 text-black',
-              },
-              {
-                title: 'Répertoire\nLocataires',
+                title: 'Locataires, Baux\n& Échéances',
                 icon: Users,
                 colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-600 text-white',
                 glowClass: 'shadow-teal-500/25',
                 to: '/tenants',
+                badge: 'ALERTES EMAIL',
+                badgeBg: 'bg-emerald-400 text-black',
               },
               {
-                title: 'Espace\nPropriétaire',
+                title: 'Contrats de\nBaux Numériques',
+                icon: KeyRound,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/leases',
+                badge: 'CERTIFIÉ',
+                badgeBg: 'bg-purple-300 text-black',
+              },
+              {
+                title: 'Délégation de\nGestion & Mandats',
                 icon: Briefcase,
-                colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
-                glowClass: 'shadow-indigo-500/25',
-                to: '/owner-portal',
+                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/properties',
+                badge: 'MANDAT',
+                badgeBg: 'bg-amber-300 text-black',
               },
               {
-                title: 'Mes Annonces\n& Mandats',
+                title: 'Mes Annonces\n& Commercialisation',
                 icon: Building2,
                 colorClass: 'bg-gradient-to-tr from-sky-600 to-blue-700 text-white',
                 glowClass: 'shadow-sky-500/25',

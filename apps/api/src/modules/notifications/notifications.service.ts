@@ -154,3 +154,22 @@ export async function listPreferences(req: Request, res: Response): Promise<void
     userId: req.user!.id,
   });
 }
+
+export function createTriggerReminders(config: AppConfig) {
+  return async function triggerReminders(req: Request, res: Response): Promise<void> {
+    const { runAutomations } = await import('../jobs/jobs.service.js');
+    await runAutomations(config, new Date());
+    const recent = await Notification.find({
+      organizationId: req.organizationContext!.organizationId,
+      createdAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) },
+    })
+      .sort({ createdAt: -1 })
+      .limit(10);
+    res.locals.data = {
+      success: true,
+      message: 'Vérification des échéances et alertes emails envoyées avec succès aux locataires et propriétaires.',
+      dispatchedCount: recent.length,
+      recentDispatched: recent,
+    };
+  };
+}

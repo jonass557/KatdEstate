@@ -10,6 +10,11 @@ export const propertyInputSchema = z.object({
   type: z.enum(PROPERTY_TYPES).default('BUILDING'),
   address: trimmed(240),
   city: trimmed(120),
+  zone: optionalText(120),
+  roomsCount: z.coerce.number().int().nonnegative().optional().default(0),
+  studiosCount: z.coerce.number().int().nonnegative().optional().default(0),
+  apartmentsCount: z.coerce.number().int().nonnegative().optional().default(0),
+  otherUnitsCount: z.coerce.number().int().nonnegative().optional().default(0),
   country: z
     .string()
     .trim()
@@ -21,6 +26,21 @@ export const propertyInputSchema = z.object({
   value: z.number().nonnegative().optional(),
   owner: optionalText(160),
   manager: optionalText(160),
+  delegation: z
+    .object({
+      managerName: trimmed(160),
+      managerEmail: z.string().trim().email().max(160).optional().or(z.literal('')),
+      managerPhone: optionalText(32),
+      agencyName: optionalText(160),
+      scope: z.enum(['ALL_PORTFOLIO', 'PROPERTY']).default('PROPERTY'),
+      permissions: z.array(z.string()).default(['COLLECTION', 'LEASES', 'MAINTENANCE']),
+      commissionRate: z.coerce.number().min(0).max(100).default(0),
+      startDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional(),
+      status: z.enum(['ACTIVE', 'SUSPENDED', 'REVOKED']).default('ACTIVE'),
+      notes: optionalText(2_000),
+    })
+    .optional(),
 });
 
 export const propertyUpdateSchema = propertyInputSchema.partial();

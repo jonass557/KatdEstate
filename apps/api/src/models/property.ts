@@ -10,6 +10,23 @@ const photoSchema = new Schema(
   { _id: false },
 );
 
+const delegationSubSchema = new Schema(
+  {
+    managerName: { type: String, trim: true, maxlength: 160 },
+    managerEmail: { type: String, trim: true, maxlength: 160 },
+    managerPhone: { type: String, trim: true, maxlength: 32 },
+    agencyName: { type: String, trim: true, maxlength: 160 },
+    scope: { type: String, enum: ['ALL_PORTFOLIO', 'PROPERTY'], default: 'PROPERTY' },
+    permissions: { type: [String], default: ['COLLECTION', 'LEASES', 'MAINTENANCE'] },
+    commissionRate: { type: Number, default: 0 },
+    startDate: { type: Date },
+    endDate: { type: Date },
+    status: { type: String, enum: ['ACTIVE', 'SUSPENDED', 'REVOKED'], default: 'ACTIVE' },
+    notes: { type: String, maxlength: 2_000 },
+  },
+  { _id: false },
+);
+
 const propertySchema = new Schema(
   {
     organizationId: org,
@@ -17,11 +34,17 @@ const propertySchema = new Schema(
     type: { type: String, enum: PROPERTY_TYPES, default: 'BUILDING', index: true },
     address: { type: String, required: true, trim: true, maxlength: 240 },
     city: { type: String, required: true, trim: true, maxlength: 120 },
+    zone: { type: String, trim: true, maxlength: 120 },
+    roomsCount: { type: Number, default: 0, min: 0 },
+    studiosCount: { type: Number, default: 0, min: 0 },
+    apartmentsCount: { type: Number, default: 0, min: 0 },
+    otherUnitsCount: { type: Number, default: 0, min: 0 },
     country: { type: String, required: true, uppercase: true, length: 2 },
     description: { type: String, maxlength: 4_000 },
     status: { type: String, enum: PROPERTY_STATUSES, default: 'ACTIVE', index: true },
     owner: { type: String, maxlength: 160 },
     manager: { type: String, maxlength: 160 },
+    delegation: { type: delegationSubSchema },
     acquisitionDate: { type: Date },
     value: { type: Number, min: 0 },
     photos: { type: [photoSchema], default: [] },

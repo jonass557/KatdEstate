@@ -1,6 +1,8 @@
 import type { AppConfig } from '../../config/index.js';
 import { computePenalty } from '../../common/schedule.js';
-import { Lease } from '../../models/lease.js';
+import { Lease, Tenant } from '../../models/lease.js';
+import { Property, Unit } from '../../models/property.js';
+import { User } from '../../models/identity.js';
 import { RentSchedule } from '../../models/finance.js';
 import { Job, UtilityMeter, UtilityReading } from '../../models/operations.js';
 import { notify } from '../notifications/notifications.service.js';
@@ -34,13 +36,55 @@ async function flagOverdue(config: AppConfig, now: Date): Promise<void> {
     schedule.status = 'OVERDUE';
     await schedule.save();
 
-    const daysLate = Math.floor((now.getTime() - schedule.dueDate.getTime()) / DAY);
-    if (daysLate >= 3) {
+    const tenant = schedule.tenantId ? await Tenant.findById(schedule.tenantId) : null;
+    const unit = schedule.unitId ? await Unit.findById(schedule.unitId) : null;
+    const property = schedule.propertyId ? await Property.findById(schedule.propertyId) : null;
+    const ownerUser = lease?.ownerId
+      ? await User.findById(lease.ownerId)
+      : await User.findOne({ organizationId: schedule.organizationId, role: { $in: ['OWNER', 'SUPER_ADMIN'] } });
+
+    const tenantName = tenant?.fullName ?? 'Locataire';
+    const rentAmount = `${schedule.amountDueMinor.toLocaleString('fr-FR')} ${schedule.currency || 'XOF'}`;
+    const dueDateStr = schedule.dueDate.toLocaleDateString('fr-FR');
+    const propertyName = property?.name ?? 'Propriété KatdEstate';
+    const unitName = unit ? `${unit.name} (${unit.number ? 'Porte ' + unit.number : unit.type})` : 'Logement';
+
+    // Notification au Propriétaire (Loyer en retard)
+    const ownerEmail = ownerUser?.email ?? 'proprietaire@katdestate.immo';
+    await notify(config, {
+      organizationId: String(schedule.organizationId),
+      event: 'RENT_OVERDUE',
+      recipientAddress: ownerEmail,
+      recipientUserId: ownerUser?._id ? String(ownerUser._id) : undefined,
+      channels: ['EMAIL', 'IN_APP'],
+      variables: {
+        tenantName,
+        rentAmount,
+        dueDate: dueDateStr,
+        propertyName,
+        unitName,
+        paymentLink: `${config.client.primaryOrigin}/finance/rents`,
+      },
+      idempotencyKey: `rent-overdue-owner:${String(schedule._id)}`,
+    });
+
+    // Notification au Locataire
+    if (tenant?.email) {
       await notify(config, {
         organizationId: String(schedule.organizationId),
         event: 'RENT_OVERDUE',
-        variables: { tenantName: '', rentAmount: String(schedule.amountDueMinor), dueDate: schedule.dueDate.toISOString().slice(0, 10), propertyName: '', unitName: '', paymentLink: '' },
-        idempotencyKey: `rent-overdue:${String(schedule._id)}`,
+        recipientAddress: tenant.email,
+        recipientUserId: tenant.userId ? String(tenant.userId) : undefined,
+        channels: ['EMAIL', 'IN_APP'],
+        variables: {
+          tenantName,
+          rentAmount,
+          dueDate: dueDateStr,
+          propertyName,
+          unitName,
+          paymentLink: `${config.client.primaryOrigin}/portal/rent`,
+        },
+        idempotencyKey: `rent-overdue-tenant:${String(schedule._id)}`,
       });
     }
   }
@@ -49,16 +93,62 @@ async function flagOverdue(config: AppConfig, now: Date): Promise<void> {
 async function sendDueReminders(config: AppConfig, now: Date): Promise<void> {
   const upcoming = await RentSchedule.find({
     status: 'PENDING',
-    dueDate: { $gte: now, $lte: new Date(now.getTime() + 5 * DAY) },
+    dueDate: { $gte: new Date(now.getTime() - DAY), $lte: new Date(now.getTime() + 5 * DAY) },
   });
   for (const schedule of upcoming) {
     const daysBefore = Math.ceil((schedule.dueDate.getTime() - now.getTime()) / DAY);
     const threshold = daysBefore <= 0 ? 'due-day' : 'due-soon';
+    const lease = await Lease.findById(schedule.leaseId);
+    const tenant = schedule.tenantId ? await Tenant.findById(schedule.tenantId) : null;
+    const unit = schedule.unitId ? await Unit.findById(schedule.unitId) : null;
+    const property = schedule.propertyId ? await Property.findById(schedule.propertyId) : null;
+    const ownerUser = lease?.ownerId
+      ? await User.findById(lease.ownerId)
+      : await User.findOne({ organizationId: schedule.organizationId, role: { $in: ['OWNER', 'SUPER_ADMIN'] } });
+
+    const tenantName = tenant?.fullName ?? 'Locataire';
+    const rentAmount = `${schedule.amountDueMinor.toLocaleString('fr-FR')} ${schedule.currency || 'XOF'}`;
+    const dueDateStr = schedule.dueDate.toLocaleDateString('fr-FR');
+    const propertyName = property?.name ?? 'Propriété KatdEstate';
+    const unitName = unit ? `${unit.name} (${unit.number ? 'Porte ' + unit.number : unit.type})` : 'Logement';
+
+    // 1. Notification au Locataire
+    if (tenant?.email) {
+      await notify(config, {
+        organizationId: String(schedule.organizationId),
+        event: 'RENT_DUE_SOON',
+        recipientAddress: tenant.email,
+        recipientUserId: tenant.userId ? String(tenant.userId) : undefined,
+        channels: ['EMAIL', 'IN_APP'],
+        variables: {
+          tenantName,
+          rentAmount,
+          dueDate: dueDateStr,
+          propertyName,
+          unitName,
+          paymentLink: `${config.client.primaryOrigin}/portal/rent`,
+        },
+        idempotencyKey: `rent-reminder-tenant:${String(schedule._id)}:${threshold}`,
+      });
+    }
+
+    // 2. Notification au Propriétaire (Bailleur)
+    const ownerEmail = ownerUser?.email ?? 'proprietaire@katdestate.immo';
     await notify(config, {
       organizationId: String(schedule.organizationId),
       event: 'RENT_DUE_SOON',
-      variables: { tenantName: '', rentAmount: String(schedule.amountDueMinor), dueDate: schedule.dueDate.toISOString().slice(0, 10), propertyName: '', unitName: '', paymentLink: '' },
-      idempotencyKey: `rent-reminder:${String(schedule._id)}:${threshold}`,
+      recipientAddress: ownerEmail,
+      recipientUserId: ownerUser?._id ? String(ownerUser._id) : undefined,
+      channels: ['EMAIL', 'IN_APP'],
+      variables: {
+        tenantName,
+        rentAmount,
+        dueDate: dueDateStr,
+        propertyName,
+        unitName,
+        paymentLink: `${config.client.primaryOrigin}/finance/rents`,
+      },
+      idempotencyKey: `rent-reminder-owner:${String(schedule._id)}:${threshold}`,
     });
   }
 }
@@ -75,14 +165,59 @@ async function flagExpiringLeases(config: AppConfig, now: Date): Promise<void> {
       await lease.save();
     }
 
-    for (const threshold of [60, 30] as const) {
+    const tenant = lease.tenantId ? await Tenant.findById(lease.tenantId) : null;
+    const unit = lease.unitId ? await Unit.findById(lease.unitId) : null;
+    const property = lease.propertyId ? await Property.findById(lease.propertyId) : null;
+    const ownerUser = lease?.ownerId
+      ? await User.findById(lease.ownerId)
+      : await User.findOne({ organizationId: lease.organizationId, role: { $in: ['OWNER', 'SUPER_ADMIN'] } });
+
+    const tenantName = tenant?.fullName ?? 'Locataire';
+    const rentAmount = `${lease.rentAmountMinor.toLocaleString('fr-FR')} ${lease.currency || 'XOF'}`;
+    const dueDateStr = lease.endDate.toLocaleDateString('fr-FR');
+    const propertyName = property?.name ?? 'Propriété KatdEstate';
+    const unitName = unit ? `${unit.name} (${unit.number ? 'Porte ' + unit.number : unit.type})` : 'Logement';
+
+    for (const threshold of [60, 30, 7] as const) {
       if (daysLeft <= threshold && daysLeft > threshold - 1) {
+        // Notification au Propriétaire
+        const ownerEmail = ownerUser?.email ?? 'proprietaire@katdestate.immo';
         await notify(config, {
           organizationId: String(lease.organizationId),
           event: 'LEASE_EXPIRING',
-          variables: { tenantName: '', rentAmount: String(lease.rentAmountMinor), dueDate: lease.endDate.toISOString().slice(0, 10), propertyName: '', unitName: '', paymentLink: '' },
-          idempotencyKey: `lease-expiry:${String(lease._id)}:${threshold}:${lease.endDate.getUTCFullYear()}`,
+          recipientAddress: ownerEmail,
+          recipientUserId: ownerUser?._id ? String(ownerUser._id) : undefined,
+          channels: ['EMAIL', 'IN_APP'],
+          variables: {
+            tenantName,
+            rentAmount,
+            dueDate: dueDateStr,
+            propertyName,
+            unitName,
+            paymentLink: `${config.client.primaryOrigin}/leases`,
+          },
+          idempotencyKey: `lease-expiry-owner:${String(lease._id)}:${threshold}:${lease.endDate.getUTCFullYear()}`,
         });
+
+        // Notification au Locataire
+        if (tenant?.email) {
+          await notify(config, {
+            organizationId: String(lease.organizationId),
+            event: 'LEASE_EXPIRING',
+            recipientAddress: tenant.email,
+            recipientUserId: tenant.userId ? String(tenant.userId) : undefined,
+            channels: ['EMAIL', 'IN_APP'],
+            variables: {
+              tenantName,
+              rentAmount,
+              dueDate: dueDateStr,
+              propertyName,
+              unitName,
+              paymentLink: `${config.client.primaryOrigin}/portal`,
+            },
+            idempotencyKey: `lease-expiry-tenant:${String(lease._id)}:${threshold}:${lease.endDate.getUTCFullYear()}`,
+          });
+        }
       }
     }
   }

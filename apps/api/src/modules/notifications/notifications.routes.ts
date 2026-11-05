@@ -7,7 +7,7 @@ import { createAuthenticate } from '../../middleware/authenticate.js';
 import { requireOrganizationMembership } from '../../middleware/organization.js';
 import { requirePermission } from '../../middleware/permissions.js';
 import { validateRequest } from '../../middleware/validate-request.js';
-import { listNotifications, listPreferences, listTemplates, markRead, upsertPreference, upsertTemplate } from './notifications.service.js';
+import { createTriggerReminders, listNotifications, listPreferences, listTemplates, markRead, upsertPreference, upsertTemplate } from './notifications.service.js';
 
 function respond(handler: (req: import('express').Request, res: import('express').Response) => Promise<void>) {
   return (req: import('express').Request, res: import('express').Response, next: (error: unknown) => void) => {
@@ -19,6 +19,7 @@ export function createNotificationRouter(config: AppConfig) {
   const router = Router({ mergeParams: true });
   router.use(createAuthenticate(config), requireOrganizationMembership);
 
+  router.post('/notifications/trigger-reminders', respond(createTriggerReminders(config)));
   router.get('/notifications', requirePermission('notifications.view'), validateRequest(paginationSchema, 'query'), respond(listNotifications));
   router.post('/notifications/:id/read', requirePermission('notifications.view'), validateRequest(z.object({ id: objectIdSchema }), 'params'), respond(markRead));
   router.get('/notification-preferences', requirePermission('notifications.view'), respond(listPreferences));

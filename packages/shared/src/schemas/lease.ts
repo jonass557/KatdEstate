@@ -52,6 +52,7 @@ export const penaltyRuleSchema = z.object({
 export const leaseInputSchema = z.object({
   tenantId: objectIdSchema,
   unitId: objectIdSchema,
+  propertyId: objectIdSchema.optional(),
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
   rentAmountMinor: amount,
