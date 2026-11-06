@@ -1,8 +1,8 @@
-# Blueprint de déploiement Render — KadtEstate API
+# Blueprint de déploiement Render — KatdEstate API
 # Documentation : https://render.com/docs/blueprint-spec
 services:
   - type: web
-    name: kadtestate-api
+    name: katdestate-api
     env: node
     plan: starter
     region: frankfurt
@@ -19,9 +19,9 @@ services:
       - key: TRUST_PROXY
         value: 'true'
       - key: SERVER_URL
-        value: https://kadtestate-api.onrender.com
+        value: https://katdestate-api.onrender.com
       - key: CLIENT_URL
-        sync: false
+        value: https://katdestate.vercel.app
       - key: MONGODB_URI
         sync: false
       - key: MONGODB_SERVER_SELECTION_TIMEOUT_MS
@@ -31,15 +31,15 @@ services:
       - key: JWT_REFRESH_SECRET
         generateValue: true
       - key: JWT_ISSUER
-        value: kadtestate-api
+        value: katdestate-api
       - key: JWT_AUDIENCE
-        value: kadtestate-web
+        value: katdestate-web
       - key: ACCESS_TOKEN_TTL
         value: 15m
       - key: REFRESH_TOKEN_TTL
         value: 30d
       - key: COOKIE_NAME
-        value: kadtestate_refresh
+        value: katdestate_refresh
       - key: COOKIE_SECURE
         value: 'true'
       - key: RATE_LIMIT_GENERAL_WINDOW_MS

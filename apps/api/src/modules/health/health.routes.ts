@@ -46,25 +46,17 @@ healthRouter.get('/ready', async (_req, res) => {
 healthRouter.get('/', async (_req, res) => {
   const database = await pingDatabase();
 
-  if (!database.connected) {
-    sendError(res, {
-      code: 'SERVICE_UNAVAILABLE',
-      message: 'Base de données injoignable.',
-      statusCode: 503,
-      details: [
-        { path: 'database.state', message: getDatabaseState() },
-        { path: 'database.error', message: database.error ?? 'Connexion indisponible.' },
-      ],
-    });
-    return;
-  }
-
   sendSuccess(res, {
-    status: 'ok',
-    service: 'rentflow-api',
-    version: process.env.npm_package_version ?? '0.0.0',
+    status: database.connected ? 'ok' : 'degraded',
+    service: 'katdestate-api',
+    version: process.env.npm_package_version ?? '0.1.0',
     uptimeSeconds: Math.round((Date.now() - startedAt) / 1_000),
     timestamp: new Date().toISOString(),
-    dependencies: { database },
+    dependencies: {
+      database: {
+        ...database,
+        state: getDatabaseState(),
+      },
+    },
   });
 });
