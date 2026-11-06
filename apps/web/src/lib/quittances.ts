@@ -7,16 +7,16 @@ export interface QuittanceItem {
   propertyName: string;
   tenantId: string;
   tenantName: string;
-  tenantPhone?: string;
-  tenantEmail?: string;
+  tenantPhone?: string | undefined;
+  tenantEmail?: string | undefined;
   amountMinor: number;
   period: string;
   dueDate: string;
   status: 'PENDING' | 'PAID';
-  meterIndex?: string;
-  notes?: string;
-  paidAt?: string;
-  paymentMethod?: string;
+  meterIndex?: string | undefined;
+  notes?: string | undefined;
+  paidAt?: string | undefined;
+  paymentMethod?: string | undefined;
   createdAt: string;
 }
 

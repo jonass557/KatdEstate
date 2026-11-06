@@ -1,9 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
-  Download,
   Grid3x3,
   Home,
   List,
@@ -16,10 +15,9 @@ import {
   Layers,
   DoorOpen,
   PieChart,
-  Filter,
   Sparkles,
 } from 'lucide-react';
-import { propertyInputSchema, type PropertyInput } from '@rentflow/shared';
+import type { PropertyInput } from '@rentflow/shared';
 import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
 import { Badge } from '../components/ui/badge';
@@ -28,7 +26,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
-import { API_BASE_URL, apiRequest, getAccessToken } from '../lib/api-client';
+import { apiRequest } from '../lib/api-client';
 import { useOrgList, useOrgPath, useOrgQuery } from '../lib/query';
 import {
   PropertyDelegationModal,
@@ -42,50 +40,40 @@ export const STORAGE_UNITS_KEY = 'katdestate_custom_units';
 export interface Property {
   _id: string;
   name: string;
-  type?: string;
-  customPropertyType?: string;
+  type?: string | undefined;
+  customPropertyType?: string | undefined;
   address: string;
   city: string;
   country: string;
   status: string;
-  description?: string;
-  zone?: string;
-  chambreSimpleCount?: number;
-  chambreModerneCount?: number;
-  studioSimpleCount?: number;
-  studioModerneCount?: number;
-  appartementCount?: number;
-  otherCustomType?: string;
-  otherCustomCount?: number;
-  roomsCount?: number;
-  studiosCount?: number;
-  apartmentsCount?: number;
-  otherUnitsCount?: number;
-  delegation?: DelegationData;
+  description?: string | undefined;
+  zone?: string | undefined;
+  chambreSimpleCount?: number | undefined;
+  chambreModerneCount?: number | undefined;
+  studioSimpleCount?: number | undefined;
+  studioModerneCount?: number | undefined;
+  appartementCount?: number | undefined;
+  otherCustomType?: string | undefined;
+  otherCustomCount?: number | undefined;
+  roomsCount?: number | undefined;
+  studiosCount?: number | undefined;
+  apartmentsCount?: number | undefined;
+  otherUnitsCount?: number | undefined;
+  delegation?: DelegationData | undefined;
 }
 
 interface Unit {
   _id: string;
   propertyId: string;
   name: string;
-  number?: string;
-  floor?: number;
+  number?: string | undefined;
+  floor?: number | undefined;
   type: string;
   status: string;
   rentAmountMinor: number;
-  surfaceM2?: number;
-  bedrooms?: number;
-  amenities?: string[];
-}
-
-interface PropertyStats {
-  units: number;
-  occupied: number;
-  available: number;
-  occupancyRate: number;
-  collectedMinor: number;
-  overdueMinor: number;
-  openMaintenance: number;
+  surfaceM2?: number | undefined;
+  bedrooms?: number | undefined;
+  amenities?: string[] | undefined;
 }
 
 const UNIT_TYPE_LABELS: Record<string, string> = {
@@ -711,7 +699,7 @@ export function PropertyFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const client = useQueryClient();
   const { toast } = useToast();
 
-  const [localInitial, setLocalInitial] = useState<Property | undefined>(() => {
+  const [localInitial] = useState<Property | undefined>(() => {
     if (mode === 'edit' && id) {
       const list = getLocalProperties();
       return list.find((p) => p._id === id);
@@ -1260,7 +1248,6 @@ export function PropertyDetailPage() {
 
   // Recherche sur API avec fallback local
   const propertyQuery = useOrgQuery<Property>(['property', id], `/properties/${id}`);
-  const statsQuery = useOrgQuery<PropertyStats>(['property-stats', id], `/properties/${id}/stats`);
   const unitsQuery = useOrgList<Unit>(['units', id], `/units?propertyId=${id}&pageSize=100`);
 
   const localProps = getLocalProperties();
@@ -1369,7 +1356,7 @@ export function PropertyDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setDelegatingProperty(p)}
+              onClick={() => setDelegationOpen(true)}
               className="text-xs text-amber-500 border-amber-500/30"
             >
               <Briefcase className="size-4 mr-1.5" />
@@ -1538,7 +1525,7 @@ export function PropertyDetailPage() {
 export function UnitsPage() {
   const [type, setType] = useState('');
   const [status, setStatus] = useState('');
-  const [page, setPage] = useState(1);
+  const [page] = useState(1);
 
   const query = new URLSearchParams({ page: String(page), pageSize: '50' });
   if (type) query.set('type', type);

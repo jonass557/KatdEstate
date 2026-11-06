@@ -23,7 +23,6 @@ import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
@@ -402,10 +401,7 @@ export function PortalPaymentsPage() {
 }
 
 export function PortalReceiptsPage() {
-  const base = useOrgPath();
   const { toast } = useToast();
-  const { user } = useSession();
-  const { data } = useOrgQuery<Row[]>(['portal-receipts'], '/portal/receipts');
 
   const [quittances, setQuittances] = useState<QuittanceItem[]>(() => getStoredQuittances());
   const [selectedQuittanceToPay, setSelectedQuittanceToPay] = useState<QuittanceItem | null>(null);
@@ -688,10 +684,7 @@ export function PortalReceiptsPage() {
 }
 
 export function PortalLeasePage() {
-  const base = useOrgPath();
-  const { toast } = useToast();
   const { user } = useSession();
-  const { data } = useOrgQuery<Row[]>(['portal-lease'], '/portal/lease');
   const [contractModalOpen, setContractModalOpen] = useState(false);
 
   const certifiedContract: LeaseContractData = {
@@ -800,7 +793,8 @@ export function PortalLeasePage() {
               Échéance : Le {certifiedContract.dueDay} de chaque mois
             </p>
             <p className="text-muted-foreground">
-              Caution versée : {certifiedContract.depositAmountMinor.toLocaleString('fr-FR')} FCFA
+              Caution versée : {(certifiedContract.depositAmountMinor ?? 0).toLocaleString('fr-FR')}{' '}
+              FCFA
             </p>
           </div>
         </div>

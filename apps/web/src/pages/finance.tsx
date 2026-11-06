@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   applyLatePenaltiesSchema,
@@ -6,14 +6,13 @@ import {
   chargeSplitSchema,
   recordDepositSchema,
   recordPaymentSchema,
-  refundPaymentSchema,
-  sendReceiptSchema,
   updateScheduleSchema,
 } from '@rentflow/shared';
 import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
+import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Modal } from '../components/ui/dialog';
 import { useToast } from '../components/ui/toast';
@@ -21,31 +20,32 @@ import { apiRequest, downloadFile } from '../lib/api-client';
 import { formatDate } from '../lib/format';
 import { useOrgList, useOrgPath, useOrgQuery } from '../lib/query';
 import {
+  AlertCircle,
   AlertTriangle,
   CheckCircle2,
   CircleDollarSign,
   Clock,
+  CreditCard,
   Download,
   FileSpreadsheet,
-  Search,
   Send,
   ShieldCheck,
   Split,
-  Undo2,
   Wallet,
   ArrowDownCircle,
   Smartphone,
   Mail,
   Plus,
   Receipt,
-  UserCheck,
-  Check,
   Building2,
-  UserX,
-  X,
 } from 'lucide-react';
 import { IkeepayPayoutModal } from '../components/payments/ikeepay-payout-modal';
-import { getStoredQuittances, saveStoredQuittances, type QuittanceItem } from '../lib/quittances';
+import {
+  getStoredQuittances,
+  markQuittanceAsPaid,
+  saveStoredQuittances,
+  type QuittanceItem,
+} from '../lib/quittances';
 import { getLocalProperties } from './properties';
 import { getLocalTenants } from './tenants';
 
@@ -110,13 +110,6 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Annulé',
 };
 
-const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  CONFIRMED: 'Confirmé',
-  PENDING: 'En attente',
-  REFUNDED: 'Remboursé',
-  CANCELLED: 'Annulé',
-};
-
 const METHODS = [
   ['CASH', 'Espèces'],
   ['TRANSFER', 'Virement'],
@@ -145,7 +138,6 @@ export function RentPage() {
   const { toast } = useToast();
 
   const localTenants = getLocalTenants();
-  const localProps = getLocalProperties();
 
   const { data: schedulesData } = useOrgList<Schedule>(
     ['schedules', status],
@@ -153,8 +145,6 @@ export function RentPage() {
   );
   const { data: invoicesData } = useOrgList<Invoice>(['invoices'], '/invoices?pageSize=50');
   const summary = useOrgQuery<Summary>(['finance-summary'], '/finance/summary');
-
-  const availableBalance = summary.data?.collectedMinor ?? 750000;
 
   // Calcul synthétique par locataire & propriété
   const tenantRentSummaries = useMemo(() => {
@@ -218,6 +208,8 @@ export function RentPage() {
 
     return defaultList;
   }, [localTenants]);
+
+  const totalPaidRent = tenantRentSummaries.reduce((sum, item) => sum + item.paidTotal, 0);
 
   const lateTenants = tenantRentSummaries.filter(
     (t) => t.status === 'LATE' || t.status === 'UNPAID',
@@ -1540,7 +1532,6 @@ export function PaymentsPage() {
   }, []);
 
   const properties = useMemo(() => getLocalProperties(), []);
-  const tenants = useMemo(() => getLocalTenants(), []);
 
   // Filtered quittances
   const filtered = useMemo(() => {
@@ -1626,28 +1617,28 @@ export function PaymentsPage() {
       {/* Cartes de statistiques Quittances & Solde */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Quittances Émises"
-          value={totalEmittedCount}
-          subtitle="Toutes charges confondues"
-          icon={<Receipt className="size-5 text-indigo-400" />}
+          label="Total Quittances Émises"
+          value={String(totalEmittedCount)}
+          hint="Toutes charges confondues"
+          icon={Receipt}
         />
         <StatCard
-          title="Total Encaissé (Solde Retirable)"
+          label="Total Encaissé (Solde Retirable)"
           value={`${totalPaidAmount.toLocaleString('fr-FR')} FCFA`}
-          subtitle="Disponible pour retrait MoMo"
-          icon={<CheckCircle2 className="size-5 text-emerald-400" />}
+          hint="Disponible pour retrait MoMo"
+          icon={CheckCircle2}
         />
         <StatCard
-          title="Quittances en Attente"
-          value={pendingCount}
-          subtitle={`${pendingAmount.toLocaleString('fr-FR')} FCFA à recouvrer`}
-          icon={<AlertCircle className="size-5 text-amber-400" />}
+          label="Quittances en Attente"
+          value={String(pendingCount)}
+          hint={`${pendingAmount.toLocaleString('fr-FR')} FCFA à recouvrer`}
+          icon={AlertCircle}
         />
         <StatCard
-          title="Mode de Versement"
+          label="Mode de Versement"
           value="Mobile Money"
-          subtitle="Orange, Wave, MTN, Moov"
-          icon={<CreditCard className="size-5 text-blue-400" />}
+          hint="Orange, Wave, MTN, Moov"
+          icon={CreditCard}
         />
       </div>
 
@@ -1684,7 +1675,7 @@ export function PaymentsPage() {
           >
             <option value="ALL">Toutes les propriétés</option>
             {properties.map((p) => (
-              <option key={p.id} value={p.id}>
+              <option key={p._id} value={p._id}>
                 {p.name}
               </option>
             ))}
@@ -1951,10 +1942,40 @@ function CreateQuittanceModal({
   onCreated: () => void;
 }) {
   const { toast } = useToast();
-  const properties = useMemo(() => getLocalProperties(), []);
-  const allTenants = useMemo(() => getLocalTenants(), []);
+  const properties = useMemo(() => {
+    const list = getLocalProperties();
+    if (list.length > 0) return list;
+    return [
+      {
+        _id: 'prop-default-1',
+        name: 'Résidence Katd Les Palmiers',
+        type: 'RESIDENTIAL_BUILDING',
+        address: 'Cocody Riviera',
+        city: 'Abidjan',
+        country: 'CI',
+        zone: 'Cocody',
+        status: 'ACTIVE' as const,
+      },
+    ];
+  }, []);
+  const allTenants = useMemo(() => {
+    const list = getLocalTenants();
+    if (list.length > 0) return list;
+    return [
+      {
+        _id: 'ten-default-1',
+        fullName: 'Kouamé Jean-Marc',
+        phone: '+225 07 12 34 56 78',
+        email: 'jean.kouame@gmail.com',
+        status: 'ACTIVE',
+        propertyId: 'prop-default-1',
+        propertyName: 'Résidence Katd Les Palmiers',
+        unitNumber: 'Porte 3B',
+      },
+    ];
+  }, []);
 
-  const [propertyId, setPropertyId] = useState(properties[0]?.id || '');
+  const [propertyId, setPropertyId] = useState(properties[0]?._id || '');
   const [tenantId, setTenantId] = useState('');
   const [type, setType] = useState<'WATER' | 'ELECTRICITY' | 'RENT' | 'CHARGES' | 'OTHER'>('WATER');
   const [amount, setAmount] = useState<number>(15000);
@@ -1971,8 +1992,9 @@ function CreateQuittanceModal({
   }, [allTenants, propertyId]);
 
   useEffect(() => {
-    if (availableTenants.length > 0 && !tenantId) {
-      setTenantId(availableTenants[0].id);
+    const first = availableTenants[0];
+    if (first && !tenantId) {
+      setTenantId(first._id);
     }
   }, [availableTenants, tenantId]);
 
@@ -1987,8 +2009,8 @@ function CreateQuittanceModal({
       return;
     }
 
-    const prop = properties.find((p) => p.id === propertyId);
-    const ten = allTenants.find((t) => t.id === tenantId);
+    const prop = properties.find((p) => p._id === propertyId);
+    const ten = allTenants.find((t) => t._id === tenantId);
 
     const typeLabels: Record<string, string> = {
       WATER: 'Facture Eau (SODECI)',
@@ -2006,7 +2028,7 @@ function CreateQuittanceModal({
       propertyId,
       propertyName: prop?.name || 'Propriété',
       tenantId,
-      tenantName: ten?.name || 'Locataire',
+      tenantName: ten?.fullName || 'Locataire',
       tenantPhone: ten?.phone,
       tenantEmail: ten?.email,
       amountMinor: Number(amount),
@@ -2050,7 +2072,7 @@ function CreateQuittanceModal({
             required
           >
             {properties.map((p) => (
-              <option key={p.id} value={p.id}>
+              <option key={p._id} value={p._id}>
                 {p.name} ({p.zone || p.city})
               </option>
             ))}
@@ -2068,8 +2090,8 @@ function CreateQuittanceModal({
             required
           >
             {availableTenants.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name} · {t.unitNumber} ({t.phone})
+              <option key={t._id} value={t._id}>
+                {t.fullName} · {t.unitNumber || 'Logement'} ({t.phone || 'Contact'})
               </option>
             ))}
           </select>

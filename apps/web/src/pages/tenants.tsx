@@ -28,7 +28,6 @@ import {
   ShieldCheck,
   Users,
   Edit,
-  Trash2,
   Building2,
   UserMinus,
 } from 'lucide-react';
@@ -65,15 +64,15 @@ interface PropertyItem {
   name: string;
   address: string;
   city: string;
-  zone?: string;
+  zone?: string | undefined;
 }
 
 interface UnitItem {
   _id: string;
   propertyId: string;
   name: string;
-  number?: string;
-  floor?: number;
+  number?: string | undefined;
+  floor?: number | undefined;
   type: string;
   status: string;
   rentAmountMinor: number;
@@ -156,7 +155,7 @@ export function TenantsPage() {
   const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
 
   const [localTenants, setLocalTenants] = useState<Tenant[]>(() => getLocalTenants());
-  const [localLeases, setLocalLeases] = useState<LeaseItem[]>(() => getLocalLeases());
+  const [localLeases] = useState<LeaseItem[]>(() => getLocalLeases());
 
   const base = useOrgPath();
   const client = useQueryClient();

@@ -1,16 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { leaseInputSchema, type LeaseInput } from '@rentflow/shared';
-import {
-  FileText,
-  Plus,
-  Bell,
-  CheckCircle2,
-  ShieldCheck,
-  Calendar,
-  Clock,
-  AlertTriangle,
-} from 'lucide-react';
+import { FileText, Plus, Bell, CheckCircle2, ShieldCheck, Clock } from 'lucide-react';
 import { PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -25,7 +15,8 @@ import {
   LeaseContractModal,
   type LeaseContractData,
 } from '../components/leases/lease-contract-modal';
-import { getLocalProperties, getLocalTenants } from './properties';
+import { getLocalProperties } from './properties';
+import { getLocalTenants } from './tenants';
 
 interface Lease {
   _id: string;
@@ -381,7 +372,7 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
   const [dueDay, setDueDay] = useState<number>(5);
   const [tenantId, setTenantId] = useState<string>('');
   const [propertyId, setPropertyId] = useState<string>('');
-  const [unitId, setUnitId] = useState<string>('');
+  const [unitId] = useState<string>('');
 
   const base = useOrgPath();
   const client = useQueryClient();
@@ -405,7 +396,7 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
   }, [startDate, initialAdvanceMonths]);
 
   const create = useMutation({
-    mutationFn: (input: LeaseInput) =>
+    mutationFn: (input: Record<string, unknown>) =>
       apiRequest(`${base}/leases`, { method: 'POST', body: input }),
     onSuccess: () => {
       void client.invalidateQueries();
@@ -416,7 +407,7 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
         variant: 'success',
       });
     },
-    onError: (err: Error) => {
+    onError: () => {
       // Local fallback in case backend is offline
       const newLease: Lease = {
         _id: `lease-${Date.now()}`,
@@ -490,9 +481,10 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
         create.mutate({
           tenantId: tenantId || 'tenant-custom',
           unitId: unitId || 'unit-custom',
-          startDate,
-          endDate,
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
           rentAmountMinor: rentAmount,
+          currency: 'XOF',
           dueDay,
         });
       }}
@@ -522,7 +514,7 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
           >
             <option value="">Sélectionner la propriété</option>
             {properties.map((p) => (
-              <option key={p.id} value={p.id}>
+              <option key={p._id} value={p._id}>
                 {p.name}
               </option>
             ))}
@@ -539,8 +531,8 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
           >
             <option value="">Sélectionner le locataire</option>
             {localTenants.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name} ({t.phone})
+              <option key={t._id} value={t._id}>
+                {t.fullName} ({t.phone || 'Contact'})
               </option>
             ))}
           </select>

@@ -6,11 +6,14 @@ import { apiRequest } from '../../lib/api-client';
 import { CheckCircle2, AlertCircle, Loader2, ArrowDownCircle, ShieldCheck, X } from 'lucide-react';
 
 export interface IkeepayPayoutModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  open?: boolean;
+  onClose?: () => void;
+  onOpenChange?: (open: boolean) => void;
   availableBalance?: number;
   currency?: string;
   onPayoutSuccess?: (amount: number, operator: string, phone: string) => void;
+  onSuccess?: () => void;
 }
 
 const OPERATORS = [
@@ -20,16 +23,22 @@ const OPERATORS = [
   { id: 'MOOV', name: 'Moov Money', color: 'bg-blue-600 text-white', badge: 'Moov' },
 ];
 
-export function IkeepayPayoutModal({
-  isOpen,
-  onClose,
-  availableBalance = 750000,
-  currency = 'XOF',
-  onPayoutSuccess,
-}: IkeepayPayoutModalProps) {
+export function IkeepayPayoutModal(props: IkeepayPayoutModalProps) {
+  const isOpen = props.isOpen ?? props.open ?? false;
+  const onClose = () => {
+    props.onClose?.();
+    props.onOpenChange?.(false);
+  };
+  const availableBalance = props.availableBalance ?? 750000;
+  const currency = props.currency ?? 'XOF';
+  const onPayoutSuccess = (amt: number, op: string, ph: string) => {
+    props.onPayoutSuccess?.(amt, op, ph);
+    props.onSuccess?.();
+  };
+
   const [operator, setOperator] = useState('ORANGE');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [country, setCountry] = useState('CI');
+  const [country] = useState('CI');
   const [amount, setAmount] = useState<number>(Math.min(100000, availableBalance));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
