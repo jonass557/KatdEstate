@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { AppError } from '../../common/errors.js';
 import { IkeepayConfig, IkeepayTransaction } from '../../models/payment-gateway.js';
-import { RentSchedule } from '../../models/lease.js';
+import { RentSchedule } from '../../models/finance.js';
 import {
   HouseSaleTransaction,
   HouseRentalRecord,

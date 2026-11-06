@@ -37,3 +37,5 @@ export const requireOrganizationMembership: RequestHandler = async (req, _res, n
     next(error);
   }
 };
+
+export const requireOrganization = requireOrganizationMembership;
