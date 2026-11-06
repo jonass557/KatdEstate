@@ -335,7 +335,11 @@ export class IkeepayService {
   /**
    * Répercute automatiquement l'encaissement sur les objets métier (loyer, chefferie, etc.).
    */
-  private static async applyPaymentEffect(tx: { purpose?: string; referenceId?: unknown; amount?: number }) {
+  private static async applyPaymentEffect(tx: {
+    purpose?: string;
+    referenceId?: unknown;
+    amount?: number;
+  }) {
     if (tx.purpose === 'RENT_PAYMENT' && tx.referenceId) {
       await RentSchedule.findByIdAndUpdate(tx.referenceId, {
         $set: {
