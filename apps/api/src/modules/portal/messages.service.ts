@@ -43,7 +43,7 @@ export async function getMessage(req: Request, res: Response): Promise<void> {
 }
 
 export async function sendMessage(req: Request, res: Response): Promise<void> {
-  let recipientId = req.body.recipientId;
+  const recipientId = req.body.recipientId;
 
   // Si c'est un locataire qui écrit, le destinataire par défaut est l'équipe gestionnaire
   if (req.organizationContext!.role === 'TENANT' && !recipientId) {

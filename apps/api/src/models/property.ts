@@ -1,6 +1,6 @@
 import mongoose, { Schema, model, type InferSchemaType, type Model, type Types } from 'mongoose';
 const models = mongoose.models;
-import { PROPERTY_STATUSES, PROPERTY_TYPES, UNIT_STATUSES, UNIT_TYPES } from '@rentflow/shared';
+import { PROPERTY_STATUSES, UNIT_STATUSES, UNIT_TYPES } from '@rentflow/shared';
 
 const timestamps = true;
 const org = { type: Schema.Types.ObjectId, ref: 'Organization', required: true } as const;

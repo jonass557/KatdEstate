@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import type { AppConfig } from '../../config/index.js';
 import { Payment, RentSchedule } from '../../models/finance.js';
-import { Lease, Tenant } from '../../models/lease.js';
+import { Lease } from '../../models/lease.js';
 import { MaintenanceTicket, Transaction } from '../../models/operations.js';
 import { Property, Unit } from '../../models/property.js';
 import { AIConversation, AIUsage } from '../../models/platform.js';

@@ -11,6 +11,18 @@ import type { IkeepayPayinInput, IkeepayPayoutInput, IkeepayConfigInput } from '
 
 const IKEEPAY_BASE_URL = 'https://api.ikeepay.com';
 
+interface IkeepayApiResponse {
+  message?: string;
+  provider_reference?: string;
+  payment_link?: string;
+  status?: string;
+  data?: {
+    provider_reference?: string;
+    payment_link?: string;
+    status?: string;
+  };
+}
+
 export class IkeepayService {
   /**
    * Récupère la configuration Ikeepay de l'organisation ou de la plateforme.
@@ -98,7 +110,7 @@ export class IkeepayService {
         body: JSON.stringify(payload),
       });
 
-      const data = (await response.json()) as Record<string, any>;
+      const data = (await response.json()) as IkeepayApiResponse;
 
       if (!response.ok) {
         await IkeepayTransaction.findByIdAndUpdate(localTx._id, {
@@ -131,11 +143,12 @@ export class IkeepayService {
         status: data?.status || 'pending',
         message: 'Demande de paiement transmise avec succès au réseau mobile.',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof AppError) throw error;
+      const err = error as Error;
       throw new AppError(
         'IKEEPAY_NETWORK_ERROR',
-        `Impossible de joindre Ikeepay : ${error.message}`,
+        `Impossible de joindre Ikeepay : ${err?.message || 'Erreur inconnue'}`,
         502,
       );
     }
@@ -188,7 +201,7 @@ export class IkeepayService {
       body: JSON.stringify(payload),
     });
 
-    const data = (await response.json()) as Record<string, any>;
+    const data = (await response.json()) as IkeepayApiResponse;
 
     if (!response.ok) {
       await IkeepayTransaction.findByIdAndUpdate(localTx._id, {
@@ -229,7 +242,7 @@ export class IkeepayService {
       },
     });
 
-    const resJson = (await response.json()) as Record<string, any>;
+    const resJson = (await response.json()) as IkeepayApiResponse;
     if (!response.ok) {
       throw new AppError(
         'VERIFY_FAILED',
@@ -322,7 +335,7 @@ export class IkeepayService {
   /**
    * Répercute automatiquement l'encaissement sur les objets métier (loyer, chefferie, etc.).
    */
-  private static async applyPaymentEffect(tx: any) {
+  private static async applyPaymentEffect(tx: { purpose?: string; referenceId?: unknown; amount?: number }) {
     if (tx.purpose === 'RENT_PAYMENT' && tx.referenceId) {
       await RentSchedule.findByIdAndUpdate(tx.referenceId, {
         $set: {

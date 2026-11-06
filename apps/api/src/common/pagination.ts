@@ -42,7 +42,6 @@ export function sortOf(resource: string, query: PageQuery): Record<string, 1 | -
 }
 
 export async function paginate(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   model: Model<any>,
   filter: Record<string, unknown>,
   query: PageQuery,

@@ -57,6 +57,7 @@ export class EmailProvider implements NotificationProvider {
 export class SmsProvider implements NotificationProvider {
   readonly channel = 'SMS' as const;
   async send(_message: NotificationMessage): Promise<DeliveryResult> {
+    void _message;
     return {
       status: 'SKIPPED_UNCONFIGURED',
       detail: 'Aucun fournisseur SMS configuré. Le message n’a pas été envoyé.',
@@ -67,6 +68,7 @@ export class SmsProvider implements NotificationProvider {
 export class WhatsAppProvider implements NotificationProvider {
   readonly channel = 'WHATSAPP' as const;
   async send(_message: NotificationMessage): Promise<DeliveryResult> {
+    void _message;
     return {
       status: 'SKIPPED_UNCONFIGURED',
       detail: 'Aucun fournisseur WhatsApp configuré. Le message n’a pas été envoyé.',
@@ -77,6 +79,7 @@ export class WhatsAppProvider implements NotificationProvider {
 export class InAppProvider implements NotificationProvider {
   readonly channel = 'IN_APP' as const;
   async send(_message: NotificationMessage): Promise<DeliveryResult> {
+    void _message;
     return { status: 'SENT' };
   }
 }

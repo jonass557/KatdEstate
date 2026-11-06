@@ -24,6 +24,7 @@ function respond(handler: (req: Request, res: Response) => Promise<void>) {
  * Routes publiques pour la marketplace (consultation, visites, offres sans authentification requise)
  */
 export function createMarketplacePublicRouter(_config: AppConfig) {
+  void _config;
   const router = Router();
 
   router.get('/listings', respond(marketplace.searchListings));

@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express';
 import { HttpError } from '../../common/errors.js';
-import { sendSuccess } from '../../common/http.js';
-import { Listing, Lead, Viewing, Offer, AgentProfile } from '../../models/marketplace.js';
+import { Listing, Lead, Viewing, Offer } from '../../models/marketplace.js';
 
 export async function searchListings(req: Request, res: Response): Promise<void> {
   const {
@@ -153,7 +152,7 @@ export async function getListingById(req: Request, res: Response): Promise<void>
 
   // Address sanitization if hidden
   if (listing.location?.hideExactAddress) {
-    listing.location.address = undefined as any;
+    delete (listing.location as { address?: string }).address;
   }
 
   res.locals.data = listing;
