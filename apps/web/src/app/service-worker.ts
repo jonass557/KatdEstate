@@ -1,17 +1,23 @@
 /**
- * Enregistre le service worker PWA — **en production uniquement**.
- *
- * En développement, un service worker interférerait avec le HMR de Vite et
- * masquerait les modifications de code. L'échec d'enregistrement est non
- * bloquant : l'application doit rester pleinement utilisable sans PWA.
+ * Nettoie les anciens Service Workers et caches PWA afin de garantir
+ * que chaque déploiement Vercel soit immédiatement visible sur mobile et PC.
  */
 export function registerServiceWorker(): void {
-  if (!import.meta.env.PROD) return;
-  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
 
-  window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js').catch((error: unknown) => {
-      console.warn('[RentFlow] Service worker non enregistré.', error);
+  if ('serviceWorker' in navigator) {
+    void navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const reg of registrations) {
+        void reg.unregister();
+      }
     });
-  });
+  }
+
+  if ('caches' in window) {
+    void caches.keys().then((keys) => {
+      for (const key of keys) {
+        void caches.delete(key);
+      }
+    });
+  }
 }
