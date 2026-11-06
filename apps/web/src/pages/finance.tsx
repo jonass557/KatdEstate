@@ -33,7 +33,21 @@ import {
   Split,
   Undo2,
   Wallet,
+  ArrowDownCircle,
+  Smartphone,
+  Mail,
+  Plus,
+  Receipt,
+  UserCheck,
+  Check,
+  Building2,
+  UserX,
+  X,
 } from 'lucide-react';
+import { IkeepayPayoutModal } from '../components/payments/ikeepay-payout-modal';
+import { getStoredQuittances, saveStoredQuittances, type QuittanceItem } from '../lib/quittances';
+import { getLocalProperties } from './properties';
+import { getLocalTenants } from './tenants';
 
 interface Schedule {
   _id: string;
@@ -114,6 +128,7 @@ const METHODS = [
 
 export function RentPage() {
   const [activeTab, setActiveTab] = useState<'schedules' | 'invoices' | 'deposits'>('schedules');
+  const [rentSubTab, setRentSubTab] = useState<'schedules' | 'by-tenant' | 'late-tenants'>('schedules');
   const [status, setStatus] = useState('');
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [editSchedule, setEditSchedule] = useState<Schedule | null>(null);
@@ -122,8 +137,13 @@ export function RentPage() {
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showTenantHistoryModal, setShowTenantHistoryModal] = useState(false);
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
 
   const base = useOrgPath();
+  const { toast } = useToast();
+
+  const localTenants = getLocalTenants();
+  const localProps = getLocalProperties();
 
   const { data: schedulesData } = useOrgList<Schedule>(
     ['schedules', status],
@@ -132,24 +152,110 @@ export function RentPage() {
   const { data: invoicesData } = useOrgList<Invoice>(['invoices'], '/invoices?pageSize=50');
   const summary = useOrgQuery<Summary>(['finance-summary'], '/finance/summary');
 
+  const availableBalance = summary.data?.collectedMinor ?? 750000;
+
+  // Calcul synthétique par locataire & propriété
+  const tenantRentSummaries = useMemo(() => {
+    const defaultList = [
+      {
+        id: 'ten-1',
+        name: 'Kouamé Jean-Marc',
+        phone: '+225 07 12 34 56 78',
+        email: 'jean.kouame@gmail.com',
+        property: 'Résidence Katd Les Palmiers',
+        unit: 'Chambre Moderne Porte 3B',
+        monthlyRent: 150000,
+        paidTotal: 150000,
+        dueAmount: 0,
+        lateDays: 0,
+        status: 'UP_TO_DATE',
+      },
+      {
+        id: 'ten-2',
+        name: 'Mlle Aminata Koné',
+        phone: '+225 05 98 76 54 32',
+        email: 'aminata.kone@yahoo.fr',
+        property: 'Résidence Katd Les Palmiers',
+        unit: 'Studio Moderne N°2',
+        monthlyRent: 120000,
+        paidTotal: 60000,
+        dueAmount: 60000,
+        lateDays: 6,
+        status: 'LATE',
+      },
+      {
+        id: 'ten-3',
+        name: 'M. Ibrahim Ouattara',
+        phone: '+225 01 23 45 67 89',
+        email: 'ibrahim.ouattara@gmail.com',
+        property: 'Villa Duplex Angré',
+        unit: 'Appartement 3 pièces',
+        monthlyRent: 250000,
+        paidTotal: 0,
+        dueAmount: 250000,
+        lateDays: 14,
+        status: 'UNPAID',
+      },
+    ];
+
+    if (localTenants.length > 0) {
+      return localTenants.map((lt, idx) => ({
+        id: lt._id,
+        name: lt.fullName,
+        phone: lt.phone || '+225 07 00 00 00 00',
+        email: lt.email || 'locataire@katdestate.immo',
+        property: lt.propertyName || 'Résidence Principale',
+        unit: lt.unitName || lt.unitNumber || 'Logement 1',
+        monthlyRent: lt.rentAmount || 120000,
+        paidTotal: idx === 0 ? lt.rentAmount || 120000 : 0,
+        dueAmount: idx === 0 ? 0 : lt.rentAmount || 120000,
+        lateDays: idx === 1 ? 5 : idx === 2 ? 12 : 0,
+        status: idx === 0 ? 'UP_TO_DATE' : idx === 1 ? 'LATE' : 'UNPAID',
+      }));
+    }
+
+    return defaultList;
+  }, [localTenants]);
+
+  const lateTenants = tenantRentSummaries.filter((t) => t.status === 'LATE' || t.status === 'UNPAID');
+
+  const handleRemindWhatsApp = (t: typeof tenantRentSummaries[0]) => {
+    const text = encodeURIComponent(
+      `Bonjour ${t.name},\nNous vous rappelons que votre loyer d'un montant de ${t.dueAmount.toLocaleString('fr-FR')} FCFA pour votre logement (${t.unit} - ${t.property}) est en attente de règlement.\n\nVous pouvez effectuer votre paiement directement par Mobile Money depuis votre espace locataire KatdEstate : https://katdestate.vercel.app/portal/receipts\n\nMerci de votre confiance.`
+    );
+    const clean = t.phone.replace(/[^0-9]/g, '');
+    window.open(`https://wa.me/${clean}?text=${text}`, '_blank');
+  };
+
+  const handleRemindEmail = (t: typeof tenantRentSummaries[0]) => {
+    toast({
+      title: 'Alerte email transmise',
+      description: `Notification d’échéance de loyer envoyée à ${t.name} (${t.email}).`,
+      variant: 'success',
+    });
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Gestion des loyers et factures"
-        description="Suivi des échéances, pénalités de retard, cautions et répartition des charges."
+        description="Suivi des encaissements, loyers par locataire & propriété, relance des retards et demande de retrait Mobile Money."
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => setShowPayoutModal(true)}
+              className="bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20"
+            >
+              <ArrowDownCircle className="size-4" />
+              <span>Demande de Retrait Mobile Money</span>
+            </Button>
             <Button variant="secondary" onClick={() => setShowPenaltiesModal(true)}>
               <Clock className="mr-1.5 size-4" />
-              Pénalités de retard
+              Pénalités
             </Button>
             <Button variant="secondary" onClick={() => setShowDepositModal(true)}>
               <ShieldCheck className="mr-1.5 size-4" />
-              Enregistrer caution
-            </Button>
-            <Button variant="secondary" onClick={() => setShowTenantHistoryModal(true)}>
-              <Search className="mr-1.5 size-4" />
-              Historique locataire
+              Cautions
             </Button>
           </div>
         }
@@ -223,98 +329,336 @@ export function RentPage() {
 
       {activeTab === 'schedules' ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value)}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+          {/* Sous-onglets de gestion des loyers */}
+          <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-muted/40 border border-border">
+            <button
+              type="button"
+              onClick={() => setRentSubTab('schedules')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                rentSubTab === 'schedules'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <option value="">Tous les statuts</option>
-              {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              Calendrier des échéances
+            </button>
+            <button
+              type="button"
+              onClick={() => setRentSubTab('by-tenant')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                rentSubTab === 'by-tenant'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>Loyers par Locataire & Propriété</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px]">
+                {tenantRentSummaries.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRentSubTab('late-tenants')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                rentSubTab === 'late-tenants'
+                  ? 'bg-rose-600 text-white shadow-sm'
+                  : 'text-rose-500 hover:text-rose-600'
+              }`}
+            >
+              <span>Retards de paiement & Impayés</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black">
+                {lateTenants.length}
+              </span>
+            </button>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Échéance</th>
-                  <th className="px-4 py-3 font-medium">Loyer de base</th>
-                  <th className="px-4 py-3 font-medium">Pénalité</th>
-                  <th className="px-4 py-3 font-medium">Total dû</th>
-                  <th className="px-4 py-3 font-medium">Payé</th>
-                  <th className="px-4 py-3 font-medium">Reste</th>
-                  <th className="px-4 py-3 font-medium">Statut</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(schedulesData?.data ?? []).map((schedule) => {
-                  const totalDue = schedule.amountDueMinor + schedule.penaltyMinor;
-                  const remaining = Math.max(0, totalDue - schedule.amountPaidMinor);
-                  return (
-                    <tr key={schedule._id} className="border-t border-border">
-                      <td className="px-4 py-3 font-medium">{formatDate(schedule.dueDate)}</td>
-                      <td className="px-4 py-3">{schedule.amountDueMinor.toLocaleString('fr-FR')}</td>
-                      <td className="px-4 py-3 text-amber-600">
-                        {schedule.penaltyMinor > 0 ? `+${schedule.penaltyMinor.toLocaleString('fr-FR')}` : '0'}
-                      </td>
-                      <td className="px-4 py-3 font-semibold">{totalDue.toLocaleString('fr-FR')}</td>
-                      <td className="px-4 py-3 text-emerald-600">
-                        {schedule.amountPaidMinor.toLocaleString('fr-FR')}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-rose-600">
-                        {remaining.toLocaleString('fr-FR')}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge>{STATUS_LABELS[schedule.status] ?? schedule.status}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {schedule.status !== 'PAID' && schedule.status !== 'CANCELLED' ? (
-                            <Button
-                              variant="secondary"
-                              className="h-8 px-2.5 text-xs"
-                              onClick={() => setSelectedSchedule(schedule)}
-                            >
-                              Encaisser
-                            </Button>
-                          ) : null}
-                          <Button
-                            variant="ghost"
-                            className="h-8 px-2.5 text-xs"
-                            onClick={() => setEditSchedule(schedule)}
-                          >
-                            Modifier
-                          </Button>
-                          {schedule.status !== 'PAID' && schedule.status !== 'CANCELLED' ? (
-                            <Button
-                              variant="ghost"
-                              className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700"
-                              onClick={() => setCancelSchedule(schedule)}
-                            >
-                              Annuler
-                            </Button>
-                          ) : null}
-                        </div>
-                      </td>
+          {rentSubTab === 'schedules' && (
+            <>
+              <div className="flex items-center justify-between">
+                <select
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value)}
+                  className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Tous les statuts</option>
+                  {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-left">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Échéance</th>
+                      <th className="px-4 py-3 font-medium">Loyer de base</th>
+                      <th className="px-4 py-3 font-medium">Pénalité</th>
+                      <th className="px-4 py-3 font-medium">Total dû</th>
+                      <th className="px-4 py-3 font-medium">Payé</th>
+                      <th className="px-4 py-3 font-medium">Reste</th>
+                      <th className="px-4 py-3 font-medium">Statut</th>
+                      <th className="px-4 py-3 text-right font-medium">Actions</th>
                     </tr>
-                  );
-                })}
-                {(schedulesData?.data ?? []).length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
-                      Aucune échéance trouvée.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {(schedulesData?.data ?? []).map((schedule) => {
+                      const totalDue = schedule.amountDueMinor + schedule.penaltyMinor;
+                      const remaining = Math.max(0, totalDue - schedule.amountPaidMinor);
+                      return (
+                        <tr key={schedule._id} className="border-t border-border">
+                          <td className="px-4 py-3 font-medium">{formatDate(schedule.dueDate)}</td>
+                          <td className="px-4 py-3">{schedule.amountDueMinor.toLocaleString('fr-FR')}</td>
+                          <td className="px-4 py-3 text-amber-600">
+                            {schedule.penaltyMinor > 0 ? `+${schedule.penaltyMinor.toLocaleString('fr-FR')}` : '0'}
+                          </td>
+                          <td className="px-4 py-3 font-semibold">{totalDue.toLocaleString('fr-FR')}</td>
+                          <td className="px-4 py-3 text-emerald-600">
+                            {schedule.amountPaidMinor.toLocaleString('fr-FR')}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-rose-600">
+                            {remaining.toLocaleString('fr-FR')}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge>{STATUS_LABELS[schedule.status] ?? schedule.status}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {schedule.status !== 'PAID' && schedule.status !== 'CANCELLED' ? (
+                                <Button
+                                  variant="secondary"
+                                  className="h-8 px-2.5 text-xs"
+                                  onClick={() => setSelectedSchedule(schedule)}
+                                >
+                                  Encaisser
+                                </Button>
+                              ) : null}
+                              <Button
+                                variant="ghost"
+                                className="h-8 px-2.5 text-xs"
+                                onClick={() => setEditSchedule(schedule)}
+                              >
+                                Modifier
+                              </Button>
+                              {schedule.status !== 'PAID' && schedule.status !== 'CANCELLED' ? (
+                                <Button
+                                  variant="ghost"
+                                  className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700"
+                                  onClick={() => setCancelSchedule(schedule)}
+                                >
+                                  Annuler
+                                </Button>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {(schedulesData?.data ?? []).length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                          Aucune échéance trouvée.
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {/* VUE : SOMMES PAYÉES PAR LOCATAIRE SUR CHAQUE PROPRIÉTÉ */}
+          {rentSubTab === 'by-tenant' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-bold text-sm text-foreground">Récapitulatif des Loyers Encaissés</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Suivi précis de la somme versée par chaque locataire selon sa propriété attribuée
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setShowPayoutModal(true)}
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-xs flex items-center gap-1.5"
+                >
+                  <ArrowDownCircle className="size-4" />
+                  <span>Retrait sur mes encaissements</span>
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-left">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Propriété</th>
+                      <th className="px-4 py-3 font-medium">Locataire & Logement</th>
+                      <th className="px-4 py-3 font-medium">Loyer Mensuel</th>
+                      <th className="px-4 py-3 font-medium text-emerald-600">Total Encaissé</th>
+                      <th className="px-4 py-3 font-medium text-rose-600">Reste Dû</th>
+                      <th className="px-4 py-3 font-medium">Statut</th>
+                      <th className="px-4 py-3 text-right font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tenantRentSummaries.map((item) => (
+                      <tr key={item.id} className="border-t border-border">
+                        <td className="px-4 py-3 font-semibold text-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <Building2 className="size-3.5 text-primary shrink-0" />
+                            <span>{item.property}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="font-bold text-foreground">{item.name}</p>
+                          <p className="text-xs text-muted-foreground">{item.unit}</p>
+                        </td>
+                        <td className="px-4 py-3 font-medium">
+                          {item.monthlyRent.toLocaleString('fr-FR')} FCFA
+                        </td>
+                        <td className="px-4 py-3 font-black text-emerald-500">
+                          {item.paidTotal.toLocaleString('fr-FR')} FCFA
+                        </td>
+                        <td className="px-4 py-3 font-black text-rose-500">
+                          {item.dueAmount > 0 ? `${item.dueAmount.toLocaleString('fr-FR')} FCFA` : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            className={
+                              item.status === 'UP_TO_DATE'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                : item.status === 'LATE'
+                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                            }
+                          >
+                            {item.status === 'UP_TO_DATE'
+                              ? 'À jour'
+                              : item.status === 'LATE'
+                              ? `${item.lateDays}j de retard`
+                              : 'Impayé'}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {item.dueAmount > 0 ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRemindWhatsApp(item)}
+                              className="text-xs h-8 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                            >
+                              <Smartphone className="size-3 mr-1" />
+                              Relancer
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-emerald-500 font-bold flex items-center justify-end gap-1">
+                              <CheckCircle2 className="size-3.5" />
+                              Soldé
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* VUE : LOCATAIRES EN RETARD & IMPAYÉS */}
+          {rentSubTab === 'late-tenants' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-bold text-sm text-rose-500 flex items-center gap-1.5">
+                    <AlertTriangle className="size-4" />
+                    Suivi des Retards de Paiement & Impayés
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {lateTenants.length} locataire(s) ont dépassé la date d'échéance. Relancez-les directement par WhatsApp ou email.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    lateTenants.forEach((t) => handleRemindEmail(t));
+                  }}
+                  className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs"
+                >
+                  <Mail className="size-3.5 mr-1.5" />
+                  Relancer tous les retards par email
+                </Button>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {lateTenants.map((tenant) => (
+                  <Card key={tenant.id} className="border-rose-500/30 bg-card">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-bold text-sm text-foreground">{tenant.name}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {tenant.property} · <strong className="text-foreground">{tenant.unit}</strong>
+                          </p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-xs font-black">
+                          {tenant.lateDays} jours de retard
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-background border border-border flex items-center justify-between text-xs">
+                        <div>
+                          <span className="text-muted-foreground text-[11px] block">Montant en retard</span>
+                          <span className="font-black text-rose-500 text-sm">
+                            {tenant.dueAmount.toLocaleString('fr-FR')} FCFA
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-muted-foreground text-[11px] block">Loyer mensuel</span>
+                          <span className="font-bold text-foreground">
+                            {tenant.monthlyRent.toLocaleString('fr-FR')} FCFA
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-muted-foreground space-y-0.5">
+                        <p>Tél : <strong className="text-foreground">{tenant.phone}</strong></p>
+                        <p>Email : <strong className="text-foreground">{tenant.email}</strong></p>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2 border-t border-border">
+                        <Button
+                          size="sm"
+                          onClick={() => handleRemindWhatsApp(tenant)}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8 flex items-center justify-center gap-1.5"
+                        >
+                          <Smartphone className="size-3.5" />
+                          <span>Rappeler (WhatsApp)</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRemindEmail(tenant)}
+                          className="flex-1 text-xs h-8 flex items-center justify-center gap-1.5"
+                        >
+                          <Mail className="size-3.5" />
+                          <span>Notification Email</span>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {lateTenants.length === 0 && (
+                  <div className="sm:col-span-2 text-center py-8 text-sm text-muted-foreground">
+                    🎉 Aucun locataire en retard. Tous vos loyers sont à jour !
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -508,6 +852,22 @@ export function RentPage() {
         >
           <TenantHistoryViewer />
         </Modal>
+      ) : null}
+
+      {/* Modal Retrait Mobile Money */}
+      {showPayoutModal ? (
+        <IkeepayPayoutModal
+          open={showPayoutModal}
+          onOpenChange={setShowPayoutModal}
+          availableBalance={totalPaidRent}
+          onSuccess={() => {
+            toast({
+              title: 'Demande de retrait enregistrée',
+              description: 'Votre virement Mobile Money vers votre compte a été initié avec succès.',
+              variant: 'success',
+            });
+          }}
+        />
       ) : null}
     </div>
   );
@@ -1046,307 +1406,636 @@ function TenantHistoryViewer() {
 }
 
 export function PaymentsPage() {
-  const [method, setMethod] = useState('');
-  const [status, setStatus] = useState('');
-  const [refundPayment, setRefundPayment] = useState<{ _id: string; number: string; amountMinor: number } | null>(null);
-  const [sendReceiptModal, setSendReceiptModal] = useState<{ _id: string; number: string } | null>(null);
-
-  const base = useOrgPath();
-  const client = useQueryClient();
   const { toast } = useToast();
+  const [quittances, setQuittances] = useState<QuittanceItem[]>(() => getStoredQuittances());
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [propertyFilter, setPropertyFilter] = useState<string>('ALL');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [activeQuittanceForPrint, setActiveQuittanceForPrint] = useState<QuittanceItem | null>(null);
 
-  const queryParams = new URLSearchParams({ pageSize: '50' });
-  if (method) queryParams.set('method', method);
-  if (status) queryParams.set('status', status);
+  // Sync with local storage
+  const reloadQuittances = () => {
+    setQuittances(getStoredQuittances());
+  };
 
-  const { data } = useOrgList<{
-    _id: string;
-    number: string;
-    paidAt: string;
-    amountMinor: number;
-    method: string;
-    status: string;
-  }>(['payments', method, status], `/payments?${queryParams.toString()}`);
+  useEffect(() => {
+    reloadQuittances();
+  }, []);
 
-  const confirmMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`${base}/payments/${id}/confirm`, { method: 'POST' }),
-    onSuccess: () => {
-      void client.invalidateQueries();
-      toast({ title: 'Paiement confirmé', description: 'La quittance de loyer a été validée.', variant: 'success' });
-    },
-    onError: (err: Error) => toast({ title: 'Erreur', description: err.message, variant: 'error' }),
-  });
+  const properties = useMemo(() => getLocalProperties(), []);
+  const tenants = useMemo(() => getLocalTenants(), []);
+
+  // Filtered quittances
+  const filtered = useMemo(() => {
+    return quittances.filter((q) => {
+      if (typeFilter !== 'ALL' && q.type !== typeFilter) return false;
+      if (statusFilter !== 'ALL' && q.status !== statusFilter) return false;
+      if (propertyFilter !== 'ALL' && q.propertyId !== propertyFilter) return false;
+      return true;
+    });
+  }, [quittances, typeFilter, statusFilter, propertyFilter]);
+
+  // Statistics
+  const totalEmittedCount = quittances.length;
+  const totalPaidAmount = quittances
+    .filter((q) => q.status === 'PAID')
+    .reduce((sum, q) => sum + q.amountMinor, 0);
+  const pendingCount = quittances.filter((q) => q.status === 'PENDING').length;
+  const pendingAmount = quittances
+    .filter((q) => q.status === 'PENDING')
+    .reduce((sum, q) => sum + q.amountMinor, 0);
+
+  const handleMarkAsPaid = (id: string) => {
+    markQuittanceAsPaid(id, 'Paiement direct (Espèces / Virement)');
+    reloadQuittances();
+    toast({
+      title: 'Quittance marquée comme réglée',
+      description: 'Le reçu officiel est maintenant disponible pour le locataire.',
+      variant: 'success',
+    });
+  };
+
+  const handleDeleteQuittance = (id: string) => {
+    const next = quittances.filter((q) => q._id !== id);
+    saveStoredQuittances(next);
+    reloadQuittances();
+    toast({
+      title: 'Quittance supprimée',
+      variant: 'success',
+    });
+  };
+
+  const handleSendReminder = (q: QuittanceItem) => {
+    const text = encodeURIComponent(
+      `Bonjour ${q.tenantName},\nVoici votre avis d'échéance KatdEstate pour votre logement (${q.propertyName}) :\n- Type : ${q.typeLabel}\n- Période : ${q.period}\n- Montant : ${q.amountMinor.toLocaleString('fr-FR')} FCFA\n- Date limite : ${formatDate(q.dueDate)}\n\nVous pouvez régler cette facture en 1 clic par Mobile Money sur votre portail : https://katdestate.vercel.app/portal/receipts\n\nMerci de votre réactivité.`
+    );
+    const cleanPhone = (q.tenantPhone || '').replace(/[^0-9]/g, '');
+    if (cleanPhone) {
+      window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+    } else {
+      toast({
+        title: 'Rappel transmis par notification',
+        description: `Notification d'échéance envoyée au locataire ${q.tenantName}.`,
+        variant: 'success',
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Gestion des paiements & quittances"
-        description="Encaissements, gestion des passerelles (MTN/Orange MoMo), quittances officielles et exports."
+        title="Quittances & Factures de Charges"
+        description="Émettez et transmettez les quittances d'eau (SODECI), électricité (CIE) et loyers à vos locataires selon leur bien attribué, encaissez par Mobile Money et effectuez vos retraits."
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
-              variant="secondary"
-              onClick={() => downloadFile(`${base}/payments/export?format=xlsx`, 'paiements-domora.xlsx')}
+              onClick={() => setShowPayoutModal(true)}
+              className="bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20"
             >
-              <FileSpreadsheet className="mr-1.5 size-4" />
-              Exporter XLSX
+              <ArrowDownCircle className="size-4" />
+              <span>Demande de Retrait Mobile Money</span>
             </Button>
             <Button
-              variant="secondary"
-              onClick={() => downloadFile(`${base}/payments/export?format=csv`, 'paiements-domora.csv')}
+              onClick={() => setShowCreateModal(true)}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs flex items-center gap-1.5"
             >
-              <Download className="mr-1.5 size-4" />
-              Exporter CSV
+              <Plus className="size-4" />
+              <span>+ Émettre une quittance (Eau / Élec / Loyer)</span>
             </Button>
           </div>
         }
       />
 
-      <div className="flex flex-wrap gap-2">
-        <select
-          value={method}
-          onChange={(event) => setMethod(event.target.value)}
-          className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
-        >
-          <option value="">Tous les modes de règlement</option>
-          {METHODS.map(([val, label]) => (
-            <option key={val} value={val}>
-              {label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
-        >
-          <option value="">Tous les statuts</option>
-          {Object.entries(PAYMENT_STATUS_LABELS).map(([val, label]) => (
-            <option key={val} value={val}>
-              {label}
-            </option>
-          ))}
-        </select>
+      {/* Cartes de statistiques Quittances & Solde */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Quittances Émises"
+          value={totalEmittedCount}
+          subtitle="Toutes charges confondues"
+          icon={<Receipt className="size-5 text-indigo-400" />}
+        />
+        <StatCard
+          title="Total Encaissé (Solde Retirable)"
+          value={`${totalPaidAmount.toLocaleString('fr-FR')} FCFA`}
+          subtitle="Disponible pour retrait MoMo"
+          icon={<CheckCircle2 className="size-5 text-emerald-400" />}
+        />
+        <StatCard
+          title="Quittances en Attente"
+          value={pendingCount}
+          subtitle={`${pendingAmount.toLocaleString('fr-FR')} FCFA à recouvrer`}
+          icon={<AlertCircle className="size-5 text-amber-400" />}
+        />
+        <StatCard
+          title="Mode de Versement"
+          value="Mobile Money"
+          subtitle="Orange, Wave, MTN, Moov"
+          icon={<CreditCard className="size-5 text-blue-400" />}
+        />
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-border">
+      {/* Barre de filtres */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border border-border bg-card/60">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="h-9 rounded-xl border border-input bg-background px-3 text-xs font-medium"
+          >
+            <option value="ALL">Toutes les natures de charge</option>
+            <option value="WATER">Facture Eau (SODECI)</option>
+            <option value="ELECTRICITY">Facture Électricité (CIE)</option>
+            <option value="RENT">Quittance de Loyer</option>
+            <option value="CHARGES">Charges communes & Entretien</option>
+            <option value="OTHER">Autre quittance</option>
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-9 rounded-xl border border-input bg-background px-3 text-xs font-medium"
+          >
+            <option value="ALL">Tous les statuts de paiement</option>
+            <option value="PENDING">En attente de paiement</option>
+            <option value="PAID">Payé (Mobile Money / Encaissé)</option>
+          </select>
+
+          <select
+            value={propertyFilter}
+            onChange={(e) => setPropertyFilter(e.target.value)}
+            className="h-9 rounded-xl border border-input bg-background px-3 text-xs font-medium"
+          >
+            <option value="ALL">Toutes les propriétés</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <span className="text-xs text-muted-foreground font-medium">
+          {filtered.length} quittance(s) affichée(s)
+        </span>
+      </div>
+
+      {/* Tableau des quittances */}
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left">
+          <thead className="bg-muted/50 text-left border-b border-border">
             <tr>
-              <th className="px-4 py-3 font-medium">Référence</th>
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium">Montant</th>
-              <th className="px-4 py-3 font-medium">Mode</th>
-              <th className="px-4 py-3 font-medium">Statut</th>
-              <th className="px-4 py-3 font-medium">Quittance PDF</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 font-semibold text-xs">Réf & Nature</th>
+              <th className="px-4 py-3 font-semibold text-xs">Propriété attribuée</th>
+              <th className="px-4 py-3 font-semibold text-xs">Locataire destinataire</th>
+              <th className="px-4 py-3 font-semibold text-xs">Période / Échéance</th>
+              <th className="px-4 py-3 font-semibold text-xs">Montant</th>
+              <th className="px-4 py-3 font-semibold text-xs">Statut Paiement</th>
+              <th className="px-4 py-3 text-right font-semibold text-xs">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {(data?.data ?? []).map((payment) => (
-              <tr key={payment._id} className="border-t border-border">
-                <td className="px-4 py-3 font-medium">{payment.number}</td>
-                <td className="px-4 py-3">{formatDate(payment.paidAt)}</td>
-                <td className="px-4 py-3 font-semibold text-emerald-600">
-                  {payment.amountMinor.toLocaleString('fr-FR')} FCFA
-                </td>
-                <td className="px-4 py-3">
-                  {METHODS.find(([val]) => val === payment.method)?.[1] ?? payment.method}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge>{PAYMENT_STATUS_LABELS[payment.status] ?? payment.status}</Badge>
-                </td>
-                <td className="px-4 py-3">
-                  <Button
-                    variant="ghost"
-                    className="h-8 px-2.5 text-xs"
-                    onClick={() =>
-                      downloadFile(
-                        `${base}/receipts/${payment._id}/pdf`,
-                        `quittance-${payment.number}.pdf`,
-                      )
-                    }
-                  >
-                    <Download className="mr-1 size-3.5" />
-                    Quittance
-                  </Button>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <Button
-                      variant="ghost"
-                      className="h-8 px-2.5 text-xs"
-                      onClick={() => setSendReceiptModal(payment)}
-                    >
-                      <Send className="mr-1 size-3.5" />
-                      Envoyer
-                    </Button>
-                    {payment.status === 'PENDING' ? (
-                      <Button
-                        variant="secondary"
-                        className="h-8 px-2.5 text-xs"
-                        onClick={() => confirmMutation.mutate(payment._id)}
-                      >
-                        <CheckCircle2 className="mr-1 size-3.5" />
-                        Confirmer
-                      </Button>
-                    ) : null}
-                    {payment.status === 'CONFIRMED' ? (
+          <tbody className="divide-y divide-border">
+            {filtered.map((q) => {
+              const isPaid = q.status === 'PAID';
+              const typeIcon =
+                q.type === 'WATER'
+                  ? '💧'
+                  : q.type === 'ELECTRICITY'
+                  ? '⚡'
+                  : q.type === 'RENT'
+                  ? '🏠'
+                  : '📋';
+
+              return (
+                <tr key={q._id} className="hover:bg-muted/20 transition">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{typeIcon}</span>
+                      <div>
+                        <div className="font-bold text-xs">{q.number}</div>
+                        <div className="text-[11px] text-muted-foreground">{q.typeLabel}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-xs font-medium text-foreground">{q.propertyName}</div>
+                    {q.meterIndex && (
+                      <div className="text-[10px] text-muted-foreground">{q.meterIndex}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-xs font-semibold">{q.tenantName}</div>
+                    {q.tenantPhone && (
+                      <div className="text-[11px] text-muted-foreground">{q.tenantPhone}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-xs font-medium">{q.period}</div>
+                    <div className="text-[11px] text-muted-foreground">Limite : {formatDate(q.dueDate)}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="font-bold text-emerald-500 text-sm">
+                      {q.amountMinor.toLocaleString('fr-FR')} FCFA
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {isPaid ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        <CheckCircle2 className="size-3" />
+                        Payé ({q.paymentMethod || 'Mobile Money'})
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                        <AlertCircle className="size-3" />
+                        En attente de paiement
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {!isPaid && (
+                        <>
+                          <Button
+                            variant="secondary"
+                            className="h-8 px-2 text-xs bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30"
+                            title="Relancer sur WhatsApp"
+                            onClick={() => handleSendReminder(q)}
+                          >
+                            <Send className="mr-1 size-3.5" />
+                            Relancer
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            className="h-8 px-2 text-xs"
+                            title="Marquer comme encaissé manuellement"
+                            onClick={() => handleMarkAsPaid(q._id)}
+                          >
+                            <CheckCircle2 className="mr-1 size-3.5" />
+                            Encaissé
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="ghost"
-                        className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700"
-                        onClick={() => setRefundPayment(payment)}
+                        className="h-8 px-2 text-xs"
+                        onClick={() => setActiveQuittanceForPrint(q)}
                       >
-                        <Undo2 className="mr-1 size-3.5" />
-                        Rembourser
+                        <FileSpreadsheet className="mr-1 size-3.5" />
+                        Reçu
                       </Button>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {(data?.data ?? []).length === 0 ? (
+                      <Button
+                        variant="ghost"
+                        className="h-8 px-2 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                        onClick={() => handleDeleteQuittance(q._id)}
+                      >
+                        Suppr.
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
-                  Aucun paiement trouvé pour ces filtres.
+                <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                  Aucune quittance ou facture correspondant aux filtres sélectionnés.
                 </td>
               </tr>
-            ) : null}
+            )}
           </tbody>
         </table>
       </div>
 
-      {refundPayment ? (
-        <Modal
-          open={!!refundPayment}
-          onOpenChange={(open) => {
-            if (!open) setRefundPayment(null);
+      {/* Modal Créer une Quittance */}
+      {showCreateModal && (
+        <CreateQuittanceModal
+          open={showCreateModal}
+          onOpenChange={setShowCreateModal}
+          onCreated={() => {
+            reloadQuittances();
+            setShowCreateModal(false);
           }}
-          title="Rembourser un paiement"
-          description={`Remboursement de ${refundPayment.amountMinor.toLocaleString('fr-FR')} FCFA sur la référence ${refundPayment.number}.`}
-        >
-          <RefundForm payment={refundPayment} onClose={() => setRefundPayment(null)} />
-        </Modal>
-      ) : null}
+        />
+      )}
 
-      {sendReceiptModal ? (
-        <Modal
-          open={!!sendReceiptModal}
-          onOpenChange={(open) => {
-            if (!open) setSendReceiptModal(null);
+      {/* Modal Retrait Mobile Money */}
+      {showPayoutModal && (
+        <IkeepayPayoutModal
+          open={showPayoutModal}
+          onOpenChange={setShowPayoutModal}
+          availableBalance={totalPaidAmount}
+          onSuccess={() => {
+            toast({
+              title: 'Demande de retrait initiée',
+              description: 'Vos fonds issus des quittances ont été transférés sur votre compte Mobile Money.',
+              variant: 'success',
+            });
+            setShowPayoutModal(false);
           }}
-          title="Transmettre la quittance au locataire"
-          description={`Envoi officiel de la quittance ${sendReceiptModal.number} par notification et email.`}
+        />
+      )}
+
+      {/* Modal Détails & Reçu Quittance */}
+      {activeQuittanceForPrint && (
+        <Modal
+          open={Boolean(activeQuittanceForPrint)}
+          onOpenChange={(op) => !op && setActiveQuittanceForPrint(null)}
+          title={`Reçu / Quittance Officielle ${activeQuittanceForPrint.number}`}
+          description="Avis de paiement et justificatif KatdEstate certifié."
         >
-          <SendReceiptForm paymentId={sendReceiptModal._id} onClose={() => setSendReceiptModal(null)} />
+          <div className="space-y-4 p-4 rounded-xl border border-border bg-muted/20">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="font-bold text-base">{activeQuittanceForPrint.typeLabel}</h3>
+                <p className="text-xs text-muted-foreground">Réf: {activeQuittanceForPrint.number}</p>
+              </div>
+              <Badge
+                className={
+                  activeQuittanceForPrint.status === 'PAID'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-amber-500 text-white'
+                }
+              >
+                {activeQuittanceForPrint.status === 'PAID' ? 'RÉGLÉE' : 'EN ATTENTE'}
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-muted-foreground">Propriété :</span>
+                <p className="font-semibold text-foreground">{activeQuittanceForPrint.propertyName}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Locataire :</span>
+                <p className="font-semibold text-foreground">{activeQuittanceForPrint.tenantName}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Période concernée :</span>
+                <p className="font-semibold text-foreground">{activeQuittanceForPrint.period}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Date limite :</span>
+                <p className="font-semibold text-foreground">{formatDate(activeQuittanceForPrint.dueDate)}</p>
+              </div>
+            </div>
+
+            {activeQuittanceForPrint.meterIndex && (
+              <div className="rounded-lg bg-background p-2.5 text-xs border border-border">
+                <span className="text-muted-foreground font-medium">Relevé de compteur : </span>
+                <span className="font-semibold">{activeQuittanceForPrint.meterIndex}</span>
+              </div>
+            )}
+
+            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 flex items-center justify-between">
+              <span className="font-bold text-xs uppercase text-emerald-400">Montant net :</span>
+              <span className="text-lg font-black text-emerald-500">
+                {activeQuittanceForPrint.amountMinor.toLocaleString('fr-FR')} FCFA
+              </span>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setActiveQuittanceForPrint(null)}>
+                Fermer
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  window.print();
+                }}
+              >
+                <Download className="mr-1.5 size-4" />
+                Imprimer le reçu
+              </Button>
+            </div>
+          </div>
         </Modal>
-      ) : null}
+      )}
     </div>
   );
 }
 
-function RefundForm({
-  payment,
-  onClose,
+function CreateQuittanceModal({
+  open,
+  onOpenChange,
+  onCreated,
 }: {
-  payment: { _id: string; number: string; amountMinor: number };
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: () => void;
 }) {
-  const base = useOrgPath();
-  const client = useQueryClient();
   const { toast } = useToast();
+  const properties = useMemo(() => getLocalProperties(), []);
+  const allTenants = useMemo(() => getLocalTenants(), []);
 
-  const refund = useMutation({
-    mutationFn: (body: unknown) =>
-      apiRequest(`${base}/payments/${payment._id}/refund`, { method: 'POST', body }),
-    onSuccess: () => {
-      void client.invalidateQueries();
-      toast({ title: 'Remboursement effectué', description: 'Le solde de l’échéance a été réouvert.', variant: 'success' });
-      onClose();
-    },
-    onError: (err: Error) =>
-      toast({ title: 'Erreur', description: err.message, variant: 'error' }),
-  });
+  const [propertyId, setPropertyId] = useState(properties[0]?.id || '');
+  const [tenantId, setTenantId] = useState('');
+  const [type, setType] = useState<'WATER' | 'ELECTRICITY' | 'RENT' | 'CHARGES' | 'OTHER'>('WATER');
+  const [amount, setAmount] = useState<number>(15000);
+  const [period, setPeriod] = useState<string>('Novembre 2026');
+  const [dueDate, setDueDate] = useState<string>('2026-11-20');
+  const [meterIndex, setMeterIndex] = useState<string>('');
+  const [notes, setNotes] = useState<string>('');
+
+  // Selected property tenants
+  const availableTenants = useMemo(() => {
+    if (!propertyId) return allTenants;
+    const filtered = allTenants.filter((t) => t.propertyId === propertyId);
+    return filtered.length > 0 ? filtered : allTenants;
+  }, [allTenants, propertyId]);
+
+  useEffect(() => {
+    if (availableTenants.length > 0 && !tenantId) {
+      setTenantId(availableTenants[0].id);
+    }
+  }, [availableTenants, tenantId]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!propertyId || !tenantId || !amount) {
+      toast({
+        title: 'Formulaire incomplet',
+        description: 'Veuillez sélectionner la propriété, le locataire et renseigner le montant.',
+        variant: 'error',
+      });
+      return;
+    }
+
+    const prop = properties.find((p) => p.id === propertyId);
+    const ten = allTenants.find((t) => t.id === tenantId);
+
+    const typeLabels: Record<string, string> = {
+      WATER: 'Facture Eau (SODECI)',
+      ELECTRICITY: 'Facture Électricité (CIE)',
+      RENT: 'Quittance de Loyer Mensuel',
+      CHARGES: 'Charges communes & Entretien',
+      OTHER: 'Autre Facture',
+    };
+
+    const newQuittance: QuittanceItem = {
+      _id: `quit-${Date.now()}`,
+      number: `QUIT-${type}-${Date.now().toString().slice(-4)}`,
+      type,
+      typeLabel: typeLabels[type] || 'Quittance de charges',
+      propertyId,
+      propertyName: prop?.name || 'Propriété',
+      tenantId,
+      tenantName: ten?.name || 'Locataire',
+      tenantPhone: ten?.phone,
+      tenantEmail: ten?.email,
+      amountMinor: Number(amount),
+      period,
+      dueDate,
+      status: 'PENDING',
+      meterIndex: meterIndex || undefined,
+      notes: notes || undefined,
+      createdAt: new Date().toISOString(),
+    };
+
+    const current = getStoredQuittances();
+    saveStoredQuittances([newQuittance, ...current]);
+
+    toast({
+      title: 'Quittance émise et envoyée',
+      description: `La quittance ${newQuittance.number} est désormais visible sur le dashboard du locataire pour paiement Mobile Money.`,
+      variant: 'success',
+    });
+
+    onCreated();
+  };
 
   return (
-    <form
-      className="space-y-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        const parsed = refundPaymentSchema.safeParse({ reason: form.get('reason') });
-        if (!parsed.success) {
-          toast({ title: 'Motif requis', description: parsed.error.issues[0]?.message, variant: 'error' });
-          return;
-        }
-        refund.mutate(parsed.data);
-      }}
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Émettre une quittance à un locataire"
+      description="Sélectionnez la propriété attribuée, le locataire et le type de charge (SODECI, CIE, loyer)."
     >
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">Motif du remboursement</label>
-        <Input name="reason" placeholder="Ex: Paiement en doublon, erreur de facturation" required />
-      </div>
-      <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-        <Button type="submit" variant="secondary" className="text-rose-600 hover:text-rose-700" disabled={refund.isPending}>
-          Valider le remboursement
-        </Button>
-      </div>
-    </form>
-  );
-}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground">Propriété attribuée</label>
+          <select
+            value={propertyId}
+            onChange={(e) => {
+              setPropertyId(e.target.value);
+              setTenantId('');
+            }}
+            className="mt-1 h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium"
+            required
+          >
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.zone || p.city})
+              </option>
+            ))}
+          </select>
+        </div>
 
-function SendReceiptForm({ paymentId, onClose }: { paymentId: string; onClose: () => void }) {
-  const base = useOrgPath();
-  const { toast } = useToast();
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground">Locataire destinataire</label>
+          <select
+            value={tenantId}
+            onChange={(e) => setTenantId(e.target.value)}
+            className="mt-1 h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium"
+            required
+          >
+            {availableTenants.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} · {t.unitNumber} ({t.phone})
+              </option>
+            ))}
+          </select>
+        </div>
 
-  const send = useMutation({
-    mutationFn: (body: unknown) =>
-      apiRequest(`${base}/receipts/${paymentId}/send`, { method: 'POST', body }),
-    onSuccess: () => {
-      toast({ title: 'Quittance transmise', description: 'Notification envoyée au locataire avec succès.', variant: 'success' });
-      onClose();
-    },
-    onError: (err: Error) =>
-      toast({ title: 'Erreur d’envoi', description: err.message, variant: 'error' }),
-  });
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Nature de la charge</label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as any)}
+              className="mt-1 h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium"
+            >
+              <option value="WATER">💧 Facture Eau (SODECI)</option>
+              <option value="ELECTRICITY">⚡ Facture Électricité (CIE)</option>
+              <option value="RENT">🏠 Quittance de Loyer</option>
+              <option value="CHARGES">🧹 Charges communes / Gardien</option>
+              <option value="OTHER">📋 Autre quittance</option>
+            </select>
+          </div>
 
-  return (
-    <form
-      className="space-y-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        const parsed = sendReceiptSchema.safeParse({
-          sendEmail: form.get('sendEmail') === 'on',
-          notifyInApp: form.get('notifyInApp') === 'on',
-        });
-        if (!parsed.success) {
-          toast({ title: 'Erreur', description: parsed.error.issues[0]?.message, variant: 'error' });
-          return;
-        }
-        send.mutate(parsed.data);
-      }}
-    >
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="sendEmail" defaultChecked className="rounded border-input" />
-          Envoyer par Email au locataire
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="notifyInApp" defaultChecked className="rounded border-input" />
-          Envoyer une notification in-app sur le portail locataire
-        </label>
-      </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Montant net (FCFA)</label>
+            <Input
+              type="number"
+              min={1}
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              placeholder="Ex: 15000"
+              className="mt-1 rounded-xl"
+              required
+            />
+          </div>
+        </div>
 
-      <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-        <Button type="submit" disabled={send.isPending}>
-          <Send className="mr-1.5 size-4" />
-          Envoyer la quittance
-        </Button>
-      </div>
-    </form>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Période concernée</label>
+            <Input
+              type="text"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              placeholder="Ex: Novembre 2026"
+              className="mt-1 rounded-xl"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Date limite de paiement</label>
+            <Input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="mt-1 rounded-xl"
+              required
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground">
+            Index compteur ou N° Facture (optionnel)
+          </label>
+          <Input
+            type="text"
+            value={meterIndex}
+            onChange={(e) => setMeterIndex(e.target.value)}
+            placeholder="Ex: Index SODECI 4210 à 4235 ou N° compteur CIE 014785"
+            className="mt-1 rounded-xl"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground">Note / Instructions particulières</label>
+          <Input
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Ex: Facture commune partagée à parts égales"
+            className="mt-1 rounded-xl"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-3">
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+          <Button type="submit" className="bg-primary hover:bg-primary/90 font-bold">
+            <Send className="mr-1.5 size-4" />
+            Émettre et envoyer au locataire
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

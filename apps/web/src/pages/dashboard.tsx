@@ -163,24 +163,17 @@ export function DashboardPage() {
             ],
           },
           {
-            title: 'PARC IMMOBILIER, LOTS & LOCATIONS',
-            subtitle: 'Gestion globale des patrimoines, logements, contrats et répertoire locataires',
+            title: 'PARC IMMOBILIER & LOCATIONS',
+            subtitle: 'Gestion globale des patrimoines, logements, contrats et locataires',
             buttons: [
               {
-                title: 'Propriétés &\nImmeubles',
+                title: 'Gestion des\nPropriétés',
                 icon: Building2,
                 colorClass: 'bg-gradient-to-tr from-indigo-600 to-violet-600 text-white',
                 glowClass: 'shadow-indigo-500/25',
                 to: '/properties',
                 badge: 'PARC',
                 badgeBg: 'bg-indigo-400 text-black',
-              },
-              {
-                title: 'Logements\n& Lots',
-                icon: Home,
-                colorClass: 'bg-gradient-to-tr from-blue-600 to-cyan-600 text-white',
-                glowClass: 'shadow-blue-500/25',
-                to: '/units',
               },
               {
                 title: 'Baux &\nContrats',
@@ -190,7 +183,7 @@ export function DashboardPage() {
                 to: '/leases',
               },
               {
-                title: 'Répertoire\nLocataires',
+                title: 'Gestion des\nLocataires',
                 icon: Users,
                 colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-600 text-white',
                 glowClass: 'shadow-teal-500/25',
@@ -1191,7 +1184,7 @@ export function DashboardPage() {
             subtitle: 'Création, modification et suppression de propriétés, attribution des chambres/studios aux locataires et baux',
             buttons: [
               {
-                title: 'Mes Propriétés\n& Immeubles',
+                title: 'Gestion des\nPropriétés',
                 icon: Building2,
                 colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white',
                 glowClass: 'shadow-blue-500/25',
@@ -1200,21 +1193,12 @@ export function DashboardPage() {
                 badgeBg: 'bg-blue-400 text-black',
               },
               {
-                title: 'Chambres, Studios\n& Appartements',
-                icon: Home,
-                colorClass: 'bg-gradient-to-tr from-cyan-600 to-teal-600 text-white',
-                glowClass: 'shadow-cyan-500/25',
-                to: '/units',
-                badge: 'LOTS',
-                badgeBg: 'bg-cyan-300 text-black',
-              },
-              {
-                title: 'Locataires, Baux\n& Échéances',
+                title: 'Gestion des\nLocataires',
                 icon: Users,
                 colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-600 text-white',
                 glowClass: 'shadow-teal-500/25',
                 to: '/tenants',
-                badge: 'ALERTES EMAIL',
+                badge: 'LOCATAIRES',
                 badgeBg: 'bg-emerald-400 text-black',
               },
               {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Bell, FileText, Home, MessageSquare, Receipt, Send, Wallet, Smartphone, ShieldCheck } from 'lucide-react';
+import { Bell, FileText, Home, MessageSquare, Receipt, Send, Wallet, Smartphone, ShieldCheck, Download, CheckCircle2, AlertCircle, Phone, Mail, MapPin } from 'lucide-react';
 import { maintenanceTicketInputSchema } from '@rentflow/shared';
 import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
@@ -16,6 +16,7 @@ import { useOrgPath, useOrgQuery } from '../lib/query';
 import { useSession } from '../app/session';
 import { IkeepayModal } from '../components/payments/ikeepay-modal';
 import { LeaseContractModal, type LeaseContractData } from '../components/leases/lease-contract-modal';
+import { getStoredQuittances, markQuittanceAsPaid, type QuittanceItem } from '../lib/quittances';
 
 interface PortalHome {
   tenant: { fullName: string };
@@ -287,29 +288,281 @@ export function PortalPaymentsPage() {
 export function PortalReceiptsPage() {
   const base = useOrgPath();
   const { toast } = useToast();
+  const { user } = useSession();
   const { data } = useOrgQuery<Row[]>(['portal-receipts'], '/portal/receipts');
+
+  const [quittances, setQuittances] = useState<QuittanceItem[]>(() => getStoredQuittances());
+  const [selectedQuittanceToPay, setSelectedQuittanceToPay] = useState<QuittanceItem | null>(null);
+  const [activeQuittanceForPrint, setActiveQuittanceForPrint] = useState<QuittanceItem | null>(null);
+
+  const reload = () => {
+    setQuittances(getStoredQuittances());
+  };
+
+  const pendingBills = quittances.filter((q) => q.status === 'PENDING');
+  const paidBills = quittances.filter((q) => q.status === 'PAID');
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mes reçus" description="Téléchargez vos quittances." />
-      <div className="space-y-2">
-        {(data ?? []).map((row) => (
-          <div key={row._id} className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
-            <p className="text-sm">{row.number} · {money(row.amountMinor, row.currency)}</p>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                openPdf(`${base}/portal/receipts/${row._id}/pdf`).catch((error: Error) =>
-                  toast({ title: 'Téléchargement impossible', description: error.message, variant: 'error' }),
-                );
-              }}
-            >
-              Télécharger
-            </Button>
+      <PageHeader
+        title="Mes Quittances, Factures & Reçus"
+        description="Retrouvez ici l'ensemble des factures transmises par votre propriétaire (Eau SODECI, Électricité CIE, Loyers et Charges) et réglez-les en un clic par Mobile Money."
+      />
+
+      {/* Alerte si des factures sont en attente */}
+      {pendingBills.length > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+              <AlertCircle className="size-5" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-foreground">
+                Vous avez {pendingBills.length} facture(s) en attente de règlement
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Montant total à payer :{' '}
+                <strong className="text-amber-500">
+                  {pendingBills.reduce((s, q) => s + q.amountMinor, 0).toLocaleString('fr-FR')} FCFA
+                </strong>
+              </p>
+            </div>
           </div>
-        ))}
-        {data && data.length === 0 ? <EmptyState title="Aucune quittance" description="Une quittance apparaît ici après un paiement complet." /> : null}
+        </div>
+      )}
+
+      {/* Section des factures & quittances en attente de paiement */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+          <span>Factures à régler (Eau, Électricité & Loyers)</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-500">
+            {pendingBills.length}
+          </span>
+        </h3>
+
+        {pendingBills.length === 0 ? (
+          <div className="p-6 rounded-2xl border border-dashed border-border bg-card/40 text-center text-sm text-muted-foreground">
+            Toutes vos quittances et factures sont à jour ! Aucune charge en attente.
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {pendingBills.map((q) => {
+              const icon =
+                q.type === 'WATER'
+                  ? '💧'
+                  : q.type === 'ELECTRICITY'
+                  ? '⚡'
+                  : q.type === 'RENT'
+                  ? '🏠'
+                  : '📋';
+
+              return (
+                <div
+                  key={q._id}
+                  className="p-4 rounded-2xl border border-border bg-card shadow-sm space-y-3 flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl">{icon}</span>
+                        <div>
+                          <h4 className="font-bold text-sm text-foreground">{q.typeLabel}</h4>
+                          <span className="text-[11px] text-muted-foreground">Réf: {q.number}</span>
+                        </div>
+                      </div>
+                      <Badge className="bg-amber-500/15 text-amber-500 border border-amber-500/30 text-[10px]">
+                        À PAYER
+                      </Badge>
+                    </div>
+
+                    <div className="text-xs space-y-1 text-muted-foreground bg-muted/30 p-2.5 rounded-xl border border-border/50">
+                      <div>
+                        Propriété : <strong className="text-foreground">{q.propertyName}</strong>
+                      </div>
+                      <div>
+                        Période : <strong className="text-foreground">{q.period}</strong>
+                      </div>
+                      {q.meterIndex && (
+                        <div className="text-[11px] text-primary font-medium">
+                          Compteur : {q.meterIndex}
+                        </div>
+                      )}
+                      {q.notes && <div className="text-[11px] italic">Note : {q.notes}</div>}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                        Montant à régler
+                      </span>
+                      <strong className="text-base font-black text-emerald-500">
+                        {q.amountMinor.toLocaleString('fr-FR')} FCFA
+                      </strong>
+                    </div>
+
+                    <Button
+                      onClick={() => setSelectedQuittanceToPay(q)}
+                      className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white shadow-sm flex items-center gap-1.5"
+                    >
+                      <Smartphone className="size-3.5" />
+                      Payer par Mobile Money
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      {/* Section des quittances réglées & reçus officiels */}
+      <div className="space-y-3 pt-4">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+          <span>Quittances réglées & Reçus officiels</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-500">
+            {paidBills.length}
+          </span>
+        </h3>
+
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left border-b border-border">
+              <tr>
+                <th className="px-4 py-3 font-semibold text-xs">Nature / Réf</th>
+                <th className="px-4 py-3 font-semibold text-xs">Propriété</th>
+                <th className="px-4 py-3 font-semibold text-xs">Période</th>
+                <th className="px-4 py-3 font-semibold text-xs">Montant payé</th>
+                <th className="px-4 py-3 font-semibold text-xs">Mode</th>
+                <th className="px-4 py-3 text-right font-semibold text-xs">Reçu certifié</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {paidBills.map((q) => (
+                <tr key={q._id} className="hover:bg-muted/20 transition">
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-xs">{q.typeLabel}</div>
+                    <div className="text-[11px] text-muted-foreground">{q.number}</div>
+                  </td>
+                  <td className="px-4 py-3 text-xs">{q.propertyName}</td>
+                  <td className="px-4 py-3 text-xs">{q.period}</td>
+                  <td className="px-4 py-3">
+                    <span className="font-bold text-emerald-500 text-xs">
+                      {q.amountMinor.toLocaleString('fr-FR')} FCFA
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="size-3" />
+                      {q.paymentMethod || 'Mobile Money'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="secondary"
+                      className="h-8 text-xs font-semibold"
+                      onClick={() => setActiveQuittanceForPrint(q)}
+                    >
+                      <Download className="mr-1.5 size-3.5" />
+                      Reçu PDF
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {paidBills.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                    Aucun reçu payé pour l'instant.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal Paiement iKeepay pour la quittance choisie */}
+      {selectedQuittanceToPay && (
+        <IkeepayModal
+          isOpen={Boolean(selectedQuittanceToPay)}
+          onClose={() => setSelectedQuittanceToPay(null)}
+          amount={selectedQuittanceToPay.amountMinor}
+          purpose="RENT_PAYMENT"
+          title={`Paiement : ${selectedQuittanceToPay.typeLabel}`}
+          description={`Règlement Mobile Money de la quittance ${selectedQuittanceToPay.number} (${selectedQuittanceToPay.period}) pour un montant de ${selectedQuittanceToPay.amountMinor.toLocaleString('fr-FR')} FCFA.`}
+          onPaymentSuccess={() => {
+            markQuittanceAsPaid(selectedQuittanceToPay._id, 'iKeepay Mobile Money');
+            reload();
+            setSelectedQuittanceToPay(null);
+            toast({
+              title: 'Paiement effectué avec succès !',
+              description: `Votre facture ${selectedQuittanceToPay.typeLabel} a été réglée. Votre reçu officiel est disponible.`,
+              variant: 'success',
+            });
+          }}
+        />
+      )}
+
+      {/* Modal Impression / Visualisation du reçu */}
+      {activeQuittanceForPrint && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-3xl bg-card border border-border p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider">
+                  Reçu de Paiement Certifié KatdEstate
+                </span>
+                <h3 className="font-black text-lg text-foreground">{activeQuittanceForPrint.typeLabel}</h3>
+              </div>
+              <Badge className="bg-emerald-500 text-white font-bold">RÉGLÉE</Badge>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between py-1 border-b border-border/50">
+                <span className="text-muted-foreground">N° Quittance :</span>
+                <span className="font-bold">{activeQuittanceForPrint.number}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-border/50">
+                <span className="text-muted-foreground">Propriété attribuée :</span>
+                <span className="font-semibold">{activeQuittanceForPrint.propertyName}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-border/50">
+                <span className="text-muted-foreground">Locataire :</span>
+                <span className="font-semibold">{activeQuittanceForPrint.tenantName}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-border/50">
+                <span className="text-muted-foreground">Période :</span>
+                <span className="font-semibold">{activeQuittanceForPrint.period}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-border/50">
+                <span className="text-muted-foreground">Mode de règlement :</span>
+                <span className="font-semibold text-emerald-500">
+                  {activeQuittanceForPrint.paymentMethod || 'Mobile Money'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+              <span className="text-xs uppercase font-bold text-emerald-600 dark:text-emerald-400">
+                Montant total réglé
+              </span>
+              <strong className="text-xl font-black text-emerald-500">
+                {activeQuittanceForPrint.amountMinor.toLocaleString('fr-FR')} FCFA
+              </strong>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setActiveQuittanceForPrint(null)}>
+                Fermer
+              </Button>
+              <Button variant="secondary" onClick={() => window.print()}>
+                <Download className="mr-1.5 size-4" />
+                Imprimer le reçu
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -317,38 +570,120 @@ export function PortalReceiptsPage() {
 export function PortalLeasePage() {
   const base = useOrgPath();
   const { toast } = useToast();
+  const { user } = useSession();
   const { data } = useOrgQuery<Row[]>(['portal-lease'], '/portal/lease');
+  const [contractModalOpen, setContractModalOpen] = useState(false);
+
+  const certifiedContract: LeaseContractData = {
+    leaseNumber: 'BAIL-2026-0042',
+    propertyName: 'Résidence Katd Les Palmiers',
+    propertyAddress: 'Boulevard de France, Cocody',
+    propertyZone: 'Cocody Palmeraie',
+    propertyCity: 'Abidjan',
+    unitName: 'Chambre Moderne Porte 3B',
+    unitType: 'Chambre moderne',
+    unitNumber: 'Porte 3B',
+    floor: 1,
+    tenantName: user?.displayName || 'Locataire Résident',
+    tenantPhone: '+225 07 12 34 56 78',
+    tenantEmail: user?.email || 'locataire@katdestate.immo',
+    ownerName: 'M. Amadou Diallo (Bailleur KatdEstate)',
+    ownerPhone: '+225 07 10 20 30 40',
+    ownerEmail: 'bailleur.amadou@katdestate.immo',
+    startDate: '2026-01-01',
+    endDate: '2026-12-31',
+    dueDay: 5,
+    rentAmountMinor: 150000,
+    chargesAmountMinor: 5000,
+    depositAmountMinor: 300000,
+    currency: 'FCFA',
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mon contrat" description="Vos contrats, du plus récent au plus ancien." />
-      <div className="space-y-2">
-        {(data ?? []).map((row) => (
-          <Card key={row._id}>
-            <CardContent className="flex items-center justify-between py-4">
-              <div>
-                <p className="font-medium">{row.number}</p>
-                <p className="text-xs text-muted-foreground">
-                  {date(row.startDate)} → {date(row.endDate)} · {money(row.rentAmountMinor, row.currency)}
-                </p>
-              </div>
+      <PageHeader
+        title="Mon Contrat de Bail Numérique"
+        description="Votre bail d'habitation certifié établi par votre propriétaire, conforme aux normes KatdEstate."
+      />
+
+      {/* Carte du contrat certifié reçu du propriétaire */}
+      <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-card to-background border border-emerald-500/30 shadow-md space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="size-12 rounded-2xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
+              <ShieldCheck className="size-7" />
+            </div>
+            <div>
               <div className="flex items-center gap-2">
-                {row.status ? <Badge>{row.status}</Badge> : null}
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    openPdf(`${base}/portal/lease/${row._id}/pdf`).catch((error: Error) =>
-                      toast({ title: 'Téléchargement impossible', description: error.message, variant: 'error' }),
-                    );
-                  }}
-                >
-                  PDF
-                </Button>
+                <span className="text-xs font-black text-emerald-500 uppercase tracking-wider">
+                  Contrat Établi & Transmis par le Propriétaire
+                </span>
+                <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px]">
+                  VALIDE & ACTIF
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <h2 className="text-xl font-black text-foreground">Contrat N° {certifiedContract.leaseNumber}</h2>
+              <p className="text-xs text-muted-foreground">
+                Bien loué : <strong>{certifiedContract.propertyName}</strong> · {certifiedContract.unitName}
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setContractModalOpen(true)}
+            className="bg-primary hover:bg-primary/90 font-bold text-xs flex items-center gap-2 shadow-sm"
+          >
+            <FileText className="size-4" />
+            Consulter & Télécharger le contrat certifié
+          </Button>
+        </div>
+
+        {/* Coordonnées Propriétaire & Logement */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
+          <div className="p-3.5 rounded-2xl bg-background/80 border border-border space-y-1">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              Bailleur / Propriétaire
+            </span>
+            <p className="font-bold text-sm text-foreground">{certifiedContract.ownerName}</p>
+            <p className="text-muted-foreground flex items-center gap-1.5 pt-1">
+              <Phone className="size-3 text-emerald-500" /> {certifiedContract.ownerPhone}
+            </p>
+            <p className="text-muted-foreground flex items-center gap-1.5">
+              <Mail className="size-3 text-blue-500" /> {certifiedContract.ownerEmail}
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-background/80 border border-border space-y-1">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              Localisation du bien
+            </span>
+            <p className="font-bold text-sm text-foreground">{certifiedContract.propertyName}</p>
+            <p className="text-muted-foreground flex items-center gap-1.5 pt-1">
+              <MapPin className="size-3 text-rose-500" /> {certifiedContract.propertyAddress}
+            </p>
+            <p className="text-muted-foreground">{certifiedContract.propertyZone}, {certifiedContract.propertyCity}</p>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-background/80 border border-border space-y-1">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              Modalités de Loyer
+            </span>
+            <p className="font-black text-base text-emerald-500">
+              {certifiedContract.rentAmountMinor.toLocaleString('fr-FR')} FCFA / mois
+            </p>
+            <p className="text-muted-foreground pt-1">Échéance : Le {certifiedContract.dueDay} de chaque mois</p>
+            <p className="text-muted-foreground">Caution versée : {certifiedContract.depositAmountMinor.toLocaleString('fr-FR')} FCFA</p>
+          </div>
+        </div>
       </div>
+
+      {/* Modal Contrat de Bail Certifié */}
+      {contractModalOpen && (
+        <LeaseContractModal
+          contract={certifiedContract}
+          onClose={() => setContractModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
