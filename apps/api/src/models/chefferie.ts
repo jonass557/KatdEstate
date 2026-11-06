@@ -4,15 +4,25 @@ import type { InferSchemaType } from 'mongoose';
 // 1. Paramètres des commissions de la Chefferie
 const chefferieCommissionSettingsSchema = new Schema(
   {
-    organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
-    neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', required: true, index: true },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
+      index: true,
+    },
+    neighborhoodId: {
+      type: Schema.Types.ObjectId,
+      ref: 'GeoNeighborhood',
+      required: true,
+      index: true,
+    },
     cityId: { type: Schema.Types.ObjectId, ref: 'GeoCity' },
     houseSalePercent: { type: Number, default: 3, min: 0, max: 50 },
     houseRentPercent: { type: Number, default: 10, min: 0, max: 50 },
     landSalePercent: { type: Number, default: 5, min: 0, max: 50 },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 chefferieCommissionSettingsSchema.index({ organizationId: 1, neighborhoodId: 1 }, { unique: true });
@@ -20,10 +30,20 @@ chefferieCommissionSettingsSchema.index({ organizationId: 1, neighborhoodId: 1 }
 // 2. Vente de Maison
 const houseSaleTransactionSchema = new Schema(
   {
-    organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
+      index: true,
+    },
     transactionNumber: { type: String, required: true, unique: true },
     cityId: { type: Schema.Types.ObjectId, ref: 'GeoCity', required: true },
-    neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', required: true, index: true },
+    neighborhoodId: {
+      type: Schema.Types.ObjectId,
+      ref: 'GeoNeighborhood',
+      required: true,
+      index: true,
+    },
     blockId: { type: Schema.Types.ObjectId, ref: 'GeoBlock', required: true, index: true },
     residenceId: { type: Schema.Types.ObjectId, ref: 'QuartierResidence' },
     houseDescription: { type: String, required: true },
@@ -70,7 +90,7 @@ const houseSaleTransactionSchema = new Schema(
     ],
     notes: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 houseSaleTransactionSchema.index({ organizationId: 1, neighborhoodId: 1, createdAt: -1 });
@@ -78,10 +98,20 @@ houseSaleTransactionSchema.index({ organizationId: 1, neighborhoodId: 1, created
 // 3. Location de Maison
 const houseRentalRecordSchema = new Schema(
   {
-    organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
+      index: true,
+    },
     rentalNumber: { type: String, required: true, unique: true },
     cityId: { type: Schema.Types.ObjectId, ref: 'GeoCity', required: true },
-    neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', required: true, index: true },
+    neighborhoodId: {
+      type: Schema.Types.ObjectId,
+      ref: 'GeoNeighborhood',
+      required: true,
+      index: true,
+    },
     blockId: { type: Schema.Types.ObjectId, ref: 'GeoBlock', required: true, index: true },
     residenceId: { type: Schema.Types.ObjectId, ref: 'QuartierResidence' },
     houseDescription: { type: String, required: true },
@@ -128,7 +158,7 @@ const houseRentalRecordSchema = new Schema(
     ],
     notes: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 houseRentalRecordSchema.index({ organizationId: 1, neighborhoodId: 1, createdAt: -1 });
@@ -136,10 +166,20 @@ houseRentalRecordSchema.index({ organizationId: 1, neighborhoodId: 1, createdAt:
 // 4. Vente de Terrain (Transactions Foncières)
 const landSaleTransactionSchema = new Schema(
   {
-    organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
+      index: true,
+    },
     transactionNumber: { type: String, required: true, unique: true },
     cityId: { type: Schema.Types.ObjectId, ref: 'GeoCity', required: true },
-    neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', required: true, index: true },
+    neighborhoodId: {
+      type: Schema.Types.ObjectId,
+      ref: 'GeoNeighborhood',
+      required: true,
+      index: true,
+    },
     blockId: { type: Schema.Types.ObjectId, ref: 'GeoBlock', required: true, index: true },
     plotNumber: { type: String },
     locationText: { type: String, required: true },
@@ -189,7 +229,7 @@ const landSaleTransactionSchema = new Schema(
     ],
     notes: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 landSaleTransactionSchema.index({ organizationId: 1, neighborhoodId: 1, createdAt: -1 });
@@ -197,7 +237,12 @@ landSaleTransactionSchema.index({ organizationId: 1, neighborhoodId: 1, createdA
 // 5. Certificat Officiel délivré par la Chefferie
 const chefferieCertificateSchema = new Schema(
   {
-    organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
+      index: true,
+    },
     certificateNumber: { type: String, required: true, unique: true },
     operationType: {
       type: String,
@@ -255,7 +300,7 @@ const chefferieCertificateSchema = new Schema(
     pdfUrl: { type: String },
     issuedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 chefferieCertificateSchema.index({ organizationId: 1, certificateNumber: 1 });
@@ -263,26 +308,22 @@ chefferieCertificateSchema.index({ organizationId: 1, verificationCode: 1 });
 
 export const ChefferieCommissionSettings = mongoose.model(
   'ChefferieCommissionSettings',
-  chefferieCommissionSettingsSchema
+  chefferieCommissionSettingsSchema,
 );
 export const HouseSaleTransaction = mongoose.model(
   'HouseSaleTransaction',
-  houseSaleTransactionSchema
+  houseSaleTransactionSchema,
 );
-export const HouseRentalRecord = mongoose.model(
-  'HouseRentalRecord',
-  houseRentalRecordSchema
-);
-export const LandSaleTransaction = mongoose.model(
-  'LandSaleTransaction',
-  landSaleTransactionSchema
-);
+export const HouseRentalRecord = mongoose.model('HouseRentalRecord', houseRentalRecordSchema);
+export const LandSaleTransaction = mongoose.model('LandSaleTransaction', landSaleTransactionSchema);
 export const ChefferieCertificate = mongoose.model(
   'ChefferieCertificate',
-  chefferieCertificateSchema
+  chefferieCertificateSchema,
 );
 
-export type ChefferieCommissionSettingsDoc = InferSchemaType<typeof chefferieCommissionSettingsSchema>;
+export type ChefferieCommissionSettingsDoc = InferSchemaType<
+  typeof chefferieCommissionSettingsSchema
+>;
 export type HouseSaleTransactionDoc = InferSchemaType<typeof houseSaleTransactionSchema>;
 export type HouseRentalRecordDoc = InferSchemaType<typeof houseRentalRecordSchema>;
 export type LandSaleTransactionDoc = InferSchemaType<typeof landSaleTransactionSchema>;

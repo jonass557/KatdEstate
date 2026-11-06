@@ -73,7 +73,7 @@ export async function registerHouseholdResident(req: Request, res: Response): Pr
     if (isDuplicate) {
       throw new HttpError(
         409,
-        'Une résidence similaire existe déjà dans ce bloc avec cette adresse. Veuillez sélectionner la résidence existante ou contacter votre chef de bloc.'
+        'Une résidence similaire existe déjà dans ce bloc avec cette adresse. Veuillez sélectionner la résidence existante ou contacter votre chef de bloc.',
       );
     }
 
@@ -109,7 +109,9 @@ export async function registerHouseholdResident(req: Request, res: Response): Pr
     householdSize,
     minorsCount,
     arrivalDate: arrivalDate ? new Date(arrivalDate) : new Date(),
-    emergencyContact: emergencyContactName ? { name: emergencyContactName, phone: emergencyContactPhone } : undefined,
+    emergencyContact: emergencyContactName
+      ? { name: emergencyContactName, phone: emergencyContactPhone }
+      : undefined,
     consentAccepted: true,
   });
 
@@ -131,7 +133,8 @@ export async function registerHouseholdResident(req: Request, res: Response): Pr
   res.locals.data = {
     submission,
     household,
-    message: 'Votre résidence et votre foyer ont été enregistrés avec succès. Ils sont en attente de validation par votre chef de bloc.',
+    message:
+      'Votre résidence et votre foyer ont été enregistrés avec succès. Ils sont en attente de validation par votre chef de bloc.',
   };
 }
 
@@ -161,7 +164,8 @@ export async function validateCensusSubmission(req: Request, res: Response): Pro
   await submission.save();
 
   // Mise à jour de la résidence
-  const newCensusStatus = status === 'VALIDATED' ? 'VALIDATED' : status === 'REJECTED' ? 'REJECTED' : 'TO_UPDATE';
+  const newCensusStatus =
+    status === 'VALIDATED' ? 'VALIDATED' : status === 'REJECTED' ? 'REJECTED' : 'TO_UPDATE';
   await QuartierResidence.findByIdAndUpdate(submission.residenceId, {
     censusStatus: newCensusStatus,
     validatedBy: leaderId,
@@ -250,11 +254,7 @@ export async function listResidences(req: Request, res: Response): Promise<void>
 
   if (q && typeof q === 'string') {
     const regex = new RegExp(q.trim(), 'i');
-    filter.$or = [
-      { residenceDomoraId: regex },
-      { address: regex },
-      { landmark: regex },
-    ];
+    filter.$or = [{ residenceDomoraId: regex }, { address: regex }, { landmark: regex }];
   }
 
   // Si chef de bloc, restreindre automatiquement à son secteur
@@ -303,7 +303,10 @@ export async function declareMoveOut(req: Request, res: Response): Promise<void>
   const userId = req.user!.id;
   const { householdId } = req.body;
 
-  const household = await ResidentHousehold.findOne({ _id: householdId, headOfHouseholdId: userId });
+  const household = await ResidentHousehold.findOne({
+    _id: householdId,
+    headOfHouseholdId: userId,
+  });
   if (!household) {
     throw new HttpError(404, 'Foyer introuvable ou non autorisé.');
   }
@@ -317,5 +320,7 @@ export async function declareMoveOut(req: Request, res: Response): Promise<void>
     $inc: { 'stats.totalResidentsDeclared': -household.householdSize },
   });
 
-  res.locals.data = { message: 'Votre déménagement a bien été enregistré. Merci de votre civisme.' };
+  res.locals.data = {
+    message: 'Votre déménagement a bien été enregistré. Merci de votre civisme.',
+  };
 }

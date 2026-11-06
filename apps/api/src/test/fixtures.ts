@@ -70,7 +70,12 @@ export async function createActor(role: Role, organizationId?: string): Promise<
     displayName: role,
     passwordHash: await hashPassword('motdepasse-tres-long'),
   });
-  await Membership.create({ organizationId: organization, userId: user._id, role, status: 'ACTIVE' });
+  await Membership.create({
+    organizationId: organization,
+    userId: user._id,
+    role,
+    status: 'ACTIVE',
+  });
 
   const session = await Session.create({
     userId: user._id,
@@ -79,7 +84,10 @@ export async function createActor(role: Role, organizationId?: string): Promise<
     familyId: randomUUID(),
     expiresAt: new Date(Date.now() + 60 * 60 * 1000),
   });
-  const { token } = signAccessToken({ userId: String(user._id), sessionId: String(session._id), jti: session.jti }, testConfig.tokens);
+  const { token } = signAccessToken(
+    { userId: String(user._id), sessionId: String(session._id), jti: session.jti },
+    testConfig.tokens,
+  );
   return { userId: String(user._id), organizationId: organization, token };
 }
 

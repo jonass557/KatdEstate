@@ -24,33 +24,58 @@ export function BlockLeaderDashboard() {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
-  const [tab, setTab] = useState<'overview' | 'validations' | 'new-residence' | 'registry' | 'incidents' | 'broadcast' | 'subscription'>('overview');
+  const [tab, setTab] = useState<
+    | 'overview'
+    | 'validations'
+    | 'new-residence'
+    | 'registry'
+    | 'incidents'
+    | 'broadcast'
+    | 'subscription'
+  >('overview');
 
   // Queries
   const { data: dashboard } = useOrgQuery<any>(
     ['block-leader-dashboard'],
-    '/quartier/dashboard/block-leader'
+    '/quartier/dashboard/block-leader',
   );
 
   const { data: residences } = useOrgQuery<any[]>(
     ['block-residences'],
-    dashboard?.block?._id ? `/quartier/residences?blockId=${dashboard.block._id}` : '/quartier/residences'
+    dashboard?.block?._id
+      ? `/quartier/residences?blockId=${dashboard.block._id}`
+      : '/quartier/residences',
   );
 
   const { data: pendingSubmissions } = useOrgQuery<any[]>(
     ['block-pending-submissions'],
-    dashboard?.block?._id ? `/quartier/submissions/pending?blockId=${dashboard.block._id}` : '/quartier/submissions/pending'
+    dashboard?.block?._id
+      ? `/quartier/submissions/pending?blockId=${dashboard.block._id}`
+      : '/quartier/submissions/pending',
   );
 
   const { data: incidents } = useOrgQuery<any[]>(
     ['block-incidents'],
-    dashboard?.block?._id ? `/quartier/incidents?blockId=${dashboard.block._id}` : '/quartier/incidents'
+    dashboard?.block?._id
+      ? `/quartier/incidents?blockId=${dashboard.block._id}`
+      : '/quartier/incidents',
   );
 
   // Mutation: Validate / Reject submission
   const validateMutation = useMutation({
-    mutationFn: ({ id, status, decisionReason }: { id: string; status: 'VALIDATED' | 'REJECTED'; decisionReason?: string }) =>
-      apiRequest(`${base}/quartier/submissions/${id}/validate`, { method: 'POST', body: { status, decisionReason } }),
+    mutationFn: ({
+      id,
+      status,
+      decisionReason,
+    }: {
+      id: string;
+      status: 'VALIDATED' | 'REJECTED';
+      decisionReason?: string;
+    }) =>
+      apiRequest(`${base}/quartier/submissions/${id}/validate`, {
+        method: 'POST',
+        body: { status, decisionReason },
+      }),
     onSuccess: () => {
       toast({ title: 'Validation enregistrée', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['block-leader-dashboard'] });
@@ -62,20 +87,33 @@ export function BlockLeaderDashboard() {
 
   // Mutation: Manual residence creation
   const createResidenceMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/quartier/residences`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest(`${base}/quartier/residences`, { method: 'POST', body }),
     onSuccess: () => {
       toast({ title: 'Résidence recensée avec succès', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['block-leader-dashboard'] });
       void client.invalidateQueries({ queryKey: ['block-residences'] });
       setTab('registry');
     },
-    onError: (err: Error) => toast({ title: 'Erreur de création', description: err.message, variant: 'error' }),
+    onError: (err: Error) =>
+      toast({ title: 'Erreur de création', description: err.message, variant: 'error' }),
   });
 
   // Mutation: Incident status update
   const updateIncidentMutation = useMutation({
-    mutationFn: ({ id, status, resolutionNotes }: { id: string; status: string; resolutionNotes?: string }) =>
-      apiRequest(`${base}/quartier/incidents/${id}`, { method: 'PATCH', body: { status, resolutionNotes } }),
+    mutationFn: ({
+      id,
+      status,
+      resolutionNotes,
+    }: {
+      id: string;
+      status: string;
+      resolutionNotes?: string;
+    }) =>
+      apiRequest(`${base}/quartier/incidents/${id}`, {
+        method: 'PATCH',
+        body: { status, resolutionNotes },
+      }),
     onSuccess: () => {
       toast({ title: 'Statut mis à jour', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['block-incidents'] });
@@ -85,7 +123,8 @@ export function BlockLeaderDashboard() {
 
   // Mutation: Broadcast announcement
   const broadcastMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/quartier/announcements`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest(`${base}/quartier/announcements`, { method: 'POST', body }),
     onSuccess: () => {
       toast({ title: 'Annonce diffusée aux habitants du bloc', variant: 'success' });
       setTab('overview');
@@ -97,7 +136,9 @@ export function BlockLeaderDashboard() {
   const kpis = dashboard?.kpis;
   const sub = dashboard?.subscription;
 
-  const joinUrl = block?.registrationToken ? `https://kadtestate.immo/quartier/join/${block.registrationToken}` : '';
+  const joinUrl = block?.registrationToken
+    ? `https://kadtestate.immo/quartier/join/${block.registrationToken}`
+    : '';
 
   return (
     <div className="space-y-6">
@@ -113,7 +154,8 @@ export function BlockLeaderDashboard() {
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Quartier : <strong>{block?.neighborhoodName || 'Quartier'}</strong> • Forfait : <strong>{sub?.plan?.name || 'Découverte'}</strong>
+            Quartier : <strong>{block?.neighborhoodName || 'Quartier'}</strong> • Forfait :{' '}
+            <strong>{sub?.plan?.name || 'Découverte'}</strong>
           </p>
         </div>
 
@@ -143,10 +185,22 @@ export function BlockLeaderDashboard() {
       <div className="flex flex-wrap gap-2 border-b border-border pb-2 text-xs">
         {[
           { key: 'overview', label: 'Vue d’ensemble & KPIs', icon: Home },
-          { key: 'validations', label: `Demandes en attente (${pendingSubmissions?.length || 0})`, icon: FileCheck },
+          {
+            key: 'validations',
+            label: `Demandes en attente (${pendingSubmissions?.length || 0})`,
+            icon: FileCheck,
+          },
           { key: 'new-residence', label: '+ Recenser une maison', icon: Plus },
-          { key: 'registry', label: `Registre du bloc (${residences?.length || 0})`, icon: Building },
-          { key: 'incidents', label: `Sécurité & Signalements (${incidents?.length || 0})`, icon: Flame },
+          {
+            key: 'registry',
+            label: `Registre du bloc (${residences?.length || 0})`,
+            icon: Building,
+          },
+          {
+            key: 'incidents',
+            label: `Sécurité & Signalements (${incidents?.length || 0})`,
+            icon: Flame,
+          },
           { key: 'broadcast', label: 'Diffuser une annonce', icon: Send },
           { key: 'subscription', label: 'Mon Abonnement', icon: Sparkles },
         ].map((t) => {
@@ -176,45 +230,65 @@ export function BlockLeaderDashboard() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Maisons Recensées</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Maisons Recensées
+                </CardTitle>
                 <Home className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{kpis?.totalResidences || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">{kpis?.totalDwellings || 0} logements au total</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {kpis?.totalDwellings || 0} logements au total
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Occupation</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Occupation
+                </CardTitle>
                 <CheckCircle className="h-4 w-4 text-emerald-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-emerald-600">{kpis?.occupiedResidences || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">{kpis?.vacantResidences || 0} résidences vacantes</p>
+                <div className="text-2xl font-bold text-emerald-600">
+                  {kpis?.occupiedResidences || 0}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {kpis?.vacantResidences || 0} résidences vacantes
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Population Déclarée</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Population Déclarée
+                </CardTitle>
                 <Users className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{kpis?.totalResidents || 0} hab.</div>
-                <p className="text-xs text-muted-foreground mt-1">{kpis?.totalHouseholds || 0} foyers ({kpis?.totalMinors || 0} enfants)</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {kpis?.totalHouseholds || 0} foyers ({kpis?.totalMinors || 0} enfants)
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Taux de Couverture</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Taux de Couverture
+                </CardTitle>
                 <Sparkles className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-primary">{kpis?.censusCompletionRate || 0}%</div>
-                <p className="text-xs text-muted-foreground mt-1">{kpis?.pendingValidations || 0} en attente</p>
+                <div className="text-2xl font-bold text-primary">
+                  {kpis?.censusCompletionRate || 0}%
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {kpis?.pendingValidations || 0} en attente
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -226,19 +300,33 @@ export function BlockLeaderDashboard() {
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <FileCheck className="h-4 w-4 text-primary" /> Dernières demandes à valider
                 </CardTitle>
-                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setTab('validations')}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => setTab('validations')}
+                >
                   Voir tout
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3">
-                {(!pendingSubmissions || pendingSubmissions.length === 0) ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center">Aucune demande en attente pour ce bloc.</p>
+                {!pendingSubmissions || pendingSubmissions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">
+                    Aucune demande en attente pour ce bloc.
+                  </p>
                 ) : (
                   pendingSubmissions.slice(0, 3).map((s) => (
-                    <div key={s._id} className="flex items-center justify-between rounded-lg border border-border p-3 text-xs">
+                    <div
+                      key={s._id}
+                      className="flex items-center justify-between rounded-lg border border-border p-3 text-xs"
+                    >
                       <div>
-                        <p className="font-semibold text-foreground">{s.submittedBy?.name || 'Résident'}</p>
-                        <p className="text-muted-foreground truncate max-w-[200px]">{s.residenceId?.address}</p>
+                        <p className="font-semibold text-foreground">
+                          {s.submittedBy?.name || 'Résident'}
+                        </p>
+                        <p className="text-muted-foreground truncate max-w-[200px]">
+                          {s.residenceId?.address}
+                        </p>
                       </div>
                       <Button
                         size="sm"
@@ -260,7 +348,9 @@ export function BlockLeaderDashboard() {
                   <span>Enrôlement autonome des habitants par QR code</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Invitez les habitants de votre bloc à s'enregistrer eux-mêmes. Partagez le lien de votre bloc sur WhatsApp ou imprimez le QR code pour l'afficher à l'entrée de la rue.
+                  Invitez les habitants de votre bloc à s'enregistrer eux-mêmes. Partagez le lien de
+                  votre bloc sur WhatsApp ou imprimez le QR code pour l'afficher à l'entrée de la
+                  rue.
                 </p>
                 <div className="rounded-lg bg-muted p-2 font-mono text-[11px] truncate">
                   {joinUrl || 'Lien en cours de chargement...'}
@@ -285,27 +375,36 @@ export function BlockLeaderDashboard() {
       {/* TAB 2: DEMANDES EN ATTENTE */}
       {tab === 'validations' && (
         <div className="space-y-4">
-          <h2 className="text-base font-bold">Demandes d'enregistrement en attente de vérification</h2>
-          {(!pendingSubmissions || pendingSubmissions.length === 0) ? (
+          <h2 className="text-base font-bold">
+            Demandes d'enregistrement en attente de vérification
+          </h2>
+          {!pendingSubmissions || pendingSubmissions.length === 0 ? (
             <Card className="p-8 text-center text-xs text-muted-foreground">
               Toutes les demandes de recensement de votre bloc ont été traitées !
             </Card>
           ) : (
             <div className="space-y-3">
               {pendingSubmissions.map((s) => (
-                <Card key={s._id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs border-border">
+                <Card
+                  key={s._id}
+                  className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs border-border"
+                >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-foreground">{s.submittedBy?.name}</span>
+                      <span className="font-bold text-sm text-foreground">
+                        {s.submittedBy?.name}
+                      </span>
                       <span className="rounded bg-amber-500/20 text-amber-600 px-2 py-0.5 text-[10px] font-bold">
                         En attente
                       </span>
                     </div>
                     <p className="text-muted-foreground">
-                      Adresse déclarée : <strong>{s.residenceId?.address}</strong> {s.residenceId?.landmark ? `(${s.residenceId.landmark})` : ''}
+                      Adresse déclarée : <strong>{s.residenceId?.address}</strong>{' '}
+                      {s.residenceId?.landmark ? `(${s.residenceId.landmark})` : ''}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Contact : {s.submittedBy?.phone || 'Non renseigné'} • Foyer : {s.householdId?.householdSize || 1} personne(s)
+                      Contact : {s.submittedBy?.phone || 'Non renseigné'} • Foyer :{' '}
+                      {s.householdId?.householdSize || 1} personne(s)
                     </p>
                   </div>
 
@@ -322,8 +421,15 @@ export function BlockLeaderDashboard() {
                       variant="outline"
                       className="h-8 text-xs text-red-600"
                       onClick={() => {
-                        const reason = prompt('Motif du rejet (ex: mauvais bloc, adresse erronée) :');
-                        if (reason) validateMutation.mutate({ id: s._id, status: 'REJECTED', decisionReason: reason });
+                        const reason = prompt(
+                          'Motif du rejet (ex: mauvais bloc, adresse erronée) :',
+                        );
+                        if (reason)
+                          validateMutation.mutate({
+                            id: s._id,
+                            status: 'REJECTED',
+                            decisionReason: reason,
+                          });
                       }}
                     >
                       Refuser
@@ -340,9 +446,12 @@ export function BlockLeaderDashboard() {
       {tab === 'new-residence' && (
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle className="text-base">Enregistrement manuel d'une résidence par le Chef</CardTitle>
+            <CardTitle className="text-base">
+              Enregistrement manuel d'une résidence par le Chef
+            </CardTitle>
             <p className="text-xs text-muted-foreground">
-              Saisie directe par vos soins lors d'une tournée dans votre bloc avec détection anti-doublon.
+              Saisie directe par vos soins lors d'une tournée dans votre bloc avec détection
+              anti-doublon.
             </p>
           </CardHeader>
           <CardContent>
@@ -369,13 +478,19 @@ export function BlockLeaderDashboard() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="font-semibold block mb-1">Type d'habitation *</label>
-                  <select name="buildingType" className="w-full rounded-md border border-input bg-background p-2 text-xs" defaultValue="INDIVIDUAL_HOUSE">
+                  <select
+                    name="buildingType"
+                    className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                    defaultValue="INDIVIDUAL_HOUSE"
+                  >
                     <option value="INDIVIDUAL_HOUSE">Maison individuelle</option>
                     <option value="RESIDENTIAL_BUILDING">Immeuble résidentiel</option>
                     <option value="APARTMENT">Appartement</option>
                     <option value="STUDIO">Studio</option>
                     <option value="COLLECTIVE_RESIDENCE">Résidence collective</option>
-                    <option value="COMMERCIAL_RESIDENTIAL">Logement commercial & résidentiel</option>
+                    <option value="COMMERCIAL_RESIDENTIAL">
+                      Logement commercial & résidentiel
+                    </option>
                     <option value="OTHER_BUILDING">Autre type</option>
                   </select>
                 </div>
@@ -398,7 +513,11 @@ export function BlockLeaderDashboard() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="font-semibold block mb-1">Statut d'occupation *</label>
-                  <select name="occupancyStatus" className="w-full rounded-md border border-input bg-background p-2 text-xs" defaultValue="OCCUPIED">
+                  <select
+                    name="occupancyStatus"
+                    className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                    defaultValue="OCCUPIED"
+                  >
                     <option value="OCCUPIED">Occupé</option>
                     <option value="VACANT">Vacant</option>
                     <option value="UNDER_CONSTRUCTION">En construction</option>
@@ -411,8 +530,14 @@ export function BlockLeaderDashboard() {
                 </div>
               </div>
 
-              <Button type="submit" disabled={createResidenceMutation.isPending} className="w-full font-bold">
-                {createResidenceMutation.isPending ? 'Enregistrement...' : 'Enregistrer la résidence'}
+              <Button
+                type="submit"
+                disabled={createResidenceMutation.isPending}
+                className="w-full font-bold"
+              >
+                {createResidenceMutation.isPending
+                  ? 'Enregistrement...'
+                  : 'Enregistrer la résidence'}
               </Button>
             </form>
           </CardContent>
@@ -441,7 +566,9 @@ export function BlockLeaderDashboard() {
                     <td className="p-3 font-mono font-bold text-primary">{r.residenceDomoraId}</td>
                     <td className="p-3">
                       <span className="font-semibold block">{r.address}</span>
-                      {r.landmark && <span className="text-[11px] text-muted-foreground">{r.landmark}</span>}
+                      {r.landmark && (
+                        <span className="text-[11px] text-muted-foreground">{r.landmark}</span>
+                      )}
                     </td>
                     <td className="p-3">{r.buildingType}</td>
                     <td className="p-3 font-bold">{r.dwellingsCount || 1}</td>
@@ -464,10 +591,15 @@ export function BlockLeaderDashboard() {
       {/* TAB 5: INCIDENTS & SÉCURITÉ */}
       {tab === 'incidents' && (
         <div className="space-y-4">
-          <h2 className="text-base font-bold">Signalements de sécurité & urgences communautaires</h2>
+          <h2 className="text-base font-bold">
+            Signalements de sécurité & urgences communautaires
+          </h2>
           <div className="space-y-3">
             {incidents?.map((inc) => (
-              <Card key={inc._id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs border-border">
+              <Card
+                key={inc._id}
+                className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs border-border"
+              >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold text-primary">{inc.incidentNumber}</span>
@@ -480,7 +612,9 @@ export function BlockLeaderDashboard() {
                   </div>
                   <p className="text-foreground mt-1 font-medium">{inc.description}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    Lieu : {inc.locationText || 'Dans le bloc'} • Déclarant : <strong>{inc.reporterName || 'Habitant'}</strong> ({inc.reporterPhone || 'Non renseigné'})
+                    Lieu : {inc.locationText || 'Dans le bloc'} • Déclarant :{' '}
+                    <strong>{inc.reporterName || 'Habitant'}</strong> (
+                    {inc.reporterPhone || 'Non renseigné'})
                   </p>
                 </div>
 
@@ -490,7 +624,9 @@ export function BlockLeaderDashboard() {
                       size="sm"
                       variant="outline"
                       className="h-8 text-xs"
-                      onClick={() => updateIncidentMutation.mutate({ id: inc._id, status: 'VERIFYING' })}
+                      onClick={() =>
+                        updateIncidentMutation.mutate({ id: inc._id, status: 'VERIFYING' })
+                      }
                     >
                       Prendre en charge
                     </Button>
@@ -501,7 +637,11 @@ export function BlockLeaderDashboard() {
                       className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs font-bold"
                       onClick={() => {
                         const notes = prompt('Notes de résolution de l’incident :');
-                        updateIncidentMutation.mutate({ id: inc._id, status: 'RESOLVED', resolutionNotes: notes || 'Incident réglé.' });
+                        updateIncidentMutation.mutate({
+                          id: inc._id,
+                          status: 'RESOLVED',
+                          resolutionNotes: notes || 'Incident réglé.',
+                        });
                       }}
                     >
                       Clôturer comme résolu
@@ -518,7 +658,9 @@ export function BlockLeaderDashboard() {
       {tab === 'broadcast' && (
         <Card className="max-w-xl mx-auto">
           <CardHeader>
-            <CardTitle className="text-base">Diffuser une communication aux habitants du bloc</CardTitle>
+            <CardTitle className="text-base">
+              Diffuser une communication aux habitants du bloc
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form
@@ -539,7 +681,11 @@ export function BlockLeaderDashboard() {
             >
               <div>
                 <label className="font-semibold block mb-1">Type d'annonce *</label>
-                <select name="type" className="w-full rounded-md border border-input bg-background p-2 text-xs" defaultValue="INFO">
+                <select
+                  name="type"
+                  className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                  defaultValue="INFO"
+                >
                   <option value="INFO">Information générale</option>
                   <option value="MEETING">Réunion de bloc</option>
                   <option value="WORKS">Travaux & Voirie</option>
@@ -549,7 +695,11 @@ export function BlockLeaderDashboard() {
 
               <div>
                 <label className="font-semibold block mb-1">Titre de l'annonce *</label>
-                <Input name="title" placeholder="Ex: Réunion de propreté et éclairage public samedi à 17h" required />
+                <Input
+                  name="title"
+                  placeholder="Ex: Réunion de propreté et éclairage public samedi à 17h"
+                  required
+                />
               </div>
 
               <div>
@@ -564,11 +714,17 @@ export function BlockLeaderDashboard() {
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Date et heure de l'événement (facultatif)</label>
+                <label className="font-semibold block mb-1">
+                  Date et heure de l'événement (facultatif)
+                </label>
                 <Input name="eventDate" type="datetime-local" />
               </div>
 
-              <Button type="submit" disabled={broadcastMutation.isPending} className="w-full font-bold">
+              <Button
+                type="submit"
+                disabled={broadcastMutation.isPending}
+                className="w-full font-bold"
+              >
                 {broadcastMutation.isPending ? 'Diffusion en cours...' : 'Diffuser l’annonce'}
               </Button>
             </form>
@@ -581,22 +737,33 @@ export function BlockLeaderDashboard() {
         <Card className="max-w-xl mx-auto p-5 space-y-4 text-xs">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div>
-              <h3 className="text-base font-bold text-foreground">Formule {sub?.plan?.name || 'Découverte'}</h3>
-              <p className="text-muted-foreground">Statut : <strong className="text-emerald-600">{sub?.subscription?.status || 'Actif'}</strong></p>
+              <h3 className="text-base font-bold text-foreground">
+                Formule {sub?.plan?.name || 'Découverte'}
+              </h3>
+              <p className="text-muted-foreground">
+                Statut :{' '}
+                <strong className="text-emerald-600">{sub?.subscription?.status || 'Actif'}</strong>
+              </p>
             </div>
             <span className="text-xl font-black text-primary">
-              {sub?.plan?.priceMinor === 0 ? 'Gratuit' : `${sub?.plan?.priceMinor?.toLocaleString('fr-FR')} XOF`}
+              {sub?.plan?.priceMinor === 0
+                ? 'Gratuit'
+                : `${sub?.plan?.priceMinor?.toLocaleString('fr-FR')} XOF`}
             </span>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Résidences recensées :</span>
-              <span className="font-bold">{sub?.usage?.residencesCount || 0} / {sub?.usage?.maxResidences || 500}</span>
+              <span className="font-bold">
+                {sub?.usage?.residencesCount || 0} / {sub?.usage?.maxResidences || 500}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Blocs attribués :</span>
-              <span className="font-bold">{sub?.usage?.blocksCount || 1} / {sub?.usage?.maxBlocks || 1}</span>
+              <span className="font-bold">
+                {sub?.usage?.blocksCount || 1} / {sub?.usage?.maxBlocks || 1}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Accès Carte interactive :</span>

@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Home,
-  UserCheck,
-  Plus
-} from 'lucide-react';
+import { Home, UserCheck, Plus } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -17,7 +13,9 @@ export function OwnerListingsPage() {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'listings' | 'mandates' | 'offers' | 'new-mandate'>('listings');
+  const [activeTab, setActiveTab] = useState<'listings' | 'mandates' | 'offers' | 'new-mandate'>(
+    'listings',
+  );
   const [publishModalOpen, setPublishModalOpen] = useState(false);
 
   // Queries
@@ -46,7 +44,11 @@ export function OwnerListingsPage() {
   const createMandateMutation = useMutation({
     mutationFn: (body: unknown) => apiRequest(`${base}/owner/mandates`, { method: 'POST', body }),
     onSuccess: () => {
-      toast({ title: 'Mandat proposé à l’agent', description: 'En attente de son acceptation.', variant: 'success' });
+      toast({
+        title: 'Mandat proposé à l’agent',
+        description: 'En attente de son acceptation.',
+        variant: 'success',
+      });
       void client.invalidateQueries({ queryKey: ['owner-mandates'] });
       setActiveTab('mandates');
     },
@@ -56,7 +58,10 @@ export function OwnerListingsPage() {
   // Mutation: Decide on Offer
   const decideOfferMutation = useMutation({
     mutationFn: ({ id, status, counterOfferAmountMinor, ownerDecisionNote }: any) =>
-      apiRequest(`${base}/owner/offers/${id}`, { method: 'PATCH', body: { status, counterOfferAmountMinor, ownerDecisionNote } }),
+      apiRequest(`${base}/owner/offers/${id}`, {
+        method: 'PATCH',
+        body: { status, counterOfferAmountMinor, ownerDecisionNote },
+      }),
     onSuccess: () => {
       toast({ title: 'Décision enregistrée', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['owner-offers'] });
@@ -68,9 +73,12 @@ export function OwnerListingsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Commercialisation & Marketplace</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">
+            Commercialisation & Marketplace
+          </h1>
           <p className="text-xs text-muted-foreground">
-            Gérez vos annonces directes, mandatez des agents immobiliers partenaires et négociez les offres.
+            Gérez vos annonces directes, mandatez des agents immobiliers partenaires et négociez les
+            offres.
           </p>
         </div>
         <div className="flex gap-2">
@@ -114,9 +122,10 @@ export function OwnerListingsPage() {
       {/* TAB 1: LISTINGS */}
       {activeTab === 'listings' && (
         <div className="space-y-4">
-          {(!listings || listings.length === 0) ? (
+          {!listings || listings.length === 0 ? (
             <Card className="p-8 text-center text-xs text-muted-foreground">
-              Aucune annonce publiée pour l'instant. Vous pouvez créer une annonce ou confier la commercialisation à un agent certifié.
+              Aucune annonce publiée pour l'instant. Vous pouvez créer une annonce ou confier la
+              commercialisation à un agent certifié.
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -124,7 +133,11 @@ export function OwnerListingsPage() {
                 <Card key={l._id} className="overflow-hidden border-border text-xs">
                   <div className="h-32 bg-muted relative">
                     {l.photos?.[0]?.url ? (
-                      <img src={l.photos[0].url} alt={l.title} className="h-full w-full object-cover" />
+                      <img
+                        src={l.photos[0].url}
+                        alt={l.title}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <div className="flex h-full items-center justify-center text-muted-foreground">
                         <Home className="h-8 w-8 opacity-30" />
@@ -155,32 +168,39 @@ export function OwnerListingsPage() {
       {/* TAB 2: MANDATES */}
       {activeTab === 'mandates' && (
         <div className="space-y-4">
-          {(!mandates || mandates.length === 0) ? (
+          {!mandates || mandates.length === 0 ? (
             <Card className="p-8 text-center text-xs text-muted-foreground">
               Vous n'avez pas encore confié de mandat à un agent immobilier.
             </Card>
           ) : (
             <div className="space-y-3">
               {mandates.map((m) => (
-                <Card key={m._id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+                <Card
+                  key={m._id}
+                  className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs"
+                >
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm">Mandat : {m.mandateType}</span>
-                      <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                        m.status === 'ACTIVE'
-                          ? 'bg-emerald-500/20 text-emerald-600'
-                          : m.status === 'REVOKED'
-                          ? 'bg-red-500/20 text-red-600'
-                          : 'bg-amber-500/20 text-amber-600'
-                      }`}>
+                      <span
+                        className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                          m.status === 'ACTIVE'
+                            ? 'bg-emerald-500/20 text-emerald-600'
+                            : m.status === 'REVOKED'
+                              ? 'bg-red-500/20 text-red-600'
+                              : 'bg-amber-500/20 text-amber-600'
+                        }`}
+                      >
                         {m.status}
                       </span>
                     </div>
                     <p className="text-muted-foreground mt-1">
-                      Bien rattaché : <strong>{m.propertyId?.name || 'Bien non rattaché'}</strong> • Commission convenue : <strong>{m.commissionRate}%</strong>
+                      Bien rattaché : <strong>{m.propertyId?.name || 'Bien non rattaché'}</strong> •
+                      Commission convenue : <strong>{m.commissionRate}%</strong>
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Agent mandaté : {m.agentProfileId?.firstName} {m.agentProfileId?.lastName} ({m.agentProfileId?.agencyName || 'Indépendant'})
+                      Agent mandaté : {m.agentProfileId?.firstName} {m.agentProfileId?.lastName} (
+                      {m.agentProfileId?.agencyName || 'Indépendant'})
                     </p>
                   </div>
 
@@ -207,17 +227,22 @@ export function OwnerListingsPage() {
       {/* TAB 3: OFFERS */}
       {activeTab === 'offers' && (
         <div className="space-y-3">
-          {(!offers || offers.length === 0) ? (
+          {!offers || offers.length === 0 ? (
             <Card className="p-8 text-center text-xs text-muted-foreground">
               Aucune offre d'achat ou proposition de location reçue pour vos biens.
             </Card>
           ) : (
             offers.map((o) => (
-              <Card key={o._id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+              <Card
+                key={o._id}
+                className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs"
+              >
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm">{o.prospectName}</span>
-                    <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary">{o.status}</span>
+                    <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary">
+                      {o.status}
+                    </span>
                   </div>
                   <p className="text-muted-foreground mt-1">
                     Annonce : <strong>{o.listingId?.title}</strong>
@@ -225,7 +250,9 @@ export function OwnerListingsPage() {
                   <p className="text-base font-black text-primary mt-1">
                     Proposition : {o.offeredAmountMinor?.toLocaleString('fr-FR')} {o.currency}
                   </p>
-                  {o.message && <p className="text-muted-foreground italic mt-0.5">"{o.message}"</p>}
+                  {o.message && (
+                    <p className="text-muted-foreground italic mt-0.5">"{o.message}"</p>
+                  )}
                 </div>
 
                 {o.status === 'SUBMITTED' && (
@@ -279,15 +306,26 @@ export function OwnerListingsPage() {
             >
               <div>
                 <label className="font-semibold block mb-1">ID Utilisateur de l'agent *</label>
-                <Input name="agentId" placeholder="Identifiant de l'agent certifié DOMORA" required />
+                <Input
+                  name="agentId"
+                  placeholder="Identifiant de l'agent certifié DOMORA"
+                  required
+                />
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Propriété DOMORA à commercialiser</label>
-                <select name="propertyId" className="w-full rounded-md border border-input p-2 bg-background">
+                <label className="font-semibold block mb-1">
+                  Propriété DOMORA à commercialiser
+                </label>
+                <select
+                  name="propertyId"
+                  className="w-full rounded-md border border-input p-2 bg-background"
+                >
                   <option value="">Sélectionnez un bien de votre parc...</option>
                   {properties?.map((p) => (
-                    <option key={p._id} value={p._id}>{p.name} ({p.address?.city || 'Afrique'})</option>
+                    <option key={p._id} value={p._id}>
+                      {p.name} ({p.address?.city || 'Afrique'})
+                    </option>
                   ))}
                 </select>
               </div>
@@ -295,7 +333,10 @@ export function OwnerListingsPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="font-semibold block mb-1">Type de mandat *</label>
-                  <select name="mandateType" className="w-full rounded-md border border-input p-2 bg-background">
+                  <select
+                    name="mandateType"
+                    className="w-full rounded-md border border-input p-2 bg-background"
+                  >
                     <option value="SALE">Vente</option>
                     <option value="RENT">Location</option>
                     <option value="EXCLUSIVE">Exclusif</option>
@@ -304,8 +345,17 @@ export function OwnerListingsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="font-semibold block mb-1">Taux de commission convenu (%) *</label>
-                  <Input name="commissionRate" type="number" min="0" max="100" defaultValue="5" required />
+                  <label className="font-semibold block mb-1">
+                    Taux de commission convenu (%) *
+                  </label>
+                  <Input
+                    name="commissionRate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    defaultValue="5"
+                    required
+                  />
                 </div>
               </div>
 
@@ -321,7 +371,9 @@ export function OwnerListingsPage() {
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Clauses et conditions particulières</label>
+                <label className="font-semibold block mb-1">
+                  Clauses et conditions particulières
+                </label>
                 <textarea
                   name="terms"
                   rows={3}

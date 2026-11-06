@@ -3,7 +3,15 @@ import { PERMISSIONS } from '@rentflow/shared';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, setUnauthorizedHandler } from '../lib/api-client';
-import { fetchSession, signInRequest, signOutRequest, registerRequest, getSavedLocalSession, type SignInPayload, type RegisterPayload } from '../lib/auth-api';
+import {
+  fetchSession,
+  signInRequest,
+  signOutRequest,
+  registerRequest,
+  getSavedLocalSession,
+  type SignInPayload,
+  type RegisterPayload,
+} from '../lib/auth-api';
 
 /**
  * État de session de l'application.
@@ -60,7 +68,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const applySession = useCallback(
-    (session: { user: UserSummary; memberships: readonly MembershipWithOrganization[] | MembershipWithOrganization[] }) => {
+    (session: {
+      user: UserSummary;
+      memberships: readonly MembershipWithOrganization[] | MembershipWithOrganization[];
+    }) => {
       setUser(session.user);
       setMemberships(session.memberships);
       setStatus('authenticated');

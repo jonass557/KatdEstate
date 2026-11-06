@@ -37,7 +37,8 @@ export async function reportIncident(req: Request, res: Response): Promise<void>
 
   res.locals.data = {
     incident,
-    message: 'Votre signalement a été enregistré de façon confidentielle et transmis aux responsables de votre secteur.',
+    message:
+      'Votre signalement a été enregistré de façon confidentielle et transmis aux responsables de votre secteur.',
   };
 }
 
@@ -59,7 +60,11 @@ export async function listIncidents(req: Request, res: Response): Promise<void> 
     .lean();
 
   // Confidentialité : pour les résidents ordinaires, anonymiser le déclarant
-  const isLeaderOrAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'NEIGHBORHOOD_LEADER' || userRole === 'BLOCK_LEADER';
+  const isLeaderOrAdmin =
+    userRole === 'SUPER_ADMIN' ||
+    userRole === 'ADMIN' ||
+    userRole === 'NEIGHBORHOOD_LEADER' ||
+    userRole === 'BLOCK_LEADER';
 
   const sanitized = incidents.map((item) => {
     if (!isLeaderOrAdmin || item.isAnonymous) {
@@ -109,12 +114,32 @@ export async function listEmergencyContacts(req: Request, res: Response): Promis
   // Si aucun contact configuré, fournir la liste standard ouest-africaine par défaut
   if (contacts.length === 0) {
     contacts = [
-      { name: 'Sapeurs-Pompiers', serviceType: 'Secours & Incendie', phone: '18', shortNumber: '18' },
+      {
+        name: 'Sapeurs-Pompiers',
+        serviceType: 'Secours & Incendie',
+        phone: '18',
+        shortNumber: '18',
+      },
       { name: 'Police Secours', serviceType: 'Sécurité Publique', phone: '17', shortNumber: '17' },
-      { name: 'Gendarmerie Nationale', serviceType: 'Sécurité & Ordre', phone: '800 00 20 20', shortNumber: '123' },
+      {
+        name: 'Gendarmerie Nationale',
+        serviceType: 'Sécurité & Ordre',
+        phone: '800 00 20 20',
+        shortNumber: '123',
+      },
       { name: 'SAMU National', serviceType: 'Urgences Médicales', phone: '15', shortNumber: '15' },
-      { name: 'Dépannage Eau', serviceType: 'Réseau Eau Potable', phone: '800 00 11 11', shortNumber: '' },
-      { name: 'Dépannage Électricité', serviceType: 'Réseau Électrique', phone: '33 867 44 44', shortNumber: '' },
+      {
+        name: 'Dépannage Eau',
+        serviceType: 'Réseau Eau Potable',
+        phone: '800 00 11 11',
+        shortNumber: '',
+      },
+      {
+        name: 'Dépannage Électricité',
+        serviceType: 'Réseau Électrique',
+        phone: '33 867 44 44',
+        shortNumber: '',
+      },
     ] as any;
   }
 

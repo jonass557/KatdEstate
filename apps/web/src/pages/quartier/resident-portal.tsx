@@ -41,7 +41,9 @@ const INCIDENT_CATEGORIES = [
 export function ResidentPortal() {
   const { toast } = useToast();
   const client = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'register' | 'report' | 'emergencies' | 'announcements'>('register');
+  const [activeTab, setActiveTab] = useState<
+    'register' | 'report' | 'emergencies' | 'announcements'
+  >('register');
 
   // Queries for territory selection
   const { data: cities } = useQuery<any[]>({
@@ -66,7 +68,8 @@ export function ResidentPortal() {
   // Emergency contacts query
   const { data: emergencyContacts } = useQuery<any[]>({
     queryKey: ['quartier-emergency-contacts', selectedNeighborhoodId],
-    queryFn: () => apiRequest(`/quartier/emergency-contacts?neighborhoodId=${selectedNeighborhoodId}`),
+    queryFn: () =>
+      apiRequest(`/quartier/emergency-contacts?neighborhoodId=${selectedNeighborhoodId}`),
   });
 
   // Announcements query
@@ -78,16 +81,19 @@ export function ResidentPortal() {
 
   // Mutation: Register household & residence
   const registerMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest('/quartier/residents/register', { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest('/quartier/residents/register', { method: 'POST', body }),
     onSuccess: (res: any) => {
       toast({
         title: 'Enregistrement réussi !',
-        description: res?.message || 'Votre dossier a été transmis à votre chef de bloc pour validation.',
+        description:
+          res?.message || 'Votre dossier a été transmis à votre chef de bloc pour validation.',
         variant: 'success',
       });
       void client.invalidateQueries({ queryKey: ['quartier-blocks'] });
     },
-    onError: (err: Error) => toast({ title: 'Erreur d’enregistrement', description: err.message, variant: 'error' }),
+    onError: (err: Error) =>
+      toast({ title: 'Erreur d’enregistrement', description: err.message, variant: 'error' }),
   });
 
   // Mutation: Report incident
@@ -96,7 +102,8 @@ export function ResidentPortal() {
     onSuccess: (res: any) => {
       toast({
         title: 'Signalement transmis',
-        description: res?.message || 'Votre signalement confidentiel a été transmis aux responsables.',
+        description:
+          res?.message || 'Votre signalement confidentiel a été transmis aux responsables.',
         variant: 'success',
       });
       setActiveTab('announcements');
@@ -112,9 +119,12 @@ export function ResidentPortal() {
           <ShieldCheck className="h-3.5 w-3.5" />
           Espace Habitant & Citoyenneté — KatdEstate Quartier
         </div>
-        <h1 className="text-2xl font-black text-foreground">Portail Résident & Sécurité Communautaire</h1>
+        <h1 className="text-2xl font-black text-foreground">
+          Portail Résident & Sécurité Communautaire
+        </h1>
         <p className="text-xs sm:text-sm text-muted-foreground">
-          Recensez gratuitement votre résidence, déclarez les membres de votre foyer en toute confidentialité, signalez un incident et accédez aux numéros d'urgence locaux.
+          Recensez gratuitement votre résidence, déclarez les membres de votre foyer en toute
+          confidentialité, signalez un incident et accédez aux numéros d'urgence locaux.
         </p>
       </div>
 
@@ -174,7 +184,8 @@ export function ResidentPortal() {
               <Home className="h-4 w-4 text-primary" /> Formulaire d'enregistrement de résidence
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              Remplissez les informations de votre habitation. Ce formulaire est gratuit et vos données privées sont protégées.
+              Remplissez les informations de votre habitation. Ce formulaire est gratuit et vos
+              données privées sont protégées.
             </p>
           </CardHeader>
           <CardContent>
@@ -217,7 +228,9 @@ export function ResidentPortal() {
                   >
                     <option value="">Sélectionnez votre ville...</option>
                     {cities?.map((c) => (
-                      <option key={c._id} value={c._id}>{c.name} ({c.country})</option>
+                      <option key={c._id} value={c._id}>
+                        {c.name} ({c.country})
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -233,7 +246,9 @@ export function ResidentPortal() {
                   >
                     <option value="">Sélectionnez votre quartier...</option>
                     {neighborhoods?.map((n) => (
-                      <option key={n._id} value={n._id}>{n.name}</option>
+                      <option key={n._id} value={n._id}>
+                        {n.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -248,7 +263,9 @@ export function ResidentPortal() {
                   >
                     <option value="">Sélectionnez votre bloc...</option>
                     {blocks?.map((b) => (
-                      <option key={b._id} value={b._id}>{b.name} ({b.code})</option>
+                      <option key={b._id} value={b._id}>
+                        {b.name} ({b.code})
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -262,28 +279,44 @@ export function ResidentPortal() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="font-semibold block mb-1">Type d'habitation *</label>
-                    <select name="buildingType" className="w-full rounded-md border border-input bg-background p-2 text-xs" defaultValue="INDIVIDUAL_HOUSE">
+                    <select
+                      name="buildingType"
+                      className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                      defaultValue="INDIVIDUAL_HOUSE"
+                    >
                       {RESIDENCE_TYPE_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="font-semibold block mb-1">Adresse ou numéro de rue *</label>
-                    <Input name="address" placeholder="Ex: Rue 14 x Boulevard Central, Villa 42" required />
+                    <Input
+                      name="address"
+                      placeholder="Ex: Rue 14 x Boulevard Central, Villa 42"
+                      required
+                    />
                   </div>
                 </div>
 
                 <div>
-                  <label className="font-semibold block mb-1">Repère visuel (facultatif mais recommandé)</label>
-                  <Input name="landmark" placeholder="Ex: Derrière la pharmacie, en face de la grande mosquée" />
+                  <label className="font-semibold block mb-1">
+                    Repère visuel (facultatif mais recommandé)
+                  </label>
+                  <Input
+                    name="landmark"
+                    placeholder="Ex: Derrière la pharmacie, en face de la grande mosquée"
+                  />
                 </div>
               </div>
 
               {/* Household & Privacy-first Resident Info */}
               <div className="space-y-3 pt-2 border-t border-border">
                 <h3 className="font-bold text-sm text-foreground flex items-center gap-1.5">
-                  <User className="h-4 w-4 text-primary" /> Déclaration du foyer (Chef de famille / Habitant)
+                  <User className="h-4 w-4 text-primary" /> Déclaration du foyer (Chef de famille /
+                  Habitant)
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
@@ -302,11 +335,22 @@ export function ResidentPortal() {
 
                 <div className="grid gap-3 sm:grid-cols-3 bg-muted/20 p-3 rounded-xl border border-border">
                   <div>
-                    <label className="font-semibold block mb-1">Nombre total de personnes au foyer *</label>
-                    <Input name="householdSize" type="number" min="1" max="50" defaultValue="1" required />
+                    <label className="font-semibold block mb-1">
+                      Nombre total de personnes au foyer *
+                    </label>
+                    <Input
+                      name="householdSize"
+                      type="number"
+                      min="1"
+                      max="50"
+                      defaultValue="1"
+                      required
+                    />
                   </div>
                   <div>
-                    <label className="font-semibold block mb-1">Nombre d'enfants / mineurs (agrégé)</label>
+                    <label className="font-semibold block mb-1">
+                      Nombre d'enfants / mineurs (agrégé)
+                    </label>
                     <Input name="minorsCount" type="number" min="0" max="50" defaultValue="0" />
                     <span className="text-[10px] text-muted-foreground block mt-0.5">
                       Par respect de la vie privée, aucun profil nominatif de mineur n'est collecté.
@@ -321,10 +365,15 @@ export function ResidentPortal() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="font-semibold block mb-1">Contact d'urgence (Nom)</label>
-                    <Input name="emergencyContactName" placeholder="Proche à contacter en cas d'urgence" />
+                    <Input
+                      name="emergencyContactName"
+                      placeholder="Proche à contacter en cas d'urgence"
+                    />
                   </div>
                   <div>
-                    <label className="font-semibold block mb-1">Téléphone du contact d'urgence</label>
+                    <label className="font-semibold block mb-1">
+                      Téléphone du contact d'urgence
+                    </label>
                     <Input name="emergencyContactPhone" placeholder="+221 77 000 00 00" />
                   </div>
                 </div>
@@ -340,8 +389,15 @@ export function ResidentPortal() {
                     required
                     className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                  <label htmlFor="consentAccepted" className="text-xs leading-relaxed text-foreground">
-                    <strong>Consentement éclairé :</strong> Je certifie l'exactitude de ces informations et consens à leur transmission sécurisée à mon chef de bloc dans le cadre exclusif du recensement résidentiel et de la sécurité communautaire. Je dispose d'un droit d'accès, de rectification et de suppression conformément aux lois sur la protection des données personnelles.
+                  <label
+                    htmlFor="consentAccepted"
+                    className="text-xs leading-relaxed text-foreground"
+                  >
+                    <strong>Consentement éclairé :</strong> Je certifie l'exactitude de ces
+                    informations et consens à leur transmission sécurisée à mon chef de bloc dans le
+                    cadre exclusif du recensement résidentiel et de la sécurité communautaire. Je
+                    dispose d'un droit d'accès, de rectification et de suppression conformément aux
+                    lois sur la protection des données personnelles.
                   </label>
                 </div>
               </div>
@@ -351,7 +407,9 @@ export function ResidentPortal() {
                 disabled={registerMutation.isPending}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 h-10 font-bold"
               >
-                {registerMutation.isPending ? 'Enregistrement en cours...' : 'Valider mon enregistrement de résidence'}
+                {registerMutation.isPending
+                  ? 'Enregistrement en cours...'
+                  : 'Valider mon enregistrement de résidence'}
               </Button>
             </form>
           </CardContent>
@@ -366,7 +424,9 @@ export function ResidentPortal() {
               <AlertTriangle className="h-5 w-5" /> Signalement de sécurité & incident communautaire
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              Signalez un danger, un accident, une inondation ou une urgence. Votre signalement est <strong>confidentiel</strong> et n'expose jamais votre identité sur les écrans publics des autres résidents.
+              Signalez un danger, un accident, une inondation ou une urgence. Votre signalement est{' '}
+              <strong>confidentiel</strong> et n'expose jamais votre identité sur les écrans publics
+              des autres résidents.
             </p>
           </CardHeader>
           <CardContent>
@@ -390,16 +450,26 @@ export function ResidentPortal() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="font-bold block mb-1">Catégorie de l'incident *</label>
-                  <select name="category" className="w-full rounded-md border border-input bg-background p-2 text-xs" required>
+                  <select
+                    name="category"
+                    className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                    required
+                  >
                     {INCIDENT_CATEGORIES.map((cat) => (
-                      <option key={cat.value} value={cat.value}>{cat.label}</option>
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="font-bold block mb-1">Niveau d'urgence / Gravité *</label>
-                  <select name="severity" className="w-full rounded-md border border-input bg-background p-2 text-xs" defaultValue="MEDIUM">
+                  <select
+                    name="severity"
+                    className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                    defaultValue="MEDIUM"
+                  >
                     <option value="LOW">Faible (Information)</option>
                     <option value="MEDIUM">Moyen (Vigilance)</option>
                     <option value="HIGH">Élevé (Danger avéré)</option>
@@ -409,12 +479,20 @@ export function ResidentPortal() {
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Lieu précis ou repère géographique *</label>
-                <Input name="locationText" placeholder="Ex: Carrefour du marché, près du transformateur" required />
+                <label className="font-semibold block mb-1">
+                  Lieu précis ou repère géographique *
+                </label>
+                <Input
+                  name="locationText"
+                  placeholder="Ex: Carrefour du marché, près du transformateur"
+                  required
+                />
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Description détaillée de la situation *</label>
+                <label className="font-semibold block mb-1">
+                  Description détaillée de la situation *
+                </label>
                 <textarea
                   name="description"
                   rows={4}
@@ -427,7 +505,10 @@ export function ResidentPortal() {
               <div className="grid gap-3 sm:grid-cols-2 bg-muted/20 p-3 rounded-xl border border-border">
                 <div>
                   <label className="font-semibold block mb-1">Votre nom (facultatif)</label>
-                  <Input name="reporterName" placeholder="Pour permettre aux secours de vous joindre" />
+                  <Input
+                    name="reporterName"
+                    placeholder="Pour permettre aux secours de vous joindre"
+                  />
                 </div>
                 <div>
                   <label className="font-semibold block mb-1">Votre téléphone (facultatif)</label>
@@ -436,7 +517,12 @@ export function ResidentPortal() {
               </div>
 
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="isAnonymous" name="isAnonymous" className="h-4 w-4 rounded border-gray-300" />
+                <input
+                  type="checkbox"
+                  id="isAnonymous"
+                  name="isAnonymous"
+                  className="h-4 w-4 rounded border-gray-300"
+                />
                 <label htmlFor="isAnonymous" className="text-xs text-muted-foreground">
                   Garder mon signalement 100% anonyme
                 </label>
@@ -458,7 +544,8 @@ export function ResidentPortal() {
       {activeTab === 'emergencies' && (
         <div className="space-y-4">
           <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-xs text-red-800 dark:text-red-300">
-            <strong>Numéros d'urgence officiels :</strong> En cas de danger immédiat pour la vie d'autrui, composez directement les numéros abrégés ci-dessous.
+            <strong>Numéros d'urgence officiels :</strong> En cas de danger immédiat pour la vie
+            d'autrui, composez directement les numéros abrégés ci-dessous.
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -493,7 +580,7 @@ export function ResidentPortal() {
       {/* TAB 4: ALERTES & ANNONCES DU QUARTIER */}
       {activeTab === 'announcements' && (
         <div className="space-y-4">
-          {(!announcements || announcements.length === 0) ? (
+          {!announcements || announcements.length === 0 ? (
             <Card className="p-8 text-center text-xs text-muted-foreground">
               Aucune annonce ou alerte diffusée pour le moment dans votre secteur.
             </Card>
@@ -510,9 +597,13 @@ export function ResidentPortal() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                        a.type === 'URGENT_ALERT' ? 'bg-red-600 text-white' : 'bg-primary text-primary-foreground'
-                      }`}>
+                      <span
+                        className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                          a.type === 'URGENT_ALERT'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-primary text-primary-foreground'
+                        }`}
+                      >
                         {a.type === 'URGENT_ALERT' ? 'ALERTE URGENTE' : a.type}
                       </span>
                       <h3 className="font-bold text-sm text-foreground">{a.title}</h3>
@@ -521,9 +612,13 @@ export function ResidentPortal() {
                       {new Date(a.createdAt).toLocaleDateString('fr-FR')}
                     </span>
                   </div>
-                  <p className="mt-2 text-foreground/90 whitespace-pre-line leading-relaxed">{a.message}</p>
+                  <p className="mt-2 text-foreground/90 whitespace-pre-line leading-relaxed">
+                    {a.message}
+                  </p>
                   <div className="mt-3 pt-2 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>Publié par : {a.authorId?.name || 'Chef de secteur'} ({a.authorRole})</span>
+                    <span>
+                      Publié par : {a.authorId?.name || 'Chef de secteur'} ({a.authorRole})
+                    </span>
                     {a.eventDate && (
                       <span className="font-semibold text-primary">
                         Date prévue : {new Date(a.eventDate).toLocaleString('fr-FR')}

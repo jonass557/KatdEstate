@@ -33,7 +33,10 @@ rentScheduleSchema.index(
   { organizationId: 1, leaseId: 1, dueDate: 1 },
   { unique: true, name: 'schedules_org_lease_due_unique' },
 );
-rentScheduleSchema.index({ organizationId: 1, status: 1, dueDate: 1 }, { name: 'schedules_org_status_due' });
+rentScheduleSchema.index(
+  { organizationId: 1, status: 1, dueDate: 1 },
+  { name: 'schedules_org_status_due' },
+);
 
 const invoiceItemSchema = new Schema(
   {
@@ -61,7 +64,10 @@ const invoiceSchema = new Schema(
   },
   { timestamps },
 );
-invoiceSchema.index({ organizationId: 1, number: 1 }, { unique: true, name: 'invoices_org_number_unique' });
+invoiceSchema.index(
+  { organizationId: 1, number: 1 },
+  { unique: true, name: 'invoices_org_number_unique' },
+);
 
 const paymentSchema = new Schema(
   {
@@ -100,7 +106,10 @@ const receiptSchema = new Schema(
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );
-receiptSchema.index({ organizationId: 1, number: 1 }, { unique: true, name: 'receipts_org_number_unique' });
+receiptSchema.index(
+  { organizationId: 1, number: 1 },
+  { unique: true, name: 'receipts_org_number_unique' },
+);
 
 const depositTransactionSchema = new Schema(
   {
@@ -116,7 +125,9 @@ const depositTransactionSchema = new Schema(
 );
 depositTransactionSchema.index({ organizationId: 1, leaseId: 1 }, { name: 'deposits_org_lease' });
 
-export type RentScheduleDocument = InferSchemaType<typeof rentScheduleSchema> & { _id: Types.ObjectId };
+export type RentScheduleDocument = InferSchemaType<typeof rentScheduleSchema> & {
+  _id: Types.ObjectId;
+};
 export type InvoiceDocument = InferSchemaType<typeof invoiceSchema> & { _id: Types.ObjectId };
 export type PaymentDocument = InferSchemaType<typeof paymentSchema> & { _id: Types.ObjectId };
 export type ReceiptDocument = InferSchemaType<typeof receiptSchema> & { _id: Types.ObjectId };

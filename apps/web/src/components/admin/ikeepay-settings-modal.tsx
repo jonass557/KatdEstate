@@ -94,8 +94,12 @@ export function IkeepaySettingsModal({
             <Key className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Passerelle de Paiement Ikeepay</h3>
-            <p className="text-xs text-slate-500">Configuration des clés API H2H pour Orange, MTN, Wave & Moov</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              Passerelle de Paiement Ikeepay
+            </h3>
+            <p className="text-xs text-slate-500">
+              Configuration des clés API H2H pour Orange, MTN, Wave & Moov
+            </p>
           </div>
         </div>
 
@@ -121,7 +125,9 @@ export function IkeepaySettingsModal({
         ) : (
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <Label htmlFor="pubKey" className="text-xs font-semibold">Clé Publique Ikeepay (Public Key) *</Label>
+              <Label htmlFor="pubKey" className="text-xs font-semibold">
+                Clé Publique Ikeepay (Public Key) *
+              </Label>
               <Input
                 id="pubKey"
                 required
@@ -133,7 +139,9 @@ export function IkeepaySettingsModal({
             </div>
 
             <div>
-              <Label htmlFor="secKey" className="text-xs font-semibold">Clé Secrète Ikeepay (Secret Key) *</Label>
+              <Label htmlFor="secKey" className="text-xs font-semibold">
+                Clé Secrète Ikeepay (Secret Key) *
+              </Label>
               <Input
                 id="secKey"
                 required
@@ -143,11 +151,15 @@ export function IkeepaySettingsModal({
                 onChange={(e) => setSecretKey(e.target.value)}
                 className="mt-1 text-xs font-mono"
               />
-              <p className="mt-1 text-[11px] text-slate-500">Utilisée dans le header x-api-key pour les appels Payin/Payout.</p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Utilisée dans le header x-api-key pour les appels Payin/Payout.
+              </p>
             </div>
 
             <div>
-              <Label htmlFor="whSec" className="text-xs font-semibold">Secret Webhook (HMAC SHA-256) (Optionnel)</Label>
+              <Label htmlFor="whSec" className="text-xs font-semibold">
+                Secret Webhook (HMAC SHA-256) (Optionnel)
+              </Label>
               <Input
                 id="whSec"
                 type="password"
@@ -156,12 +168,16 @@ export function IkeepaySettingsModal({
                 onChange={(e) => setWebhookSecret(e.target.value)}
                 className="mt-1 text-xs font-mono"
               />
-              <p className="mt-1 text-[11px] text-slate-500">Pour la validation de l'en-tête X-Ikeepay-Signature.</p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Pour la validation de l'en-tête X-Ikeepay-Signature.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
-                <Label htmlFor="env" className="text-xs font-semibold">Environnement</Label>
+                <Label htmlFor="env" className="text-xs font-semibold">
+                  Environnement
+                </Label>
                 <select
                   id="env"
                   value={environment}
@@ -174,7 +190,9 @@ export function IkeepaySettingsModal({
               </div>
 
               <div>
-                <Label htmlFor="status" className="text-xs font-semibold">Statut Passerelle</Label>
+                <Label htmlFor="status" className="text-xs font-semibold">
+                  Statut Passerelle
+                </Label>
                 <select
                   id="status"
                   value={isActive ? 'ACTIVE' : 'DISABLED'}

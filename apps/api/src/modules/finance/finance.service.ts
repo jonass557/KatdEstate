@@ -7,7 +7,13 @@ import { notFound, paginate } from '../../common/pagination.js';
 import { renderPdf } from '../../common/pdf.js';
 import { computePenalty } from '../../common/schedule.js';
 import { nextNumber } from '../../common/sequence.js';
-import { DepositTransaction, Invoice, Payment, Receipt, RentSchedule } from '../../models/finance.js';
+import {
+  DepositTransaction,
+  Invoice,
+  Payment,
+  Receipt,
+  RentSchedule,
+} from '../../models/finance.js';
 import { Lease, Tenant } from '../../models/lease.js';
 import { Property, Unit } from '../../models/property.js';
 import { Organization } from '../../models/identity.js';
@@ -17,7 +23,12 @@ function org(req: Request): string {
   return req.organizationContext!.organizationId;
 }
 
-async function audit(req: Request, action: string, resourceId: string, changes?: Record<string, unknown>): Promise<void> {
+async function audit(
+  req: Request,
+  action: string,
+  resourceId: string,
+  changes?: Record<string, unknown>,
+): Promise<void> {
   await recordAudit({
     organizationId: org(req),
     ...(req.user?.id ? { actorId: req.user.id } : {}),
@@ -29,11 +40,20 @@ async function audit(req: Request, action: string, resourceId: string, changes?:
   });
 }
 
-function remainingOf(schedule: { amountDueMinor: number; penaltyMinor: number; amountPaidMinor: number }): number {
+function remainingOf(schedule: {
+  amountDueMinor: number;
+  penaltyMinor: number;
+  amountPaidMinor: number;
+}): number {
   return schedule.amountDueMinor + schedule.penaltyMinor - schedule.amountPaidMinor;
 }
 
-function statusFor(schedule: { amountDueMinor: number; penaltyMinor: number; amountPaidMinor: number; dueDate: Date }): 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE' {
+function statusFor(schedule: {
+  amountDueMinor: number;
+  penaltyMinor: number;
+  amountPaidMinor: number;
+  dueDate: Date;
+}): 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE' {
   const remaining = remainingOf(schedule);
   if (remaining <= 0) return 'PAID';
   if (schedule.dueDate.getTime() < Date.now()) return 'OVERDUE';
@@ -42,7 +62,12 @@ function statusFor(schedule: { amountDueMinor: number; penaltyMinor: number; amo
 }
 
 export async function listSchedules(req: Request, res: Response): Promise<void> {
-  const query = req.query as unknown as Record<string, unknown> & { page: number; pageSize: number; order: 'asc' | 'desc'; sort?: string };
+  const query = req.query as unknown as Record<string, unknown> & {
+    page: number;
+    pageSize: number;
+    order: 'asc' | 'desc';
+    sort?: string;
+  };
   const filter: Record<string, unknown> = { organizationId: org(req) };
   for (const key of ['status', 'propertyId', 'tenantId', 'unitId'] as const) {
     if (query[key]) filter[key] = query[key];
@@ -126,7 +151,11 @@ export async function applyLatePenalties(req: Request, res: Response): Promise<v
       await schedule.save();
       count++;
       totalPenaltiesApplied += diff;
-    } else if (schedule.status !== 'OVERDUE' && schedule.dueDate.getTime() < asOfDate.getTime() && remainingOf(schedule) > 0) {
+    } else if (
+      schedule.status !== 'OVERDUE' &&
+      schedule.dueDate.getTime() < asOfDate.getTime() &&
+      remainingOf(schedule) > 0
+    ) {
       schedule.status = 'OVERDUE';
       await schedule.save();
     }
@@ -142,13 +171,19 @@ export async function applyLatePenalties(req: Request, res: Response): Promise<v
  * L'idempotence protège contre les doubles débits.
  */
 export async function recordPayment(req: Request, res: Response): Promise<void> {
-  const existing = await Payment.findOne({ organizationId: org(req), idempotencyKey: req.body.idempotencyKey });
+  const existing = await Payment.findOne({
+    organizationId: org(req),
+    idempotencyKey: req.body.idempotencyKey,
+  });
   if (existing) {
     res.locals.data = { payment: existing, duplicate: true };
     return;
   }
 
-  const schedule = await RentSchedule.findOne({ _id: req.body.rentScheduleId, organizationId: org(req) });
+  const schedule = await RentSchedule.findOne({
+    _id: req.body.rentScheduleId,
+    organizationId: org(req),
+  });
   if (!schedule) throw notFound('Échéance');
   if (schedule.status === 'CANCELLED') throw new AppError('CONFLICT', 'Échéance annulée.', 409);
   if (schedule.status === 'PAID') throw new AppError('CONFLICT', 'Échéance déjà soldée.', 409);
@@ -198,7 +233,12 @@ export async function recordPayment(req: Request, res: Response): Promise<void> 
           propertyId: schedule.propertyId,
           unitId: schedule.unitId,
           dueDate: schedule.dueDate,
-          items: [{ label: 'Loyer et charges', amountMinor: schedule.amountDueMinor + schedule.penaltyMinor }],
+          items: [
+            {
+              label: 'Loyer et charges',
+              amountMinor: schedule.amountDueMinor + schedule.penaltyMinor,
+            },
+          ],
           totalMinor: schedule.amountDueMinor + schedule.penaltyMinor,
           currency: schedule.currency,
         },
@@ -237,8 +277,10 @@ export async function recordPayment(req: Request, res: Response): Promise<void> 
 export async function confirmPayment(req: Request, res: Response): Promise<void> {
   const payment = await Payment.findOne({ _id: req.params.id, organizationId: org(req) });
   if (!payment) throw notFound('Paiement');
-  if (payment.status === 'CONFIRMED') throw new AppError('CONFLICT', 'Paiement déjà confirmé.', 409);
-  if (payment.status === 'REFUNDED') throw new AppError('CONFLICT', 'Paiement déjà remboursé.', 409);
+  if (payment.status === 'CONFIRMED')
+    throw new AppError('CONFLICT', 'Paiement déjà confirmé.', 409);
+  if (payment.status === 'REFUNDED')
+    throw new AppError('CONFLICT', 'Paiement déjà remboursé.', 409);
 
   const schedule = await RentSchedule.findById(payment.rentScheduleId);
   if (!schedule) throw notFound('Échéance');
@@ -260,14 +302,20 @@ export async function confirmPayment(req: Request, res: Response): Promise<void>
   });
 
   await audit(req, 'payment.confirm', String(payment._id));
-  res.locals.data = { payment, receipt, status: schedule.status, remainingMinor: remainingOf(schedule) };
+  res.locals.data = {
+    payment,
+    receipt,
+    status: schedule.status,
+    remainingMinor: remainingOf(schedule),
+  };
 }
 
 /** Remboursement : mouvement inverse, l'échéance redevient due du montant rendu. */
 export async function refundPayment(req: Request, res: Response): Promise<void> {
   const payment = await Payment.findOne({ _id: req.params.id, organizationId: org(req) });
   if (!payment) throw notFound('Paiement');
-  if (payment.status === 'REFUNDED') throw new AppError('CONFLICT', 'Paiement déjà remboursé.', 409);
+  if (payment.status === 'REFUNDED')
+    throw new AppError('CONFLICT', 'Paiement déjà remboursé.', 409);
 
   const schedule = await RentSchedule.findById(payment.rentScheduleId);
   if (!schedule) throw notFound('Échéance');
@@ -289,7 +337,11 @@ export async function cancelSchedule(req: Request, res: Response): Promise<void>
   const schedule = await RentSchedule.findOne({ _id: req.params.id, organizationId: org(req) });
   if (!schedule) throw notFound('Échéance');
   if (schedule.amountPaidMinor > 0) {
-    throw new AppError('CONFLICT', 'Impossible d’annuler une échéance déjà payée en partie. Remboursez d’abord.', 409);
+    throw new AppError(
+      'CONFLICT',
+      'Impossible d’annuler une échéance déjà payée en partie. Remboursez d’abord.',
+      409,
+    );
   }
   schedule.status = 'CANCELLED';
   schedule.cancelledReason = req.body.reason;
@@ -299,7 +351,11 @@ export async function cancelSchedule(req: Request, res: Response): Promise<void>
 }
 
 export async function recordDeposit(req: Request, res: Response): Promise<void> {
-  const lease = await Lease.findOne({ _id: req.body.leaseId, organizationId: org(req), deletedAt: null });
+  const lease = await Lease.findOne({
+    _id: req.body.leaseId,
+    organizationId: org(req),
+    deletedAt: null,
+  });
   if (!lease) throw notFound('Contrat');
 
   const received = await DepositTransaction.aggregate<{ _id: string; total: number }>([
@@ -311,7 +367,10 @@ export async function recordDeposit(req: Request, res: Response): Promise<void> 
     return sum - entry.total;
   }, 0);
 
-  if ((req.body.type === 'REFUNDED' || req.body.type === 'DEDUCTION') && req.body.amountMinor > balance) {
+  if (
+    (req.body.type === 'REFUNDED' || req.body.type === 'DEDUCTION') &&
+    req.body.amountMinor > balance
+  ) {
     throw new AppError('VALIDATION_ERROR', 'Le montant dépasse le dépôt actuellement détenu.', 422);
   }
 
@@ -330,13 +389,21 @@ export async function recordDeposit(req: Request, res: Response): Promise<void> 
 }
 
 export async function listPayments(req: Request, res: Response): Promise<void> {
-  const query = req.query as unknown as Record<string, unknown> & { page: number; pageSize: number; order: 'asc' | 'desc'; sort?: string };
+  const query = req.query as unknown as Record<string, unknown> & {
+    page: number;
+    pageSize: number;
+    order: 'asc' | 'desc';
+    sort?: string;
+  };
   const filter: Record<string, unknown> = { organizationId: org(req) };
   if (query.method) filter.method = query.method;
   if (query.status) filter.status = query.status;
   if (query.tenantId) filter.tenantId = query.tenantId;
   if (query.from || query.to) {
-    filter.paidAt = { ...(query.from ? { $gte: query.from } : {}), ...(query.to ? { $lte: query.to } : {}) };
+    filter.paidAt = {
+      ...(query.from ? { $gte: query.from } : {}),
+      ...(query.to ? { $lte: query.to } : {}),
+    };
   }
   const page = await paginate(Payment, filter, query, 'payment');
   res.locals.data = page.items;
@@ -348,9 +415,15 @@ export async function tenantPaymentHistory(req: Request, res: Response): Promise
   const tenant = await Tenant.findOne({ _id: tenantId, organizationId: org(req) });
   if (!tenant) throw notFound('Locataire');
 
-  const schedules = await RentSchedule.find({ tenantId, organizationId: org(req) }).sort({ dueDate: -1 }).lean();
-  const payments = await Payment.find({ tenantId, organizationId: org(req) }).sort({ paidAt: -1 }).lean();
-  const deposits = await DepositTransaction.find({ tenantId, organizationId: org(req) }).sort({ createdAt: -1 }).lean();
+  const schedules = await RentSchedule.find({ tenantId, organizationId: org(req) })
+    .sort({ dueDate: -1 })
+    .lean();
+  const payments = await Payment.find({ tenantId, organizationId: org(req) })
+    .sort({ paidAt: -1 })
+    .lean();
+  const deposits = await DepositTransaction.find({ tenantId, organizationId: org(req) })
+    .sort({ createdAt: -1 })
+    .lean();
 
   let totalBilledMinor = 0;
   let totalPaidMinor = 0;
@@ -398,7 +471,8 @@ export async function splitCharges(req: Request, res: Response): Promise<void> {
   if (!property) throw notFound('Propriété');
 
   const units = await Unit.find({ propertyId, organizationId: org(req), deletedAt: null });
-  if (units.length === 0) throw new AppError('VALIDATION_ERROR', 'Cette propriété ne contient aucun logement.', 422);
+  if (units.length === 0)
+    throw new AppError('VALIDATION_ERROR', 'Cette propriété ne contient aucun logement.', 422);
 
   const activeLeases = await Lease.find({
     propertyId,
@@ -408,7 +482,11 @@ export async function splitCharges(req: Request, res: Response): Promise<void> {
   });
 
   if (activeLeases.length === 0) {
-    throw new AppError('VALIDATION_ERROR', 'Aucun contrat de location actif sur cette propriété pour répartir les charges.', 422);
+    throw new AppError(
+      'VALIDATION_ERROR',
+      'Aucun contrat de location actif sur cette propriété pour répartir les charges.',
+      422,
+    );
   }
 
   const totalSurface = activeLeases.reduce((acc, lease) => {
@@ -468,7 +546,12 @@ export async function splitCharges(req: Request, res: Response): Promise<void> {
 }
 
 export async function listInvoices(req: Request, res: Response): Promise<void> {
-  const query = req.query as unknown as Record<string, unknown> & { page: number; pageSize: number; order: 'asc' | 'desc'; sort?: string };
+  const query = req.query as unknown as Record<string, unknown> & {
+    page: number;
+    pageSize: number;
+    order: 'asc' | 'desc';
+    sort?: string;
+  };
   const filter: Record<string, unknown> = { organizationId: org(req) };
   if (query.status) filter.status = query.status;
   if (query.tenantId) filter.tenantId = query.tenantId;
@@ -525,7 +608,13 @@ export async function financeDashboard(req: Request, res: Response): Promise<voi
         expectedTotal: { $sum: { $add: ['$amountDueMinor', '$penaltyMinor'] } },
         collectedTotal: { $sum: '$amountPaidMinor' },
         overdueTotal: {
-          $sum: { $cond: [{ $eq: ['$status', 'OVERDUE'] }, { $subtract: [{ $add: ['$amountDueMinor', '$penaltyMinor'] }, '$amountPaidMinor'] }, 0] },
+          $sum: {
+            $cond: [
+              { $eq: ['$status', 'OVERDUE'] },
+              { $subtract: [{ $add: ['$amountDueMinor', '$penaltyMinor'] }, '$amountPaidMinor'] },
+              0,
+            ],
+          },
         },
       },
     },
@@ -587,14 +676,34 @@ export async function financeDashboard(req: Request, res: Response): Promise<voi
   const twelveMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
   const monthlyIncomeAgg = await Payment.aggregate<{ _id: string; total: number }>([
     { $match: { organizationId: orgObj, status: 'CONFIRMED', paidAt: { $gte: twelveMonthsAgo } } },
-    { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$paidAt' } }, total: { $sum: '$amountMinor' } } },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m', date: '$paidAt' } },
+        total: { $sum: '$amountMinor' },
+      },
+    },
   ]);
   const monthlyExpenseAgg = await Transaction.aggregate<{ _id: string; total: number }>([
-    { $match: { organizationId: orgObj, direction: 'EXPENSE', deletedAt: null, date: { $gte: twelveMonthsAgo } } },
-    { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$date' } }, total: { $sum: '$amountMinor' } } },
+    {
+      $match: {
+        organizationId: orgObj,
+        direction: 'EXPENSE',
+        deletedAt: null,
+        date: { $gte: twelveMonthsAgo },
+      },
+    },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m', date: '$date' } },
+        total: { $sum: '$amountMinor' },
+      },
+    },
   ]);
 
-  const monthsMap = new Map<string, { month: string; income: number; expense: number; net: number }>();
+  const monthsMap = new Map<
+    string,
+    { month: string; income: number; expense: number; net: number }
+  >();
   for (let i = 11; i >= 0; i--) {
     const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     const mStr = d.toISOString().slice(0, 7);
@@ -628,11 +737,22 @@ export async function financeDashboard(req: Request, res: Response): Promise<voi
       { $group: { _id: null, total: { $sum: '$amountPaidMinor' } } },
     ]);
     const [pExpense] = await Transaction.aggregate<{ total: number }>([
-      { $match: { propertyId: prop._id, organizationId: orgObj, direction: 'EXPENSE', deletedAt: null } },
+      {
+        $match: {
+          propertyId: prop._id,
+          organizationId: orgObj,
+          direction: 'EXPENSE',
+          deletedAt: null,
+        },
+      },
       { $group: { _id: null, total: { $sum: '$amountMinor' } } },
     ]);
     const pUnits = await Unit.countDocuments({ propertyId: prop._id, deletedAt: null });
-    const pOccupied = await Unit.countDocuments({ propertyId: prop._id, status: 'OCCUPIED', deletedAt: null });
+    const pOccupied = await Unit.countDocuments({
+      propertyId: prop._id,
+      status: 'OCCUPIED',
+      deletedAt: null,
+    });
 
     profitabilityByProperty.push({
       propertyId: String(prop._id),
@@ -650,11 +770,29 @@ export async function financeDashboard(req: Request, res: Response): Promise<voi
   const overdueSchedules = await RentSchedule.find({
     organizationId: org(req),
     status: 'OVERDUE',
-  }).populate('tenantId', 'fullName phone email').sort({ dueDate: 1 }).lean();
+  })
+    .populate('tenantId', 'fullName phone email')
+    .sort({ dueDate: 1 })
+    .lean();
 
-  const debtorsMap = new Map<string, { tenantId: string; fullName: string; phone?: string; email?: string; overdueMinor: number; oldestDueDate: Date }>();
+  const debtorsMap = new Map<
+    string,
+    {
+      tenantId: string;
+      fullName: string;
+      phone?: string;
+      email?: string;
+      overdueMinor: number;
+      oldestDueDate: Date;
+    }
+  >();
   for (const s of overdueSchedules) {
-    const t = s.tenantId as unknown as { _id?: unknown; fullName?: string; phone?: string; email?: string };
+    const t = s.tenantId as unknown as {
+      _id?: unknown;
+      fullName?: string;
+      phone?: string;
+      email?: string;
+    };
     const tId = String(t?._id ?? s.tenantId);
     const owed = remainingOf(s);
     if (!debtorsMap.has(tId)) {
@@ -695,8 +833,15 @@ export async function financeDashboard(req: Request, res: Response): Promise<voi
 }
 
 export async function financeSummary(req: Request, res: Response): Promise<void> {
-  const match: Record<string, unknown> = { organizationId: new Types.ObjectId(org(req)), status: { $ne: 'CANCELLED' } };
-  const [totals] = await RentSchedule.aggregate<{ expected: number; collected: number; overdue: number }>([
+  const match: Record<string, unknown> = {
+    organizationId: new Types.ObjectId(org(req)),
+    status: { $ne: 'CANCELLED' },
+  };
+  const [totals] = await RentSchedule.aggregate<{
+    expected: number;
+    collected: number;
+    overdue: number;
+  }>([
     { $match: match },
     {
       $group: {
@@ -704,7 +849,13 @@ export async function financeSummary(req: Request, res: Response): Promise<void>
         expected: { $sum: { $add: ['$amountDueMinor', '$penaltyMinor'] } },
         collected: { $sum: '$amountPaidMinor' },
         overdue: {
-          $sum: { $cond: [{ $eq: ['$status', 'OVERDUE'] }, { $subtract: [{ $add: ['$amountDueMinor', '$penaltyMinor'] }, '$amountPaidMinor'] }, 0] },
+          $sum: {
+            $cond: [
+              { $eq: ['$status', 'OVERDUE'] },
+              { $subtract: [{ $add: ['$amountDueMinor', '$penaltyMinor'] }, '$amountPaidMinor'] },
+              0,
+            ],
+          },
         },
       },
     },
@@ -781,9 +932,15 @@ export async function invoicePdf(req: Request, res: Response): Promise<void> {
   const tenant = await Tenant.findById(invoice.tenantId);
   const organization = await Organization.findById(org(req));
 
-  const itemsLines = (invoice.items && invoice.items.length > 0)
-    ? invoice.items.map((it) => `${it.label} (${it.category ?? 'Charge'}) : ${it.amountMinor.toLocaleString('fr-FR')} ${invoice.currency}`)
-    : [`Total loyer & charges : ${invoice.totalMinor.toLocaleString('fr-FR')} ${invoice.currency}`];
+  const itemsLines =
+    invoice.items && invoice.items.length > 0
+      ? invoice.items.map(
+          (it) =>
+            `${it.label} (${it.category ?? 'Charge'}) : ${it.amountMinor.toLocaleString('fr-FR')} ${invoice.currency}`,
+        )
+      : [
+          `Total loyer & charges : ${invoice.totalMinor.toLocaleString('fr-FR')} ${invoice.currency}`,
+        ];
 
   const pdf = await renderPdf({
     title: `AVIS D'ÉCHÉANCE / FACTURE N° ${invoice.number}`,
@@ -818,7 +975,9 @@ export async function invoicePdf(req: Request, res: Response): Promise<void> {
 }
 
 export async function exportPayments(req: Request, res: Response): Promise<void> {
-  const payments = await Payment.find({ organizationId: org(req) }).sort({ paidAt: -1 }).limit(5_000);
+  const payments = await Payment.find({ organizationId: org(req) })
+    .sort({ paidAt: -1 })
+    .limit(5_000);
 
   if (req.query.format === 'xlsx') {
     const workbook = new ExcelJS.Workbook();
@@ -835,7 +994,10 @@ export async function exportPayments(req: Request, res: Response): Promise<void>
         payment.reference ?? '—',
       ]);
     }
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
     res.setHeader('Content-Disposition', 'attachment; filename="paiements.xlsx"');
     await workbook.xlsx.write(res);
     return;

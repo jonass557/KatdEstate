@@ -64,7 +64,14 @@ export const IDENTITY_DOCUMENT_TYPES = [
 ] as const;
 export type IdentityDocumentType = (typeof IDENTITY_DOCUMENT_TYPES)[number];
 
-export const LEASE_STATUSES = ['DRAFT', 'ACTIVE', 'EXPIRING', 'EXPIRED', 'TERMINATED', 'RENEWED'] as const;
+export const LEASE_STATUSES = [
+  'DRAFT',
+  'ACTIVE',
+  'EXPIRING',
+  'EXPIRED',
+  'TERMINATED',
+  'RENEWED',
+] as const;
 export type LeaseStatus = (typeof LEASE_STATUSES)[number];
 
 export const LEASE_FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMI_ANNUAL', 'YEARLY'] as const;
@@ -73,7 +80,13 @@ export type LeaseFrequency = (typeof LEASE_FREQUENCIES)[number];
 export const SIGNATURE_STATUSES = ['NOT_REQUESTED', 'PENDING', 'SIGNED'] as const;
 export type SignatureStatus = (typeof SIGNATURE_STATUSES)[number];
 
-export const RENT_SCHEDULE_STATUSES = ['PENDING', 'PARTIAL', 'PAID', 'OVERDUE', 'CANCELLED'] as const;
+export const RENT_SCHEDULE_STATUSES = [
+  'PENDING',
+  'PARTIAL',
+  'PAID',
+  'OVERDUE',
+  'CANCELLED',
+] as const;
 export type RentScheduleStatus = (typeof RENT_SCHEDULE_STATUSES)[number];
 
 export const PAYMENT_METHODS = [
@@ -131,13 +144,7 @@ export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
 export const MESSAGE_CATEGORIES = ['GENERAL', 'PAYMENT', 'MAINTENANCE', 'LEASE', 'URGENT'] as const;
 export type MessageCategory = (typeof MESSAGE_CATEGORIES)[number];
 
-export const VENDOR_TRADES = [
-  'PLUMBER',
-  'ELECTRICIAN',
-  'TECHNICIAN',
-  'PAINTER',
-  'OTHER',
-] as const;
+export const VENDOR_TRADES = ['PLUMBER', 'ELECTRICIAN', 'TECHNICIAN', 'PAINTER', 'OTHER'] as const;
 export type VendorTrade = (typeof VENDOR_TRADES)[number];
 
 export const EXPENSE_CATEGORIES = [
@@ -276,11 +283,7 @@ export const MARKETPLACE_PROPERTY_TYPE_LABELS: Record<MarketplacePropertyType, s
   NEW_DEVELOPMENT: 'Projet immobilier neuf',
 };
 
-export const LISTING_TRANSACTION_TYPES = [
-  'SALE',
-  'RENT',
-  'SEASONAL_RENTAL',
-] as const;
+export const LISTING_TRANSACTION_TYPES = ['SALE', 'RENT', 'SEASONAL_RENTAL'] as const;
 export type ListingTransactionType = (typeof LISTING_TRANSACTION_TYPES)[number];
 
 export const LISTING_TRANSACTION_TYPE_LABELS: Record<ListingTransactionType, string> = {
@@ -331,13 +334,7 @@ export const MANDATE_TYPE_LABELS: Record<MandateType, string> = {
   NON_EXCLUSIVE: 'Mandat non exclusif',
 };
 
-export const MANDATE_STATUSES = [
-  'PENDING',
-  'ACTIVE',
-  'REJECTED',
-  'EXPIRED',
-  'REVOKED',
-] as const;
+export const MANDATE_STATUSES = ['PENDING', 'ACTIVE', 'REJECTED', 'EXPIRED', 'REVOKED'] as const;
 export type MandateStatus = (typeof MANDATE_STATUSES)[number];
 
 export const MANDATE_STATUS_LABELS: Record<MandateStatus, string> = {
@@ -505,12 +502,7 @@ export const RESIDENCE_OCCUPANCY_STATUS_LABELS: Record<ResidenceOccupancyStatus,
   OTHER: 'Autre',
 };
 
-export const CENSUS_STATUSES = [
-  'PENDING',
-  'VALIDATED',
-  'TO_UPDATE',
-  'REJECTED',
-] as const;
+export const CENSUS_STATUSES = ['PENDING', 'VALIDATED', 'TO_UPDATE', 'REJECTED'] as const;
 export type CensusStatus = (typeof CENSUS_STATUSES)[number];
 
 export const CENSUS_STATUS_LABELS: Record<CensusStatus, string> = {
@@ -543,12 +535,7 @@ export const INCIDENT_CATEGORY_LABELS: Record<IncidentCategory, string> = {
   OTHER: 'Autre incident',
 };
 
-export const INCIDENT_SEVERITIES = [
-  'LOW',
-  'MEDIUM',
-  'HIGH',
-  'CRITICAL',
-] as const;
+export const INCIDENT_SEVERITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
 export type IncidentSeverity = (typeof INCIDENT_SEVERITIES)[number];
 
 export const INCIDENT_SEVERITY_LABELS: Record<IncidentSeverity, string> = {
@@ -575,12 +562,7 @@ export const INCIDENT_STATUS_LABELS: Record<IncidentStatus, string> = {
   DISMISSED: 'Classé sans suite',
 };
 
-export const ANNOUNCEMENT_TYPES = [
-  'INFO',
-  'MEETING',
-  'WORKS',
-  'URGENT_ALERT',
-] as const;
+export const ANNOUNCEMENT_TYPES = ['INFO', 'MEETING', 'WORKS', 'URGENT_ALERT'] as const;
 export type AnnouncementType = (typeof ANNOUNCEMENT_TYPES)[number];
 
 export const ANNOUNCEMENT_TYPE_LABELS: Record<AnnouncementType, string> = {
@@ -590,10 +572,7 @@ export const ANNOUNCEMENT_TYPE_LABELS: Record<AnnouncementType, string> = {
   URGENT_ALERT: 'Alerte communautaire urgente',
 };
 
-export const ANNOUNCEMENT_SCOPES = [
-  'BLOCK',
-  'NEIGHBORHOOD',
-] as const;
+export const ANNOUNCEMENT_SCOPES = ['BLOCK', 'NEIGHBORHOOD'] as const;
 export type AnnouncementScope = (typeof ANNOUNCEMENT_SCOPES)[number];
 
 export const ANNOUNCEMENT_SCOPE_LABELS: Record<AnnouncementScope, string> = {
@@ -617,11 +596,7 @@ export const QUARTIER_PLAN_LABELS: Record<QuartierPlanCode, string> = {
 };
 
 // --- Chefferie Immobilière, Foncière & Certification ---
-export const CHEFFERIE_OPERATION_TYPES = [
-  'HOUSE_SALE',
-  'HOUSE_RENTAL',
-  'LAND_SALE',
-] as const;
+export const CHEFFERIE_OPERATION_TYPES = ['HOUSE_SALE', 'HOUSE_RENTAL', 'LAND_SALE'] as const;
 export type ChefferieOperationType = (typeof CHEFFERIE_OPERATION_TYPES)[number];
 
 export const CHEFFERIE_OPERATION_LABELS: Record<ChefferieOperationType, string> = {
@@ -630,11 +605,7 @@ export const CHEFFERIE_OPERATION_LABELS: Record<ChefferieOperationType, string> 
   LAND_SALE: 'Vente de terrain',
 };
 
-export const CHEFFERIE_PAYMENT_STATUSES = [
-  'PENDING',
-  'PARTIAL',
-  'PAID',
-] as const;
+export const CHEFFERIE_PAYMENT_STATUSES = ['PENDING', 'PARTIAL', 'PAID'] as const;
 export type ChefferiePaymentStatus = (typeof CHEFFERIE_PAYMENT_STATUSES)[number];
 
 export const CHEFFERIE_PAYMENT_STATUS_LABELS: Record<ChefferiePaymentStatus, string> = {
@@ -643,11 +614,7 @@ export const CHEFFERIE_PAYMENT_STATUS_LABELS: Record<ChefferiePaymentStatus, str
   PAID: 'Intégralement payé',
 };
 
-export const CHEFFERIE_CERTIFICATE_STATUSES = [
-  'DRAFT',
-  'ISSUED',
-  'REVOKED',
-] as const;
+export const CHEFFERIE_CERTIFICATE_STATUSES = ['DRAFT', 'ISSUED', 'REVOKED'] as const;
 export type ChefferieCertificateStatus = (typeof CHEFFERIE_CERTIFICATE_STATUSES)[number];
 
 export const CHEFFERIE_CERTIFICATE_STATUS_LABELS: Record<ChefferieCertificateStatus, string> = {
@@ -655,4 +622,3 @@ export const CHEFFERIE_CERTIFICATE_STATUS_LABELS: Record<ChefferieCertificateSta
   ISSUED: 'Délivré & Certifié',
   REVOKED: 'Révoqué / Annulé',
 };
-

@@ -96,20 +96,21 @@ export async function createBlock(req: Request, res: Response): Promise<void> {
 
 export async function assignSectorLeader(req: Request, res: Response): Promise<void> {
   const assignedBy = req.user!.id;
-  const { userId, role, cityId, districtId, neighborhoodId, blockId, notes, startDate, endDate } = req.body;
+  const { userId, role, cityId, districtId, neighborhoodId, blockId, notes, startDate, endDate } =
+    req.body;
 
   // Clôture ou suspension des précédentes affectations actives pour ce secteur ou cet utilisateur
   if (role === 'BLOCK_LEADER' && blockId) {
     await SectorAssignment.updateMany(
       { blockId, status: 'ACTIVE' },
-      { $set: { status: 'TRANSFERRED', endDate: new Date() } }
+      { $set: { status: 'TRANSFERRED', endDate: new Date() } },
     );
     // Met à jour la référence sur le bloc
     await GeoBlock.findByIdAndUpdate(blockId, { blockLeaderId: userId });
   } else if (role === 'NEIGHBORHOOD_LEADER') {
     await SectorAssignment.updateMany(
       { neighborhoodId, role: 'NEIGHBORHOOD_LEADER', status: 'ACTIVE' },
-      { $set: { status: 'TRANSFERRED', endDate: new Date() } }
+      { $set: { status: 'TRANSFERRED', endDate: new Date() } },
     );
     await GeoNeighborhood.findByIdAndUpdate(neighborhoodId, { leaderId: userId });
   }
@@ -160,7 +161,7 @@ export async function listSectorAssignments(req: Request, res: Response): Promis
 export async function assertLeaderSectorAccess(
   userId: string,
   userRole: string,
-  target: { neighborhoodId?: string; blockId?: string }
+  target: { neighborhoodId?: string; blockId?: string },
 ): Promise<void> {
   if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') return;
 

@@ -1,7 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaseInputSchema, type LeaseInput } from '@rentflow/shared';
-import { FileText, Plus, Bell, CheckCircle2, ShieldCheck, Calendar, Clock, AlertTriangle } from 'lucide-react';
+import {
+  FileText,
+  Plus,
+  Bell,
+  CheckCircle2,
+  ShieldCheck,
+  Calendar,
+  Clock,
+  AlertTriangle,
+} from 'lucide-react';
 import { PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -12,7 +21,10 @@ import { useToast } from '../components/ui/toast';
 import { apiRequest } from '../lib/api-client';
 import { formatDate } from '../lib/format';
 import { useOrgList, useOrgPath, useOrgQuery } from '../lib/query';
-import { LeaseContractModal, type LeaseContractData } from '../components/leases/lease-contract-modal';
+import {
+  LeaseContractModal,
+  type LeaseContractData,
+} from '../components/leases/lease-contract-modal';
 import { getLocalProperties, getLocalTenants } from './properties';
 
 interface Lease {
@@ -31,7 +43,11 @@ interface Lease {
   sentToTenant?: boolean;
 }
 
-interface TimelineEvent { date: string; label: string; kind: string }
+interface TimelineEvent {
+  date: string;
+  label: string;
+  kind: string;
+}
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Brouillon',
@@ -69,8 +85,15 @@ export function LeasesPage() {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
-  const { data } = useOrgList<Lease>(['leases', status], `/leases?pageSize=50${status ? `&status=${status}` : ''}`);
-  const timeline = useOrgQuery<TimelineEvent[]>(['timeline', selected], `/leases/${selected}/timeline`, Boolean(selected));
+  const { data } = useOrgList<Lease>(
+    ['leases', status],
+    `/leases?pageSize=50${status ? `&status=${status}` : ''}`,
+  );
+  const timeline = useOrgQuery<TimelineEvent[]>(
+    ['timeline', selected],
+    `/leases/${selected}/timeline`,
+    Boolean(selected),
+  );
 
   // Merge backend data with local fallback
   const allLeases = useMemo(() => {
@@ -158,9 +181,10 @@ export function LeasesPage() {
           <span>Gestion Automatisée des Baux KatdEstate</span>
         </div>
         <p className="text-muted-foreground">
-          Lorsqu'un contrat est configuré avec une <strong>avance initiale de 3 ou 6 mois</strong>, le locataire verse
-          la somme forfaitaire totale. Dès que la période couverte prend fin, le système bascule automatiquement le contrat
-          en <strong>loyer mensuel récurrent</strong> au jour d'échéance convenu.
+          Lorsqu'un contrat est configuré avec une <strong>avance initiale de 3 ou 6 mois</strong>,
+          le locataire verse la somme forfaitaire totale. Dès que la période couverte prend fin, le
+          système bascule automatiquement le contrat en <strong>loyer mensuel récurrent</strong> au
+          jour d'échéance convenu.
         </p>
       </div>
 
@@ -211,14 +235,20 @@ export function LeasesPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Loyer contractuel :</span>
                     <strong className="text-emerald-500 font-bold">
-                      {lease.rentAmountMinor.toLocaleString('fr-FR')} {lease.currency || 'FCFA'} / mois
+                      {lease.rentAmountMinor.toLocaleString('fr-FR')} {lease.currency || 'FCFA'} /
+                      mois
                     </strong>
                   </div>
                   {lease.initialAdvanceMonths && lease.initialAdvanceMonths > 1 && (
                     <div className="flex justify-between pt-1 border-t border-border/50">
                       <span className="text-muted-foreground">Avance initiale négociée :</span>
                       <strong className="text-primary font-bold">
-                        {lease.initialAdvanceMonths} mois ({(lease.initialAdvanceTotal || lease.rentAmountMinor * lease.initialAdvanceMonths).toLocaleString('fr-FR')} FCFA)
+                        {lease.initialAdvanceMonths} mois (
+                        {(
+                          lease.initialAdvanceTotal ||
+                          lease.rentAmountMinor * lease.initialAdvanceMonths
+                        ).toLocaleString('fr-FR')}{' '}
+                        FCFA)
                       </strong>
                     </div>
                   )}
@@ -269,7 +299,10 @@ export function LeasesPage() {
                         act.mutate({
                           id: lease._id,
                           action: 'terminate',
-                          body: { terminationDate: new Date().toISOString(), reason: 'Résiliation demandée' },
+                          body: {
+                            terminationDate: new Date().toISOString(),
+                            reason: 'Résiliation demandée',
+                          },
                         })
                       }
                     >
@@ -298,7 +331,8 @@ export function LeasesPage() {
             </h2>
             {!selected ? (
               <p className="text-xs text-muted-foreground">
-                Sélectionnez un contrat de bail dans la liste pour consulter ses étapes, avenants et alertes d'expiration.
+                Sélectionnez un contrat de bail dans la liste pour consulter ses étapes, avenants et
+                alertes d'expiration.
               </p>
             ) : null}
             <ol className="space-y-3 border-l border-border pl-4 text-xs">
@@ -312,8 +346,12 @@ export function LeasesPage() {
               {selected && (timeline.data ?? []).length === 0 && (
                 <li className="relative">
                   <span className="absolute -left-[1.3rem] top-1 size-2.5 rounded-full bg-emerald-500" />
-                  <p className="font-semibold text-foreground">Bail établi et envoyé au locataire</p>
-                  <p className="text-[11px] text-muted-foreground">Notification et contrat certifié transmis.</p>
+                  <p className="font-semibold text-foreground">
+                    Bail établi et envoyé au locataire
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Notification et contrat certifié transmis.
+                  </p>
                 </li>
               )}
             </ol>
@@ -367,7 +405,8 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
   }, [startDate, initialAdvanceMonths]);
 
   const create = useMutation({
-    mutationFn: (input: LeaseInput) => apiRequest(`${base}/leases`, { method: 'POST', body: input }),
+    mutationFn: (input: LeaseInput) =>
+      apiRequest(`${base}/leases`, { method: 'POST', body: input }),
     onSuccess: () => {
       void client.invalidateQueries();
       setOpen(false);
@@ -460,12 +499,17 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
     >
       <div className="flex items-center justify-between border-b border-border pb-3">
         <div>
-          <h3 className="font-bold text-base text-foreground">Établir un Nouveau Contrat de Bail</h3>
+          <h3 className="font-bold text-base text-foreground">
+            Établir un Nouveau Contrat de Bail
+          </h3>
           <p className="text-xs text-muted-foreground">
-            Assignez le locataire, configurez l'avance initiale et envoyez le bail dans son dashboard.
+            Assignez le locataire, configurez l'avance initiale et envoyez le bail dans son
+            dashboard.
           </p>
         </div>
-        <Badge className="bg-primary/10 text-primary border border-primary/20 text-xs">KatdEstate</Badge>
+        <Badge className="bg-primary/10 text-primary border border-primary/20 text-xs">
+          KatdEstate
+        </Badge>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -505,7 +549,9 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-semibold text-muted-foreground">Montant du loyer mensuel (FCFA)</label>
+          <label className="text-xs font-semibold text-muted-foreground">
+            Montant du loyer mensuel (FCFA)
+          </label>
           <Input
             type="number"
             min={1000}
@@ -517,7 +563,9 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-muted-foreground">Jour d'échéance mensuel</label>
+          <label className="text-xs font-semibold text-muted-foreground">
+            Jour d'échéance mensuel
+          </label>
           <Input
             type="number"
             min={1}
@@ -579,16 +627,20 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
             </span>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            ⚡ <strong>Règle KatdEstate :</strong> Le locataire est couvert pour les {initialAdvanceMonths} premiers mois.
-            Dès le <strong>{formatDate(transitionDate)}</strong>, le système active automatiquement le loyer mensuel
-            récurrent de {rentAmount.toLocaleString('fr-FR')} FCFA / mois payable le {dueDay} de chaque mois.
+            ⚡ <strong>Règle KatdEstate :</strong> Le locataire est couvert pour les{' '}
+            {initialAdvanceMonths} premiers mois. Dès le{' '}
+            <strong>{formatDate(transitionDate)}</strong>, le système active automatiquement le
+            loyer mensuel récurrent de {rentAmount.toLocaleString('fr-FR')} FCFA / mois payable le{' '}
+            {dueDay} de chaque mois.
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-semibold text-muted-foreground">Date de début du bail</label>
+          <label className="text-xs font-semibold text-muted-foreground">
+            Date de début du bail
+          </label>
           <Input
             type="date"
             value={startDate}
@@ -598,7 +650,9 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-muted-foreground">Date de fin d'échéance</label>
+          <label className="text-xs font-semibold text-muted-foreground">
+            Date de fin d'échéance
+          </label>
           <Input
             type="date"
             value={endDate}
@@ -612,8 +666,8 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
       <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-muted-foreground flex items-center gap-2">
         <Bell className="size-4 text-amber-500 shrink-0" />
         <span>
-          <strong>Alerte expiration automatique :</strong> Le propriétaire et le locataire seront notifiés par email
-          automatiquement lorsque le contrat de bail arrivera à expiration.
+          <strong>Alerte expiration automatique :</strong> Le propriétaire et le locataire seront
+          notifiés par email automatiquement lorsque le contrat de bail arrivera à expiration.
         </span>
       </div>
 
@@ -623,7 +677,11 @@ function LeaseCreateForm({ onCreated }: { onCreated?: (lease: Lease) => void }) 
         <Button variant="ghost" onClick={() => setOpen(false)}>
           Annuler
         </Button>
-        <Button type="submit" disabled={create.isPending} className="bg-primary hover:bg-primary/90 font-bold">
+        <Button
+          type="submit"
+          disabled={create.isPending}
+          className="bg-primary hover:bg-primary/90 font-bold"
+        >
           <ShieldCheck className="mr-1.5 size-4" />
           Créer le Bail & Transmettre au Locataire
         </Button>

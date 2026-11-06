@@ -296,7 +296,9 @@ const commissionSchema = new Schema(
 );
 commissionSchema.index({ agentId: 1, status: 1 });
 
-export type AgentProfileDocument = InferSchemaType<typeof agentProfileSchema> & { _id: Types.ObjectId };
+export type AgentProfileDocument = InferSchemaType<typeof agentProfileSchema> & {
+  _id: Types.ObjectId;
+};
 export type AgentPlanDocument = InferSchemaType<typeof agentPlanSchema> & { _id: Types.ObjectId };
 export type ListingDocument = InferSchemaType<typeof listingSchema> & { _id: Types.ObjectId };
 export type MandateDocument = InferSchemaType<typeof mandateSchema> & { _id: Types.ObjectId };

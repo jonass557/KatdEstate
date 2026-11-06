@@ -13,7 +13,10 @@ const sequenceSchema = new Schema({
   key: { type: String, required: true },
   value: { type: Number, required: true, default: 0 },
 });
-sequenceSchema.index({ organizationId: 1, key: 1 }, { unique: true, name: 'sequences_org_key_unique' });
+sequenceSchema.index(
+  { organizationId: 1, key: 1 },
+  { unique: true, name: 'sequences_org_key_unique' },
+);
 
 const Sequence = (models.Sequence as Model<{ value: number }>) ?? model('Sequence', sequenceSchema);
 

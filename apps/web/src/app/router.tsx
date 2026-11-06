@@ -25,10 +25,21 @@ import {
 } from '../pages/portal';
 import { SignInPage } from '../pages/sign-in';
 import { PlatformPage } from '../pages/platform';
-import { AnalyticsPage, ExpensesPage, MaintenancePage, NotificationsPage, UtilitiesPage } from '../pages/operations';
+import {
+  AnalyticsPage,
+  ExpensesPage,
+  MaintenancePage,
+  NotificationsPage,
+  UtilitiesPage,
+} from '../pages/operations';
 import { LeasesPage } from '../pages/leases';
 import { PaymentsPage, RentPage } from '../pages/finance';
-import { PropertiesPage, PropertyDetailPage, PropertyFormPage, UnitsPage } from '../pages/properties';
+import {
+  PropertiesPage,
+  PropertyDetailPage,
+  PropertyFormPage,
+  UnitsPage,
+} from '../pages/properties';
 import { TenantsPage } from '../pages/tenants';
 import { OwnerPortalPage } from '../pages/owner';
 import { AiAssistantPage } from '../pages/ai';
@@ -68,7 +79,9 @@ const PAGES: Record<string, ReactNode> = {
   '/notifications': <NotificationsPage />,
 };
 
-const moduleRoutes = NAV_ITEMS.filter((item) => item.path !== '/' && item.path !== '/dashboard').map((item) => {
+const moduleRoutes = NAV_ITEMS.filter(
+  (item) => item.path !== '/' && item.path !== '/dashboard',
+).map((item) => {
   const page = PAGES[item.path] ?? <ModulePlaceholderPage title={item.label} phase={item.phase} />;
 
   return {
@@ -157,9 +170,30 @@ const router = createBrowserRouter([
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'admin/owners', element: <AdminOwnersPage /> },
       { path: 'platform/owners', element: <AdminOwnersPage /> },
-      { path: 'properties/new', element: <RequirePermission permission="properties.create"><PropertyFormPage mode="create" /></RequirePermission> },
-      { path: 'properties/:id', element: <RequirePermission permission="properties.view"><PropertyDetailPage /></RequirePermission> },
-      { path: 'properties/:id/edit', element: <RequirePermission permission="properties.update"><PropertyFormPage mode="edit" /></RequirePermission> },
+      {
+        path: 'properties/new',
+        element: (
+          <RequirePermission permission="properties.create">
+            <PropertyFormPage mode="create" />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'properties/:id',
+        element: (
+          <RequirePermission permission="properties.view">
+            <PropertyDetailPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'properties/:id/edit',
+        element: (
+          <RequirePermission permission="properties.update">
+            <PropertyFormPage mode="edit" />
+          </RequirePermission>
+        ),
+      },
       ...moduleRoutes,
       { path: '*', element: <NotFoundPage /> },
     ],

@@ -128,7 +128,9 @@ const METHODS = [
 
 export function RentPage() {
   const [activeTab, setActiveTab] = useState<'schedules' | 'invoices' | 'deposits'>('schedules');
-  const [rentSubTab, setRentSubTab] = useState<'schedules' | 'by-tenant' | 'late-tenants'>('schedules');
+  const [rentSubTab, setRentSubTab] = useState<'schedules' | 'by-tenant' | 'late-tenants'>(
+    'schedules',
+  );
   const [status, setStatus] = useState('');
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [editSchedule, setEditSchedule] = useState<Schedule | null>(null);
@@ -217,17 +219,19 @@ export function RentPage() {
     return defaultList;
   }, [localTenants]);
 
-  const lateTenants = tenantRentSummaries.filter((t) => t.status === 'LATE' || t.status === 'UNPAID');
+  const lateTenants = tenantRentSummaries.filter(
+    (t) => t.status === 'LATE' || t.status === 'UNPAID',
+  );
 
-  const handleRemindWhatsApp = (t: typeof tenantRentSummaries[0]) => {
+  const handleRemindWhatsApp = (t: (typeof tenantRentSummaries)[0]) => {
     const text = encodeURIComponent(
-      `Bonjour ${t.name},\nNous vous rappelons que votre loyer d'un montant de ${t.dueAmount.toLocaleString('fr-FR')} FCFA pour votre logement (${t.unit} - ${t.property}) est en attente de règlement.\n\nVous pouvez effectuer votre paiement directement par Mobile Money depuis votre espace locataire KatdEstate : https://katdestate.vercel.app/portal/receipts\n\nMerci de votre confiance.`
+      `Bonjour ${t.name},\nNous vous rappelons que votre loyer d'un montant de ${t.dueAmount.toLocaleString('fr-FR')} FCFA pour votre logement (${t.unit} - ${t.property}) est en attente de règlement.\n\nVous pouvez effectuer votre paiement directement par Mobile Money depuis votre espace locataire KatdEstate : https://katdestate.vercel.app/portal/receipts\n\nMerci de votre confiance.`,
     );
     const clean = t.phone.replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${clean}?text=${text}`, '_blank');
   };
 
-  const handleRemindEmail = (t: typeof tenantRentSummaries[0]) => {
+  const handleRemindEmail = (t: (typeof tenantRentSummaries)[0]) => {
     toast({
       title: 'Alerte email transmise',
       description: `Notification d’échéance de loyer envoyée à ${t.name} (${t.email}).`,
@@ -410,11 +414,17 @@ export function RentPage() {
                       return (
                         <tr key={schedule._id} className="border-t border-border">
                           <td className="px-4 py-3 font-medium">{formatDate(schedule.dueDate)}</td>
-                          <td className="px-4 py-3">{schedule.amountDueMinor.toLocaleString('fr-FR')}</td>
-                          <td className="px-4 py-3 text-amber-600">
-                            {schedule.penaltyMinor > 0 ? `+${schedule.penaltyMinor.toLocaleString('fr-FR')}` : '0'}
+                          <td className="px-4 py-3">
+                            {schedule.amountDueMinor.toLocaleString('fr-FR')}
                           </td>
-                          <td className="px-4 py-3 font-semibold">{totalDue.toLocaleString('fr-FR')}</td>
+                          <td className="px-4 py-3 text-amber-600">
+                            {schedule.penaltyMinor > 0
+                              ? `+${schedule.penaltyMinor.toLocaleString('fr-FR')}`
+                              : '0'}
+                          </td>
+                          <td className="px-4 py-3 font-semibold">
+                            {totalDue.toLocaleString('fr-FR')}
+                          </td>
                           <td className="px-4 py-3 text-emerald-600">
                             {schedule.amountPaidMinor.toLocaleString('fr-FR')}
                           </td>
@@ -474,9 +484,12 @@ export function RentPage() {
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-bold text-sm text-foreground">Récapitulatif des Loyers Encaissés</h3>
+                  <h3 className="font-bold text-sm text-foreground">
+                    Récapitulatif des Loyers Encaissés
+                  </h3>
                   <p className="text-xs text-muted-foreground">
-                    Suivi précis de la somme versée par chaque locataire selon sa propriété attribuée
+                    Suivi précis de la somme versée par chaque locataire selon sa propriété
+                    attribuée
                   </p>
                 </div>
                 <Button
@@ -522,7 +535,9 @@ export function RentPage() {
                           {item.paidTotal.toLocaleString('fr-FR')} FCFA
                         </td>
                         <td className="px-4 py-3 font-black text-rose-500">
-                          {item.dueAmount > 0 ? `${item.dueAmount.toLocaleString('fr-FR')} FCFA` : '—'}
+                          {item.dueAmount > 0
+                            ? `${item.dueAmount.toLocaleString('fr-FR')} FCFA`
+                            : '—'}
                         </td>
                         <td className="px-4 py-3">
                           <Badge
@@ -530,15 +545,15 @@ export function RentPage() {
                               item.status === 'UP_TO_DATE'
                                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                                 : item.status === 'LATE'
-                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                                : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                  : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
                             }
                           >
                             {item.status === 'UP_TO_DATE'
                               ? 'À jour'
                               : item.status === 'LATE'
-                              ? `${item.lateDays}j de retard`
-                              : 'Impayé'}
+                                ? `${item.lateDays}j de retard`
+                                : 'Impayé'}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -577,7 +592,8 @@ export function RentPage() {
                     Suivi des Retards de Paiement & Impayés
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    {lateTenants.length} locataire(s) ont dépassé la date d'échéance. Relancez-les directement par WhatsApp ou email.
+                    {lateTenants.length} locataire(s) ont dépassé la date d'échéance. Relancez-les
+                    directement par WhatsApp ou email.
                   </p>
                 </div>
                 <Button
@@ -600,7 +616,8 @@ export function RentPage() {
                         <div>
                           <h4 className="font-bold text-sm text-foreground">{tenant.name}</h4>
                           <p className="text-xs text-muted-foreground">
-                            {tenant.property} · <strong className="text-foreground">{tenant.unit}</strong>
+                            {tenant.property} ·{' '}
+                            <strong className="text-foreground">{tenant.unit}</strong>
                           </p>
                         </div>
                         <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-xs font-black">
@@ -610,13 +627,17 @@ export function RentPage() {
 
                       <div className="p-2.5 rounded-xl bg-background border border-border flex items-center justify-between text-xs">
                         <div>
-                          <span className="text-muted-foreground text-[11px] block">Montant en retard</span>
+                          <span className="text-muted-foreground text-[11px] block">
+                            Montant en retard
+                          </span>
                           <span className="font-black text-rose-500 text-sm">
                             {tenant.dueAmount.toLocaleString('fr-FR')} FCFA
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="text-muted-foreground text-[11px] block">Loyer mensuel</span>
+                          <span className="text-muted-foreground text-[11px] block">
+                            Loyer mensuel
+                          </span>
                           <span className="font-bold text-foreground">
                             {tenant.monthlyRent.toLocaleString('fr-FR')} FCFA
                           </span>
@@ -624,8 +645,12 @@ export function RentPage() {
                       </div>
 
                       <div className="text-xs text-muted-foreground space-y-0.5">
-                        <p>Tél : <strong className="text-foreground">{tenant.phone}</strong></p>
-                        <p>Email : <strong className="text-foreground">{tenant.email}</strong></p>
+                        <p>
+                          Tél : <strong className="text-foreground">{tenant.phone}</strong>
+                        </p>
+                        <p>
+                          Email : <strong className="text-foreground">{tenant.email}</strong>
+                        </p>
                       </div>
 
                       <div className="flex items-center gap-2 pt-2 border-t border-border">
@@ -701,7 +726,10 @@ export function RentPage() {
                       {inv.amountPaidMinor.toLocaleString('fr-FR')} FCFA
                     </td>
                     <td className="px-4 py-3 text-rose-600">
-                      {Math.max(0, inv.amountTotalMinor - inv.amountPaidMinor).toLocaleString('fr-FR')} FCFA
+                      {Math.max(0, inv.amountTotalMinor - inv.amountPaidMinor).toLocaleString(
+                        'fr-FR',
+                      )}{' '}
+                      FCFA
                     </td>
                     <td className="px-4 py-3">
                       <Badge>{STATUS_LABELS[inv.status] ?? inv.status}</Badge>
@@ -711,7 +739,10 @@ export function RentPage() {
                         variant="secondary"
                         className="h-8 px-2.5 text-xs"
                         onClick={() =>
-                          downloadFile(`${base}/invoices/${inv._id}/pdf`, `facture-${inv.number}.pdf`)
+                          downloadFile(
+                            `${base}/invoices/${inv._id}/pdf`,
+                            `facture-${inv.number}.pdf`,
+                          )
                         }
                       >
                         <Download className="mr-1 size-3.5" />
@@ -746,7 +777,8 @@ export function RentPage() {
           </div>
           <div className="rounded-xl border border-border p-6 text-center text-sm text-muted-foreground">
             Les cautions et dépôts sont rattachés aux contrats actifs. Utilisez le bouton ci-dessus
-            pour enregistrer une caution perçue, une restitution de sortie ou une déduction pour loyer impayé.
+            pour enregistrer une caution perçue, une restitution de sortie ou une déduction pour
+            loyer impayé.
           </div>
         </div>
       ) : null}
@@ -765,10 +797,7 @@ export function RentPage() {
             selectedSchedule.amountPaidMinor
           ).toLocaleString('fr-FR')} FCFA`}
         >
-          <PaymentForm
-            schedule={selectedSchedule}
-            onClose={() => setSelectedSchedule(null)}
-          />
+          <PaymentForm schedule={selectedSchedule} onClose={() => setSelectedSchedule(null)} />
         </Modal>
       ) : null}
 
@@ -782,10 +811,7 @@ export function RentPage() {
           title="Modifier l'échéance"
           description="Ajustement de la date d'échéance, du loyer ou des pénalités avec traçabilité d'audit."
         >
-          <EditScheduleForm
-            schedule={editSchedule}
-            onClose={() => setEditSchedule(null)}
-          />
+          <EditScheduleForm schedule={editSchedule} onClose={() => setEditSchedule(null)} />
         </Modal>
       ) : null}
 
@@ -799,10 +825,7 @@ export function RentPage() {
           title="Annuler l'échéance de loyer"
           description="L'annulation clôt définitivement l'échéance avec motif motivé."
         >
-          <CancelScheduleForm
-            schedule={cancelSchedule}
-            onClose={() => setCancelSchedule(null)}
-          />
+          <CancelScheduleForm schedule={cancelSchedule} onClose={() => setCancelSchedule(null)} />
         </Modal>
       ) : null}
 
@@ -863,7 +886,8 @@ export function RentPage() {
           onSuccess={() => {
             toast({
               title: 'Demande de retrait enregistrée',
-              description: 'Votre virement Mobile Money vers votre compte a été initié avec succès.',
+              description:
+                'Votre virement Mobile Money vers votre compte a été initié avec succès.',
               variant: 'success',
             });
           }}
@@ -873,13 +897,7 @@ export function RentPage() {
   );
 }
 
-function PaymentForm({
-  schedule,
-  onClose,
-}: {
-  schedule: Schedule;
-  onClose: () => void;
-}) {
+function PaymentForm({ schedule, onClose }: { schedule: Schedule; onClose: () => void }) {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
@@ -934,7 +952,9 @@ function PaymentForm({
       }}
     >
       <div>
-        <label className="text-xs font-medium text-muted-foreground">Montant à encaisser (FCFA)</label>
+        <label className="text-xs font-medium text-muted-foreground">
+          Montant à encaisser (FCFA)
+        </label>
         <Input
           name="amountMinor"
           type="number"
@@ -961,18 +981,27 @@ function PaymentForm({
 
       <div>
         <div className="flex items-center justify-between">
-          <label className="text-xs font-medium text-muted-foreground">Référence unique (Anti-double paiement)</label>
+          <label className="text-xs font-medium text-muted-foreground">
+            Référence unique (Anti-double paiement)
+          </label>
           <button
             type="button"
             className="text-xs text-primary hover:underline"
             onClick={() =>
-              setIdempotencyKey(`PAY-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`)
+              setIdempotencyKey(
+                `PAY-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
+              )
             }
           >
             Régénérer
           </button>
         </div>
-        <Input name="idempotencyKey" value={idempotencyKey} onChange={(e) => setIdempotencyKey(e.target.value)} required />
+        <Input
+          name="idempotencyKey"
+          value={idempotencyKey}
+          onChange={(e) => setIdempotencyKey(e.target.value)}
+          required
+        />
       </div>
 
       <div>
@@ -992,13 +1021,7 @@ function PaymentForm({
   );
 }
 
-function EditScheduleForm({
-  schedule,
-  onClose,
-}: {
-  schedule: Schedule;
-  onClose: () => void;
-}) {
+function EditScheduleForm({ schedule, onClose }: { schedule: Schedule; onClose: () => void }) {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
@@ -1008,11 +1031,14 @@ function EditScheduleForm({
       apiRequest(`${base}/rent-schedules/${schedule._id}`, { method: 'PATCH', body }),
     onSuccess: () => {
       void client.invalidateQueries();
-      toast({ title: 'Échéance mise à jour', description: 'Modification consignée dans le journal d’audit.', variant: 'success' });
+      toast({
+        title: 'Échéance mise à jour',
+        description: 'Modification consignée dans le journal d’audit.',
+        variant: 'success',
+      });
       onClose();
     },
-    onError: (err: Error) =>
-      toast({ title: 'Erreur', description: err.message, variant: 'error' }),
+    onError: (err: Error) => toast({ title: 'Erreur', description: err.message, variant: 'error' }),
   });
 
   return (
@@ -1028,7 +1054,11 @@ function EditScheduleForm({
           reason: form.get('reason'),
         });
         if (!parsed.success) {
-          toast({ title: 'Données invalides', description: parsed.error.issues[0]?.message, variant: 'error' });
+          toast({
+            title: 'Données invalides',
+            description: parsed.error.issues[0]?.message,
+            variant: 'error',
+          });
           return;
         }
         update.mutate(parsed.data);
@@ -1040,32 +1070,50 @@ function EditScheduleForm({
       </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground">Montant du loyer (FCFA)</label>
-        <Input name="amountDueMinor" type="number" min={1} defaultValue={schedule.amountDueMinor} required />
+        <Input
+          name="amountDueMinor"
+          type="number"
+          min={1}
+          defaultValue={schedule.amountDueMinor}
+          required
+        />
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground">Pénalité de retard (FCFA)</label>
-        <Input name="penaltyMinor" type="number" min={0} defaultValue={schedule.penaltyMinor} required />
+        <label className="text-xs font-medium text-muted-foreground">
+          Pénalité de retard (FCFA)
+        </label>
+        <Input
+          name="penaltyMinor"
+          type="number"
+          min={0}
+          defaultValue={schedule.penaltyMinor}
+          required
+        />
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground">Motif de la modification (Audit)</label>
-        <Input name="reason" placeholder="Ex: Accord amiable d'échelonnement, régularisation" required />
+        <label className="text-xs font-medium text-muted-foreground">
+          Motif de la modification (Audit)
+        </label>
+        <Input
+          name="reason"
+          placeholder="Ex: Accord amiable d'échelonnement, régularisation"
+          required
+        />
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-        <Button type="submit" disabled={update.isPending}>Enregistrer</Button>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Annuler
+        </Button>
+        <Button type="submit" disabled={update.isPending}>
+          Enregistrer
+        </Button>
       </div>
     </form>
   );
 }
 
-function CancelScheduleForm({
-  schedule,
-  onClose,
-}: {
-  schedule: Schedule;
-  onClose: () => void;
-}) {
+function CancelScheduleForm({ schedule, onClose }: { schedule: Schedule; onClose: () => void }) {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
@@ -1078,8 +1126,7 @@ function CancelScheduleForm({
       toast({ title: 'Échéance annulée', variant: 'success' });
       onClose();
     },
-    onError: (err: Error) =>
-      toast({ title: 'Erreur', description: err.message, variant: 'error' }),
+    onError: (err: Error) => toast({ title: 'Erreur', description: err.message, variant: 'error' }),
   });
 
   return (
@@ -1090,7 +1137,11 @@ function CancelScheduleForm({
         const form = new FormData(event.currentTarget);
         const parsed = cancelScheduleSchema.safeParse({ reason: form.get('reason') });
         if (!parsed.success) {
-          toast({ title: 'Motif requis', description: parsed.error.issues[0]?.message, variant: 'error' });
+          toast({
+            title: 'Motif requis',
+            description: parsed.error.issues[0]?.message,
+            variant: 'error',
+          });
           return;
         }
         cancel.mutate(parsed.data);
@@ -1101,8 +1152,15 @@ function CancelScheduleForm({
         <Input name="reason" placeholder="Ex: Résiliation anticipée, erreur de saisie" required />
       </div>
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" onClick={onClose}>Retour</Button>
-        <Button type="submit" variant="secondary" className="text-rose-600 hover:text-rose-700" disabled={cancel.isPending}>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Retour
+        </Button>
+        <Button
+          type="submit"
+          variant="secondary"
+          className="text-rose-600 hover:text-rose-700"
+          disabled={cancel.isPending}
+        >
           Confirmer l'annulation
         </Button>
       </div>
@@ -1117,7 +1175,10 @@ function ApplyPenaltiesForm({ onClose }: { onClose: () => void }) {
 
   const apply = useMutation({
     mutationFn: (body: unknown) =>
-      apiRequest<{ updated: number }>(`${base}/rent-schedules/apply-penalties`, { method: 'POST', body }),
+      apiRequest<{ updated: number }>(`${base}/rent-schedules/apply-penalties`, {
+        method: 'POST',
+        body,
+      }),
     onSuccess: (data) => {
       void client.invalidateQueries();
       toast({
@@ -1127,8 +1188,7 @@ function ApplyPenaltiesForm({ onClose }: { onClose: () => void }) {
       });
       onClose();
     },
-    onError: (err: Error) =>
-      toast({ title: 'Erreur', description: err.message, variant: 'error' }),
+    onError: (err: Error) => toast({ title: 'Erreur', description: err.message, variant: 'error' }),
   });
 
   return (
@@ -1143,7 +1203,11 @@ function ApplyPenaltiesForm({ onClose }: { onClose: () => void }) {
           penaltyRatePercent: Number(form.get('penaltyRatePercent')),
         });
         if (!parsed.success) {
-          toast({ title: 'Paramètres invalides', description: parsed.error.issues[0]?.message, variant: 'error' });
+          toast({
+            title: 'Paramètres invalides',
+            description: parsed.error.issues[0]?.message,
+            variant: 'error',
+          });
           return;
         }
         apply.mutate(parsed.data);
@@ -1155,20 +1219,34 @@ function ApplyPenaltiesForm({ onClose }: { onClose: () => void }) {
           <Input name="minDaysOverdue" type="number" min={1} defaultValue={5} required />
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Délai de grâce (jours)</label>
+          <label className="text-xs font-medium text-muted-foreground">
+            Délai de grâce (jours)
+          </label>
           <Input name="gracePeriodDays" type="number" min={0} defaultValue={0} required />
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground">Taux de pénalité (%)</label>
-          <Input name="penaltyRatePercent" type="number" min={0} max={100} defaultValue={10} required />
+          <Input
+            name="penaltyRatePercent"
+            type="number"
+            min={0}
+            max={100}
+            defaultValue={10}
+            required
+          />
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Seules les échéances échues ayant un statut non soldé (À venir, Partiel, En retard) seront recalculées.
+        Seules les échéances échues ayant un statut non soldé (À venir, Partiel, En retard) seront
+        recalculées.
       </p>
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-        <Button type="submit" disabled={apply.isPending}>Calculer et appliquer</Button>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Annuler
+        </Button>
+        <Button type="submit" disabled={apply.isPending}>
+          Calculer et appliquer
+        </Button>
       </div>
     </form>
   );
@@ -1194,8 +1272,7 @@ function SplitChargesForm({ onClose }: { onClose: () => void }) {
       });
       onClose();
     },
-    onError: (err: Error) =>
-      toast({ title: 'Erreur', description: err.message, variant: 'error' }),
+    onError: (err: Error) => toast({ title: 'Erreur', description: err.message, variant: 'error' }),
   });
 
   return (
@@ -1214,7 +1291,11 @@ function SplitChargesForm({ onClose }: { onClose: () => void }) {
           description: form.get('description'),
         });
         if (!parsed.success) {
-          toast({ title: 'Données invalides', description: parsed.error.issues[0]?.message, variant: 'error' });
+          toast({
+            title: 'Données invalides',
+            description: parsed.error.issues[0]?.message,
+            variant: 'error',
+          });
           return;
         }
         split.mutate(parsed.data);
@@ -1228,7 +1309,10 @@ function SplitChargesForm({ onClose }: { onClose: () => void }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className="text-xs font-medium text-muted-foreground">Catégorie</label>
-          <select name="category" className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm">
+          <select
+            name="category"
+            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+          >
             <option value="WATER">Facture d’eau</option>
             <option value="ELECTRICITY">Électricité commune</option>
             <option value="INTERNET">Internet collectif</option>
@@ -1240,7 +1324,10 @@ function SplitChargesForm({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground">Mode de répartition</label>
-          <select name="splitMethod" className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm">
+          <select
+            name="splitMethod"
+            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+          >
             <option value="EQUAL">Part égale par logement</option>
             <option value="SURFACE">Au prorata de la superficie (m²)</option>
           </select>
@@ -1259,7 +1346,9 @@ function SplitChargesForm({ onClose }: { onClose: () => void }) {
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground">Montant total de la facture (FCFA)</label>
+        <label className="text-xs font-medium text-muted-foreground">
+          Montant total de la facture (FCFA)
+        </label>
         <Input name="totalAmountMinor" type="number" min={1} required />
       </div>
 
@@ -1269,8 +1358,12 @@ function SplitChargesForm({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-        <Button type="submit" disabled={split.isPending}>Calculer & Émettre les factures</Button>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Annuler
+        </Button>
+        <Button type="submit" disabled={split.isPending}>
+          Calculer & Émettre les factures
+        </Button>
       </div>
     </form>
   );
@@ -1282,15 +1375,13 @@ function DepositForm({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
 
   const record = useMutation({
-    mutationFn: (body: unknown) =>
-      apiRequest(`${base}/deposits`, { method: 'POST', body }),
+    mutationFn: (body: unknown) => apiRequest(`${base}/deposits`, { method: 'POST', body }),
     onSuccess: () => {
       void client.invalidateQueries();
       toast({ title: 'Mouvement de caution enregistré', variant: 'success' });
       onClose();
     },
-    onError: (err: Error) =>
-      toast({ title: 'Erreur', description: err.message, variant: 'error' }),
+    onError: (err: Error) => toast({ title: 'Erreur', description: err.message, variant: 'error' }),
   });
 
   return (
@@ -1306,20 +1397,29 @@ function DepositForm({ onClose }: { onClose: () => void }) {
           note: form.get('note') || undefined,
         });
         if (!parsed.success) {
-          toast({ title: 'Données invalides', description: parsed.error.issues[0]?.message, variant: 'error' });
+          toast({
+            title: 'Données invalides',
+            description: parsed.error.issues[0]?.message,
+            variant: 'error',
+          });
           return;
         }
         record.mutate(parsed.data);
       }}
     >
       <div>
-        <label className="text-xs font-medium text-muted-foreground">ID Contrat de bail (Lease ID)</label>
+        <label className="text-xs font-medium text-muted-foreground">
+          ID Contrat de bail (Lease ID)
+        </label>
         <Input name="leaseId" placeholder="Identifiant du contrat" required />
       </div>
 
       <div>
         <label className="text-xs font-medium text-muted-foreground">Type d'opération</label>
-        <select name="type" className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm">
+        <select
+          name="type"
+          className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+        >
           <option value="RECEIVED">Caution perçue (Encaissement dépôt)</option>
           <option value="REFUNDED">Restitution au locataire</option>
           <option value="DEDUCTION">Déduction pour impayé / dégradations</option>
@@ -1337,8 +1437,12 @@ function DepositForm({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-        <Button type="submit" disabled={record.isPending}>Enregistrer</Button>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Annuler
+        </Button>
+        <Button type="submit" disabled={record.isPending}>
+          Enregistrer
+        </Button>
       </div>
     </form>
   );
@@ -1381,7 +1485,10 @@ function TenantHistoryViewer() {
               {history.data.schedules.slice(0, 5).map((s) => (
                 <div key={s._id} className="flex justify-between text-xs">
                   <span>{formatDate(s.dueDate)}</span>
-                  <span>{s.amountDueMinor.toLocaleString('fr-FR')} FCFA ({STATUS_LABELS[s.status] ?? s.status})</span>
+                  <span>
+                    {s.amountDueMinor.toLocaleString('fr-FR')} FCFA (
+                    {STATUS_LABELS[s.status] ?? s.status})
+                  </span>
                 </div>
               ))}
             </div>
@@ -1392,11 +1499,17 @@ function TenantHistoryViewer() {
             <div className="mt-1 space-y-1">
               {history.data.payments.slice(0, 5).map((p) => (
                 <div key={p._id} className="flex justify-between text-xs">
-                  <span>{p.number} · {formatDate(p.paidAt)}</span>
-                  <span className="text-emerald-600">+{p.amountMinor.toLocaleString('fr-FR')} FCFA</span>
+                  <span>
+                    {p.number} · {formatDate(p.paidAt)}
+                  </span>
+                  <span className="text-emerald-600">
+                    +{p.amountMinor.toLocaleString('fr-FR')} FCFA
+                  </span>
                 </div>
               ))}
-              {history.data.payments.length === 0 ? <p className="text-xs text-muted-foreground">Aucun paiement.</p> : null}
+              {history.data.payments.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Aucun paiement.</p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1413,7 +1526,9 @@ export function PaymentsPage() {
   const [propertyFilter, setPropertyFilter] = useState<string>('ALL');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
-  const [activeQuittanceForPrint, setActiveQuittanceForPrint] = useState<QuittanceItem | null>(null);
+  const [activeQuittanceForPrint, setActiveQuittanceForPrint] = useState<QuittanceItem | null>(
+    null,
+  );
 
   // Sync with local storage
   const reloadQuittances = () => {
@@ -1469,7 +1584,7 @@ export function PaymentsPage() {
 
   const handleSendReminder = (q: QuittanceItem) => {
     const text = encodeURIComponent(
-      `Bonjour ${q.tenantName},\nVoici votre avis d'échéance KatdEstate pour votre logement (${q.propertyName}) :\n- Type : ${q.typeLabel}\n- Période : ${q.period}\n- Montant : ${q.amountMinor.toLocaleString('fr-FR')} FCFA\n- Date limite : ${formatDate(q.dueDate)}\n\nVous pouvez régler cette facture en 1 clic par Mobile Money sur votre portail : https://katdestate.vercel.app/portal/receipts\n\nMerci de votre réactivité.`
+      `Bonjour ${q.tenantName},\nVoici votre avis d'échéance KatdEstate pour votre logement (${q.propertyName}) :\n- Type : ${q.typeLabel}\n- Période : ${q.period}\n- Montant : ${q.amountMinor.toLocaleString('fr-FR')} FCFA\n- Date limite : ${formatDate(q.dueDate)}\n\nVous pouvez régler cette facture en 1 clic par Mobile Money sur votre portail : https://katdestate.vercel.app/portal/receipts\n\nMerci de votre réactivité.`,
     );
     const cleanPhone = (q.tenantPhone || '').replace(/[^0-9]/g, '');
     if (cleanPhone) {
@@ -1602,10 +1717,10 @@ export function PaymentsPage() {
                 q.type === 'WATER'
                   ? '💧'
                   : q.type === 'ELECTRICITY'
-                  ? '⚡'
-                  : q.type === 'RENT'
-                  ? '🏠'
-                  : '📋';
+                    ? '⚡'
+                    : q.type === 'RENT'
+                      ? '🏠'
+                      : '📋';
 
               return (
                 <tr key={q._id} className="hover:bg-muted/20 transition">
@@ -1632,7 +1747,9 @@ export function PaymentsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-xs font-medium">{q.period}</div>
-                    <div className="text-[11px] text-muted-foreground">Limite : {formatDate(q.dueDate)}</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Limite : {formatDate(q.dueDate)}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className="font-bold text-emerald-500 text-sm">
@@ -1728,7 +1845,8 @@ export function PaymentsPage() {
           onSuccess={() => {
             toast({
               title: 'Demande de retrait initiée',
-              description: 'Vos fonds issus des quittances ont été transférés sur votre compte Mobile Money.',
+              description:
+                'Vos fonds issus des quittances ont été transférés sur votre compte Mobile Money.',
               variant: 'success',
             });
             setShowPayoutModal(false);
@@ -1748,7 +1866,9 @@ export function PaymentsPage() {
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
                 <h3 className="font-bold text-base">{activeQuittanceForPrint.typeLabel}</h3>
-                <p className="text-xs text-muted-foreground">Réf: {activeQuittanceForPrint.number}</p>
+                <p className="text-xs text-muted-foreground">
+                  Réf: {activeQuittanceForPrint.number}
+                </p>
               </div>
               <Badge
                 className={
@@ -1764,11 +1884,15 @@ export function PaymentsPage() {
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
                 <span className="text-muted-foreground">Propriété :</span>
-                <p className="font-semibold text-foreground">{activeQuittanceForPrint.propertyName}</p>
+                <p className="font-semibold text-foreground">
+                  {activeQuittanceForPrint.propertyName}
+                </p>
               </div>
               <div>
                 <span className="text-muted-foreground">Locataire :</span>
-                <p className="font-semibold text-foreground">{activeQuittanceForPrint.tenantName}</p>
+                <p className="font-semibold text-foreground">
+                  {activeQuittanceForPrint.tenantName}
+                </p>
               </div>
               <div>
                 <span className="text-muted-foreground">Période concernée :</span>
@@ -1776,7 +1900,9 @@ export function PaymentsPage() {
               </div>
               <div>
                 <span className="text-muted-foreground">Date limite :</span>
-                <p className="font-semibold text-foreground">{formatDate(activeQuittanceForPrint.dueDate)}</p>
+                <p className="font-semibold text-foreground">
+                  {formatDate(activeQuittanceForPrint.dueDate)}
+                </p>
               </div>
             </div>
 
@@ -1932,7 +2058,9 @@ function CreateQuittanceModal({
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-muted-foreground">Locataire destinataire</label>
+          <label className="text-xs font-semibold text-muted-foreground">
+            Locataire destinataire
+          </label>
           <select
             value={tenantId}
             onChange={(e) => setTenantId(e.target.value)}
@@ -1949,7 +2077,9 @@ function CreateQuittanceModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground">Nature de la charge</label>
+            <label className="text-xs font-semibold text-muted-foreground">
+              Nature de la charge
+            </label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as any)}
@@ -1964,7 +2094,9 @@ function CreateQuittanceModal({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-muted-foreground">Montant net (FCFA)</label>
+            <label className="text-xs font-semibold text-muted-foreground">
+              Montant net (FCFA)
+            </label>
             <Input
               type="number"
               min={1}
@@ -1991,7 +2123,9 @@ function CreateQuittanceModal({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-muted-foreground">Date limite de paiement</label>
+            <label className="text-xs font-semibold text-muted-foreground">
+              Date limite de paiement
+            </label>
             <Input
               type="date"
               value={dueDate}
@@ -2016,7 +2150,9 @@ function CreateQuittanceModal({
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-muted-foreground">Note / Instructions particulières</label>
+          <label className="text-xs font-semibold text-muted-foreground">
+            Note / Instructions particulières
+          </label>
           <Input
             type="text"
             value={notes}

@@ -6,7 +6,14 @@ const timestamps = true;
 
 const userSchema = new Schema(
   {
-    emailNormalized: { type: String, required: true, unique: true, index: true, trim: true, lowercase: true },
+    emailNormalized: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+      trim: true,
+      lowercase: true,
+    },
     displayName: { type: String, required: true, trim: true, maxlength: 120 },
     passwordHash: { type: String, required: true, select: false },
     status: { type: String, enum: ['ACTIVE', 'SUSPENDED'], default: 'ACTIVE', index: true },
@@ -55,14 +62,36 @@ const membershipSchema = new Schema(
   {
     organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    role: { type: String, enum: ['ADMIN', 'OWNER', 'PROPERTY_MANAGER', 'ACCOUNTANT', 'AGENT', 'TENANT', 'NEIGHBORHOOD_LEADER', 'BLOCK_LEADER', 'RESIDENT'], required: true },
+    role: {
+      type: String,
+      enum: [
+        'ADMIN',
+        'OWNER',
+        'PROPERTY_MANAGER',
+        'ACCOUNTANT',
+        'AGENT',
+        'TENANT',
+        'NEIGHBORHOOD_LEADER',
+        'BLOCK_LEADER',
+        'RESIDENT',
+      ],
+      required: true,
+    },
     grantedPermissions: { type: [String], default: [] },
     revokedPermissions: { type: [String], default: [] },
-    status: { type: String, enum: ['INVITED', 'ACTIVE', 'SUSPENDED', 'REMOVED'], default: 'ACTIVE', index: true },
+    status: {
+      type: String,
+      enum: ['INVITED', 'ACTIVE', 'SUSPENDED', 'REMOVED'],
+      default: 'ACTIVE',
+      index: true,
+    },
   },
   { timestamps },
 );
-membershipSchema.index({ organizationId: 1, userId: 1 }, { unique: true, name: 'memberships_org_user_unique' });
+membershipSchema.index(
+  { organizationId: 1, userId: 1 },
+  { unique: true, name: 'memberships_org_user_unique' },
+);
 membershipSchema.index({ userId: 1, status: 1 }, { name: 'memberships_user_status' });
 
 const sessionSchema = new Schema(
@@ -92,8 +121,14 @@ const verificationTokenSchema = new Schema(
   },
   { timestamps },
 );
-verificationTokenSchema.index({ tokenHash: 1, purpose: 1 }, { unique: true, name: 'verification_tokens_hash_purpose_unique' });
-verificationTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'verification_tokens_expiry_ttl' });
+verificationTokenSchema.index(
+  { tokenHash: 1, purpose: 1 },
+  { unique: true, name: 'verification_tokens_hash_purpose_unique' },
+);
+verificationTokenSchema.index(
+  { expiresAt: 1 },
+  { expireAfterSeconds: 0, name: 'verification_tokens_expiry_ttl' },
+);
 
 const auditLogSchema = new Schema(
   {
@@ -116,17 +151,30 @@ auditLogSchema.pre('save', function (next) {
 });
 
 export type UserDocument = InferSchemaType<typeof userSchema> & { _id: Types.ObjectId };
-export type OrganizationDocument = InferSchemaType<typeof organizationSchema> & { _id: Types.ObjectId };
+export type OrganizationDocument = InferSchemaType<typeof organizationSchema> & {
+  _id: Types.ObjectId;
+};
 export type MembershipDocument = InferSchemaType<typeof membershipSchema> & { _id: Types.ObjectId };
 export type SessionDocument = InferSchemaType<typeof sessionSchema> & { _id: Types.ObjectId };
-export type VerificationTokenDocument = InferSchemaType<typeof verificationTokenSchema> & { _id: Types.ObjectId };
+export type VerificationTokenDocument = InferSchemaType<typeof verificationTokenSchema> & {
+  _id: Types.ObjectId;
+};
 
 export const User = (models.User as Model<UserDocument>) ?? model<UserDocument>('User', userSchema);
-export const Organization = (models.Organization as Model<OrganizationDocument>) ?? model<OrganizationDocument>('Organization', organizationSchema);
-export const Membership = (models.Membership as Model<MembershipDocument>) ?? model<MembershipDocument>('Membership', membershipSchema);
-export const Session = (models.Session as Model<SessionDocument>) ?? model<SessionDocument>('Session', sessionSchema);
-export const VerificationToken = (models.VerificationToken as Model<VerificationTokenDocument>) ?? model<VerificationTokenDocument>('VerificationToken', verificationTokenSchema);
-export const AuditLog = (models.AuditLog as Model<InferSchemaType<typeof auditLogSchema>>) ?? model('AuditLog', auditLogSchema);
+export const Organization =
+  (models.Organization as Model<OrganizationDocument>) ??
+  model<OrganizationDocument>('Organization', organizationSchema);
+export const Membership =
+  (models.Membership as Model<MembershipDocument>) ??
+  model<MembershipDocument>('Membership', membershipSchema);
+export const Session =
+  (models.Session as Model<SessionDocument>) ?? model<SessionDocument>('Session', sessionSchema);
+export const VerificationToken =
+  (models.VerificationToken as Model<VerificationTokenDocument>) ??
+  model<VerificationTokenDocument>('VerificationToken', verificationTokenSchema);
+export const AuditLog =
+  (models.AuditLog as Model<InferSchemaType<typeof auditLogSchema>>) ??
+  model('AuditLog', auditLogSchema);
 
 export function roleOfMembership(membership: MembershipDocument): Role {
   return membership.role as Role;

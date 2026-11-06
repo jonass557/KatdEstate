@@ -25,7 +25,10 @@ export async function broadcastAnnouncement(req: Request, res: Response): Promis
 
   res.locals.data = {
     announcement,
-    message: type === 'URGENT_ALERT' ? 'Alerte urgente diffusée aux résidents !' : 'Annonce publiée avec succès.',
+    message:
+      type === 'URGENT_ALERT'
+        ? 'Alerte urgente diffusée aux résidents !'
+        : 'Annonce publiée avec succès.',
   };
 }
 

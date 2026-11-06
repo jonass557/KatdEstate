@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Building,
-  Sparkles,
-  UserCheck,
-} from 'lucide-react';
+import { Building, Sparkles, UserCheck } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -21,7 +17,7 @@ export function AdminQuartierPage() {
   // Queries
   const { data: stats } = useOrgQuery<any>(
     ['admin-quartier-stats'],
-    '/quartier/dashboard/super-admin'
+    '/quartier/dashboard/super-admin',
   );
 
   const { data: cities } = useQuery<any[]>({
@@ -38,7 +34,7 @@ export function AdminQuartierPage() {
 
   const { data: assignments } = useOrgQuery<any[]>(
     ['quartier-assignments'],
-    '/quartier/sectors/assignments'
+    '/quartier/sectors/assignments',
   );
 
   // Mutations
@@ -52,7 +48,8 @@ export function AdminQuartierPage() {
   });
 
   const createNeighborhoodMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/quartier/neighborhoods`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest(`${base}/quartier/neighborhoods`, { method: 'POST', body }),
     onSuccess: () => {
       toast({ title: 'Quartier créé', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['quartier-neighborhoods'] });
@@ -70,7 +67,8 @@ export function AdminQuartierPage() {
   });
 
   const assignLeaderMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/quartier/sectors/assign`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest(`${base}/quartier/sectors/assign`, { method: 'POST', body }),
     onSuccess: () => {
       toast({ title: 'Responsabilité de secteur attribuée', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['quartier-assignments'] });
@@ -87,7 +85,8 @@ export function AdminQuartierPage() {
             Administration KatdEstate Quartier & Chefferie
           </h1>
           <p className="text-xs text-muted-foreground">
-            Découpage territorial, nomination des chefs de secteur, abonnements et supervision nationale.
+            Découpage territorial, nomination des chefs de secteur, abonnements et supervision
+            nationale.
           </p>
         </div>
       </div>
@@ -98,7 +97,9 @@ export function AdminQuartierPage() {
           type="button"
           onClick={() => setTab('territory')}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-            tab === 'territory' ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            tab === 'territory'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <Building className="h-4 w-4" /> Territoires & Villes
@@ -107,7 +108,9 @@ export function AdminQuartierPage() {
           type="button"
           onClick={() => setTab('assignments')}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-            tab === 'assignments' ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            tab === 'assignments'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <UserCheck className="h-4 w-4" /> Chefs & Affectations ({assignments?.length || 0})
@@ -116,7 +119,9 @@ export function AdminQuartierPage() {
           type="button"
           onClick={() => setTab('stats')}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-            tab === 'stats' ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            tab === 'stats'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <Sparkles className="h-4 w-4" /> Statistiques Générales
@@ -173,12 +178,18 @@ export function AdminQuartierPage() {
               >
                 <option value="">Sélectionnez la ville...</option>
                 {cities?.map((c) => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
                 ))}
               </select>
               <Input name="name" placeholder="Nom du quartier (ex: Médina, Cocody)" required />
               <Input name="code" placeholder="Code court (ex: MED, ALM)" />
-              <Button type="submit" disabled={createNeighborhoodMutation.isPending || !selectedCityId} className="w-full">
+              <Button
+                type="submit"
+                disabled={createNeighborhoodMutation.isPending || !selectedCityId}
+                className="w-full"
+              >
                 Créer le quartier
               </Button>
             </form>
@@ -199,10 +210,16 @@ export function AdminQuartierPage() {
                 });
               }}
             >
-              <select name="neighborhoodId" className="w-full rounded border border-input p-2 bg-background" required>
+              <select
+                name="neighborhoodId"
+                className="w-full rounded border border-input p-2 bg-background"
+                required
+              >
                 <option value="">Sélectionnez le quartier...</option>
                 {neighborhoods?.map((n) => (
-                  <option key={n._id} value={n._id}>{n.name}</option>
+                  <option key={n._id} value={n._id}>
+                    {n.name}
+                  </option>
                 ))}
               </select>
               <Input name="name" placeholder="Nom du bloc (ex: Carré 4, Bloc B)" required />
@@ -237,27 +254,44 @@ export function AdminQuartierPage() {
             >
               <div>
                 <label className="font-semibold block mb-1">ID Utilisateur du responsable *</label>
-                <Input name="userId" placeholder="Identifiant Mongo du compte utilisateur" required />
+                <Input
+                  name="userId"
+                  placeholder="Identifiant Mongo du compte utilisateur"
+                  required
+                />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="font-semibold block mb-1">Rôle attribué *</label>
-                  <select name="role" className="w-full rounded border border-input p-2 bg-background">
+                  <select
+                    name="role"
+                    className="w-full rounded border border-input p-2 bg-background"
+                  >
                     <option value="BLOCK_LEADER">Chef de Bloc</option>
                     <option value="NEIGHBORHOOD_LEADER">Chef de Quartier</option>
                   </select>
                 </div>
                 <div>
                   <label className="font-semibold block mb-1">Quartier *</label>
-                  <select name="neighborhoodId" className="w-full rounded border border-input p-2 bg-background" required>
+                  <select
+                    name="neighborhoodId"
+                    className="w-full rounded border border-input p-2 bg-background"
+                    required
+                  >
                     <option value="">Sélectionnez...</option>
                     {neighborhoods?.map((n) => (
-                      <option key={n._id} value={n._id}>{n.name}</option>
+                      <option key={n._id} value={n._id}>
+                        {n.name}
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
-              <Button type="submit" disabled={assignLeaderMutation.isPending} className="w-full font-bold">
+              <Button
+                type="submit"
+                disabled={assignLeaderMutation.isPending}
+                className="w-full font-bold"
+              >
                 Attribuer la responsabilité
               </Button>
             </form>
@@ -278,7 +312,10 @@ export function AdminQuartierPage() {
                 {assignments?.map((a) => (
                   <tr key={a._id} className="hover:bg-muted/30">
                     <td className="p-3 font-semibold">
-                      {a.userId?.name} <span className="block text-[11px] font-normal text-muted-foreground">{a.userId?.phone}</span>
+                      {a.userId?.name}{' '}
+                      <span className="block text-[11px] font-normal text-muted-foreground">
+                        {a.userId?.phone}
+                      </span>
                     </td>
                     <td className="p-3">
                       <span className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
@@ -310,9 +347,12 @@ export function AdminQuartierPage() {
           <Card className="p-4">
             <CardTitle className="text-xs text-muted-foreground">Villes & Blocs</CardTitle>
             <div className="text-2xl font-bold mt-2">
-              {stats?.territory?.totalCities || 0} villes / {stats?.territory?.totalBlocks || 0} blocs
+              {stats?.territory?.totalCities || 0} villes / {stats?.territory?.totalBlocks || 0}{' '}
+              blocs
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">{stats?.territory?.totalNeighborhoods || 0} quartiers répertoriés</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              {stats?.territory?.totalNeighborhoods || 0} quartiers répertoriés
+            </p>
           </Card>
 
           <Card className="p-4">
@@ -324,11 +364,16 @@ export function AdminQuartierPage() {
           </Card>
 
           <Card className="p-4">
-            <CardTitle className="text-xs text-muted-foreground">Total Résidences Recensées</CardTitle>
+            <CardTitle className="text-xs text-muted-foreground">
+              Total Résidences Recensées
+            </CardTitle>
             <div className="text-2xl font-bold text-emerald-600 mt-2">
               {stats?.census?.totalResidences || 0}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">{stats?.census?.totalHouseholds || 0} foyers ({stats?.census?.totalResidents || 0} hab.)</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              {stats?.census?.totalHouseholds || 0} foyers ({stats?.census?.totalResidents || 0}{' '}
+              hab.)
+            </p>
           </Card>
 
           <Card className="p-4">
@@ -336,7 +381,9 @@ export function AdminQuartierPage() {
             <div className="text-2xl font-bold text-red-600 mt-2">
               {stats?.security?.activeIncidents || 0}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">{stats?.security?.totalIncidents || 0} signalements traités</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              {stats?.security?.totalIncidents || 0} signalements traités
+            </p>
           </Card>
         </div>
       )}

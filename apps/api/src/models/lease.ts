@@ -28,7 +28,10 @@ const tenantSchema = new Schema(
     emergencyContactName: { type: String, maxlength: 160 },
     emergencyContactPhone: { type: String, maxlength: 32 },
     profession: { type: String, maxlength: 120 },
-    documents: { type: [{ fileId: { type: Schema.Types.ObjectId, ref: 'StoredFile' } }], default: [] },
+    documents: {
+      type: [{ fileId: { type: Schema.Types.ObjectId, ref: 'StoredFile' } }],
+      default: [],
+    },
     notes: { type: String, maxlength: 4_000 },
     status: { type: String, enum: TENANT_STATUSES, default: 'ACTIVE', index: true },
     /** Utilisateur lié, pour l'espace locataire. Absent tant qu'aucun accès n'est créé. */
@@ -78,7 +81,10 @@ const leaseSchema = new Schema(
   },
   { timestamps },
 );
-leaseSchema.index({ organizationId: 1, number: 1 }, { unique: true, name: 'leases_org_number_unique' });
+leaseSchema.index(
+  { organizationId: 1, number: 1 },
+  { unique: true, name: 'leases_org_number_unique' },
+);
 leaseSchema.index({ organizationId: 1, status: 1, endDate: 1 }, { name: 'leases_org_status_end' });
 leaseSchema.index({ organizationId: 1, unitId: 1, status: 1 }, { name: 'leases_org_unit_status' });
 
@@ -87,4 +93,5 @@ export type LeaseDocument = InferSchemaType<typeof leaseSchema> & { _id: Types.O
 
 export const Tenant =
   (models.Tenant as Model<TenantDocument>) ?? model<TenantDocument>('Tenant', tenantSchema);
-export const Lease = (models.Lease as Model<LeaseDocument>) ?? model<LeaseDocument>('Lease', leaseSchema);
+export const Lease =
+  (models.Lease as Model<LeaseDocument>) ?? model<LeaseDocument>('Lease', leaseSchema);

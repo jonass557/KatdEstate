@@ -55,7 +55,13 @@ export async function getBlockLeaderDashboard(req: Request, res: Response): Prom
     ResidentHousehold.countDocuments({ blockId, isMovedOut: false }),
     ResidentHousehold.aggregate([
       { $match: { blockId, isMovedOut: false } },
-      { $group: { _id: null, totalResidents: { $sum: '$householdSize' }, totalMinors: { $sum: '$minorsCount' } } },
+      {
+        $group: {
+          _id: null,
+          totalResidents: { $sum: '$householdSize' },
+          totalMinors: { $sum: '$minorsCount' },
+        },
+      },
     ]),
     CensusSubmission.find({ blockId, status: 'PENDING' })
       .sort({ createdAt: -1 })
@@ -63,10 +69,7 @@ export async function getBlockLeaderDashboard(req: Request, res: Response): Prom
       .populate('residenceId')
       .populate('submittedBy', 'name phone')
       .lean(),
-    IncidentReport.find({ blockId })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .lean(),
+    IncidentReport.find({ blockId }).sort({ createdAt: -1 }).limit(5).lean(),
     getLeaderSubscription(userId),
   ]);
 
@@ -139,11 +142,11 @@ export async function getNeighborhoodLeaderDashboard(req: Request, res: Response
       { $match: { neighborhoodId, isMovedOut: false } },
       { $group: { _id: null, totalResidents: { $sum: '$householdSize' } } },
     ]),
-    CensusSubmission.countDocuments({ blockId: { $in: (await GeoBlock.find({ neighborhoodId }, { _id: 1 })).map((b) => b._id) }, status: 'PENDING' }),
-    IncidentReport.find({ neighborhoodId })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .lean(),
+    CensusSubmission.countDocuments({
+      blockId: { $in: (await GeoBlock.find({ neighborhoodId }, { _id: 1 })).map((b) => b._id) },
+      status: 'PENDING',
+    }),
+    IncidentReport.find({ neighborhoodId }).sort({ createdAt: -1 }).limit(5).lean(),
     getLeaderSubscription(userId),
   ]);
 
@@ -177,7 +180,8 @@ export async function getNeighborhoodLeaderDashboard(req: Request, res: Response
       totalHouseholds,
       totalResidents: householdsAgg[0]?.totalResidents || 0,
       pendingValidations,
-      coverageRate: blocks.length > 0 ? Math.round((totalResidences / (blocks.length * 100)) * 100) : 0,
+      coverageRate:
+        blocks.length > 0 ? Math.round((totalResidences / (blocks.length * 100)) * 100) : 0,
     },
     blocksComparison,
     recentAlerts,

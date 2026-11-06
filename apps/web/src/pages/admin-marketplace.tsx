@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Building2,
-  ShieldCheck,
-  Sliders,
-  UserCheck,
-} from 'lucide-react';
+import { Building2, ShieldCheck, Sliders, UserCheck } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { useToast } from '../components/ui/toast';
@@ -22,15 +17,22 @@ export function AdminMarketplacePage() {
   // Queries
   const { data: listingsData } = useOrgQuery<{ items: any[] }>(
     ['admin-marketplace-listings', statusFilter],
-    `/admin/marketplace/listings?status=${statusFilter}`
+    `/admin/marketplace/listings?status=${statusFilter}`,
   );
 
-  const { data: agents } = useOrgQuery<any[]>(['admin-marketplace-agents'], '/admin/marketplace/agents');
-  const { data: plans } = useOrgQuery<any[]>(['admin-marketplace-plans'], '/admin/marketplace/plans');
+  const { data: agents } = useOrgQuery<any[]>(
+    ['admin-marketplace-agents'],
+    '/admin/marketplace/agents',
+  );
+  const { data: plans } = useOrgQuery<any[]>(
+    ['admin-marketplace-plans'],
+    '/admin/marketplace/plans',
+  );
 
   // Listing moderation mutations
   const approveListingMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`${base}/admin/marketplace/listings/${id}/approve`, { method: 'POST' }),
+    mutationFn: (id: string) =>
+      apiRequest(`${base}/admin/marketplace/listings/${id}/approve`, { method: 'POST' }),
     onSuccess: () => {
       toast({ title: 'Annonce validée et publiée !', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['admin-marketplace-listings'] });
@@ -40,7 +42,10 @@ export function AdminMarketplacePage() {
 
   const rejectListingMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      apiRequest(`${base}/admin/marketplace/listings/${id}/reject`, { method: 'POST', body: { reason } }),
+      apiRequest(`${base}/admin/marketplace/listings/${id}/reject`, {
+        method: 'POST',
+        body: { reason },
+      }),
     onSuccess: () => {
       toast({ title: 'Annonce rejetée', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['admin-marketplace-listings'] });
@@ -50,7 +55,10 @@ export function AdminMarketplacePage() {
 
   const toggleVerifiedMutation = useMutation({
     mutationFn: ({ id, isVerified }: { id: string; isVerified: boolean }) =>
-      apiRequest(`${base}/admin/marketplace/listings/${id}/verify`, { method: 'POST', body: { isVerified } }),
+      apiRequest(`${base}/admin/marketplace/listings/${id}/verify`, {
+        method: 'POST',
+        body: { isVerified },
+      }),
     onSuccess: () => {
       toast({ title: 'Statut de certification mis à jour', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['admin-marketplace-listings'] });
@@ -60,7 +68,8 @@ export function AdminMarketplacePage() {
 
   // Agent verification mutations
   const verifyAgentMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`${base}/admin/marketplace/agents/${id}/verify`, { method: 'POST' }),
+    mutationFn: (id: string) =>
+      apiRequest(`${base}/admin/marketplace/agents/${id}/verify`, { method: 'POST' }),
     onSuccess: () => {
       toast({ title: 'Agent vérifié avec succès', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['admin-marketplace-agents'] });
@@ -70,7 +79,10 @@ export function AdminMarketplacePage() {
 
   const rejectAgentMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      apiRequest(`${base}/admin/marketplace/agents/${id}/reject`, { method: 'POST', body: { reason } }),
+      apiRequest(`${base}/admin/marketplace/agents/${id}/reject`, {
+        method: 'POST',
+        body: { reason },
+      }),
     onSuccess: () => {
       toast({ title: 'Vérification refusée', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['admin-marketplace-agents'] });
@@ -95,9 +107,12 @@ export function AdminMarketplacePage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Modération & Administration Marketplace</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">
+            Modération & Administration Marketplace
+          </h1>
           <p className="text-xs text-muted-foreground">
-            Validation des annonces, vérification des profils d'agents et configuration centralisée des formules d'abonnement.
+            Validation des annonces, vérification des profils d'agents et configuration centralisée
+            des formules d'abonnement.
           </p>
         </div>
       </div>
@@ -108,7 +123,9 @@ export function AdminMarketplacePage() {
           type="button"
           onClick={() => setTab('listings')}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-            tab === 'listings' ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            tab === 'listings'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <Building2 className="h-4 w-4" /> Modération des annonces
@@ -117,7 +134,9 @@ export function AdminMarketplacePage() {
           type="button"
           onClick={() => setTab('agents')}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-            tab === 'agents' ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            tab === 'agents'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <UserCheck className="h-4 w-4" /> Vérification des Agents ({agents?.length || 0})
@@ -126,7 +145,9 @@ export function AdminMarketplacePage() {
           type="button"
           onClick={() => setTab('plans')}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-            tab === 'plans' ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            tab === 'plans'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <Sliders className="h-4 w-4" /> Grilles tarifaires Agents ({plans?.length || 0})
@@ -143,10 +164,18 @@ export function AdminMarketplacePage() {
                 type="button"
                 onClick={() => setStatusFilter(st)}
                 className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
-                  statusFilter === st ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'
+                  statusFilter === st
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {st === 'PENDING_REVIEW' ? 'En attente' : st === 'PUBLISHED' ? 'Publiées' : st === 'REJECTED' ? 'Rejetées' : 'Suspendues'}
+                {st === 'PENDING_REVIEW'
+                  ? 'En attente'
+                  : st === 'PUBLISHED'
+                    ? 'Publiées'
+                    : st === 'REJECTED'
+                      ? 'Rejetées'
+                      : 'Suspendues'}
               </button>
             ))}
           </div>
@@ -158,7 +187,10 @@ export function AdminMarketplacePage() {
           ) : (
             <div className="space-y-3">
               {listings.map((item) => (
-                <Card key={item._id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
+                <Card
+                  key={item._id}
+                  className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs"
+                >
                   <div className="space-y-1 max-w-xl">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-foreground">{item.title}</span>
@@ -181,7 +213,8 @@ export function AdminMarketplacePage() {
                     </p>
                     <p className="text-muted-foreground line-clamp-2">{item.description}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      Publié par : {item.publisherId?.name} ({item.publisherRole}) • Ville : {item.location?.city}
+                      Publié par : {item.publisherId?.name} ({item.publisherRole}) • Ville :{' '}
+                      {item.location?.city}
                     </p>
                   </div>
 
@@ -213,7 +246,12 @@ export function AdminMarketplacePage() {
                       size="sm"
                       variant="outline"
                       className="h-8"
-                      onClick={() => toggleVerifiedMutation.mutate({ id: item._id, isVerified: !item.isVerified })}
+                      onClick={() =>
+                        toggleVerifiedMutation.mutate({
+                          id: item._id,
+                          isVerified: !item.isVerified,
+                        })
+                      }
                     >
                       {item.isVerified ? 'Retirer badge vérifié' : 'Attribuer badge vérifié'}
                     </Button>
@@ -245,18 +283,22 @@ export function AdminMarketplacePage() {
                   <tr key={a._id} className="hover:bg-muted/30">
                     <td className="p-3 font-semibold">
                       {a.firstName} {a.lastName}
-                      <span className="block text-[11px] font-normal text-muted-foreground">{a.phone} • {a.email}</span>
+                      <span className="block text-[11px] font-normal text-muted-foreground">
+                        {a.phone} • {a.email}
+                      </span>
                     </td>
                     <td className="p-3">{a.agencyName || 'Indépendant'}</td>
                     <td className="p-3">{a.city}</td>
                     <td className="p-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        a.verificationStatus === 'VERIFIED'
-                          ? 'bg-emerald-500/20 text-emerald-600'
-                          : a.verificationStatus === 'REJECTED'
-                          ? 'bg-red-500/20 text-red-600'
-                          : 'bg-amber-500/20 text-amber-600'
-                      }`}>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          a.verificationStatus === 'VERIFIED'
+                            ? 'bg-emerald-500/20 text-emerald-600'
+                            : a.verificationStatus === 'REJECTED'
+                              ? 'bg-red-500/20 text-red-600'
+                              : 'bg-amber-500/20 text-amber-600'
+                        }`}
+                      >
                         {a.verificationStatus}
                       </span>
                     </td>
@@ -309,12 +351,30 @@ export function AdminMarketplacePage() {
               </div>
 
               <div className="grid grid-cols-2 gap-2 bg-muted/40 p-3 rounded-lg text-muted-foreground">
-                <div>Max annonces actives : <strong className="text-foreground">{p.maxActiveListings}</strong></div>
-                <div>Photos / annonce : <strong className="text-foreground">{p.maxPhotosPerListing}</strong></div>
-                <div>Vidéos autorisées : <strong className="text-foreground">{p.maxVideosPerListing}</strong></div>
-                <div>Biens mis en avant : <strong className="text-foreground">{p.featuredListingsQuota}</strong></div>
-                <div>Accès CRM : <strong className="text-foreground">{p.leadManagement ? 'Oui' : 'Non'}</strong></div>
-                <div>Statistiques avancées : <strong className="text-foreground">{p.advancedAnalytics ? 'Oui' : 'Non'}</strong></div>
+                <div>
+                  Max annonces actives :{' '}
+                  <strong className="text-foreground">{p.maxActiveListings}</strong>
+                </div>
+                <div>
+                  Photos / annonce :{' '}
+                  <strong className="text-foreground">{p.maxPhotosPerListing}</strong>
+                </div>
+                <div>
+                  Vidéos autorisées :{' '}
+                  <strong className="text-foreground">{p.maxVideosPerListing}</strong>
+                </div>
+                <div>
+                  Biens mis en avant :{' '}
+                  <strong className="text-foreground">{p.featuredListingsQuota}</strong>
+                </div>
+                <div>
+                  Accès CRM :{' '}
+                  <strong className="text-foreground">{p.leadManagement ? 'Oui' : 'Non'}</strong>
+                </div>
+                <div>
+                  Statistiques avancées :{' '}
+                  <strong className="text-foreground">{p.advancedAnalytics ? 'Oui' : 'Non'}</strong>
+                </div>
               </div>
 
               <Button
@@ -322,8 +382,14 @@ export function AdminMarketplacePage() {
                 variant="outline"
                 className="w-full text-xs"
                 onClick={() => {
-                  const newPrice = prompt(`Nouveau prix (en ${p.currency}) pour ${p.name} :`, String(p.priceMinor));
-                  const newMax = prompt(`Nouveau quota d'annonces actives :`, String(p.maxActiveListings));
+                  const newPrice = prompt(
+                    `Nouveau prix (en ${p.currency}) pour ${p.name} :`,
+                    String(p.priceMinor),
+                  );
+                  const newMax = prompt(
+                    `Nouveau quota d'annonces actives :`,
+                    String(p.maxActiveListings),
+                  );
                   if (newPrice !== null && newMax !== null) {
                     updatePlanMutation.mutate({
                       id: p._id,

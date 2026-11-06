@@ -16,7 +16,12 @@ function active(organizationId: string): { organizationId: string; deletedAt: nu
   return { organizationId, deletedAt: null };
 }
 
-async function audit(req: Request, action: string, resourceType: string, resourceId: string): Promise<void> {
+async function audit(
+  req: Request,
+  action: string,
+  resourceType: string,
+  resourceId: string,
+): Promise<void> {
   await recordAudit({
     organizationId: org(req),
     ...(req.user?.id ? { actorId: req.user.id } : {}),
@@ -131,7 +136,12 @@ export async function createUnit(req: Request, res: Response): Promise<void> {
       propertyId: req.body.propertyId,
       ...active(org(req)),
     });
-    if (!building) throw new AppError('VALIDATION_ERROR', 'Le bâtiment n’appartient pas à cette propriété.', 422);
+    if (!building)
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'Le bâtiment n’appartient pas à cette propriété.',
+        422,
+      );
   }
   const unit = await Unit.create({ ...req.body, organizationId: org(req) });
   await audit(req, 'unit.create', 'Unit', String(unit._id));
@@ -167,7 +177,9 @@ export async function getUnit(req: Request, res: Response): Promise<void> {
 }
 
 export async function updateUnit(req: Request, res: Response): Promise<void> {
-  const unit = await Unit.findOneAndUpdate({ _id: req.params.id, ...active(org(req)) }, req.body, { new: true });
+  const unit = await Unit.findOneAndUpdate({ _id: req.params.id, ...active(org(req)) }, req.body, {
+    new: true,
+  });
   if (!unit) throw notFound('Logement');
   await audit(req, 'unit.update', 'Unit', String(unit._id));
   res.locals.data = unit;
@@ -199,7 +211,9 @@ export async function propertyStats(req: Request, res: Response): Promise<void> 
   const property = await Property.findOne({ _id: req.params.id, ...active(org(req)) });
   if (!property) throw notFound('Propriété');
 
-  const units = await Unit.find({ propertyId: property._id, ...active(org(req)) }).select('status rentAmountMinor');
+  const units = await Unit.find({ propertyId: property._id, ...active(org(req)) }).select(
+    'status rentAmountMinor',
+  );
   const occupied = units.filter((unit) => unit.status === 'OCCUPIED').length;
   const available = units.filter((unit) => unit.status === 'AVAILABLE').length;
   const potentialRentMinor = units.reduce((acc, unit) => acc + (unit.rentAmountMinor ?? 0), 0);
@@ -219,8 +233,19 @@ export async function propertyStats(req: Request, res: Response): Promise<void> 
   ]);
 
   const [overdue] = await RentSchedule.aggregate<{ total: number }>([
-    { $match: { propertyId: property._id, organizationId: property.organizationId, status: 'OVERDUE' } },
-    { $group: { _id: null, total: { $sum: { $subtract: ['$amountDueMinor', '$amountPaidMinor'] } } } },
+    {
+      $match: {
+        propertyId: property._id,
+        organizationId: property.organizationId,
+        status: 'OVERDUE',
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: { $subtract: ['$amountDueMinor', '$amountPaidMinor'] } },
+      },
+    },
   ]);
 
   const openMaintenance = await MaintenanceTicket.countDocuments({

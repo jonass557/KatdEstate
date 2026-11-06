@@ -21,14 +21,33 @@ export function createAiRouter(config: AppConfig) {
   const router = Router({ mergeParams: true });
   router.use(createAuthenticate(config), requireOrganizationMembership);
 
-  router.post('/ai/ask', requirePermission('reports.view'), validateRequest(askSchema), (req, res, next) => {
-    service.ask(config, req, res).then(() => sendSuccess(res, res.locals.data)).catch(next);
-  });
-  router.post('/ai/drafts', requirePermission('messages.send'), validateRequest(draftSchema), (req, res, next) => {
-    service.draftMessage(req, res).then(() => sendSuccess(res, res.locals.data)).catch(next);
-  });
+  router.post(
+    '/ai/ask',
+    requirePermission('reports.view'),
+    validateRequest(askSchema),
+    (req, res, next) => {
+      service
+        .ask(config, req, res)
+        .then(() => sendSuccess(res, res.locals.data))
+        .catch(next);
+    },
+  );
+  router.post(
+    '/ai/drafts',
+    requirePermission('messages.send'),
+    validateRequest(draftSchema),
+    (req, res, next) => {
+      service
+        .draftMessage(req, res)
+        .then(() => sendSuccess(res, res.locals.data))
+        .catch(next);
+    },
+  );
   router.get('/ai/conversations', requirePermission('reports.view'), (req, res, next) => {
-    service.getConversations(req, res).then(() => sendSuccess(res, res.locals.data)).catch(next);
+    service
+      .getConversations(req, res)
+      .then(() => sendSuccess(res, res.locals.data))
+      .catch(next);
   });
 
   return router;

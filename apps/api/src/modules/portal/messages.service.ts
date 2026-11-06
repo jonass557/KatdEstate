@@ -8,7 +8,12 @@ function org(req: Request): string {
 }
 
 export async function listMessages(req: Request, res: Response): Promise<void> {
-  const query = req.query as unknown as Record<string, unknown> & { page: number; pageSize: number; order: 'asc' | 'desc'; sort?: string };
+  const query = req.query as unknown as Record<string, unknown> & {
+    page: number;
+    pageSize: number;
+    order: 'asc' | 'desc';
+    sort?: string;
+  };
   const filter: Record<string, unknown> = { organizationId: org(req), deletedAt: null };
 
   if (req.organizationContext!.role === 'TENANT') {
@@ -24,7 +29,11 @@ export async function listMessages(req: Request, res: Response): Promise<void> {
 }
 
 export async function getMessage(req: Request, res: Response): Promise<void> {
-  const filter: Record<string, unknown> = { _id: req.params.id, organizationId: org(req), deletedAt: null };
+  const filter: Record<string, unknown> = {
+    _id: req.params.id,
+    organizationId: org(req),
+    deletedAt: null,
+  };
   if (req.organizationContext!.role === 'TENANT') {
     filter.$or = [{ senderId: req.user?.id }, { recipientId: req.user?.id }];
   }
@@ -56,7 +65,11 @@ export async function sendMessage(req: Request, res: Response): Promise<void> {
 }
 
 export async function replyMessage(req: Request, res: Response): Promise<void> {
-  const filter: Record<string, unknown> = { _id: req.params.id, organizationId: org(req), deletedAt: null };
+  const filter: Record<string, unknown> = {
+    _id: req.params.id,
+    organizationId: org(req),
+    deletedAt: null,
+  };
   if (req.organizationContext!.role === 'TENANT') {
     filter.$or = [{ senderId: req.user?.id }, { recipientId: req.user?.id }];
   }
@@ -76,7 +89,11 @@ export async function replyMessage(req: Request, res: Response): Promise<void> {
 }
 
 export async function markRead(req: Request, res: Response): Promise<void> {
-  const message = await InternalMessage.findOne({ _id: req.params.id, organizationId: org(req), deletedAt: null });
+  const message = await InternalMessage.findOne({
+    _id: req.params.id,
+    organizationId: org(req),
+    deletedAt: null,
+  });
   if (!message) throw notFound('Message');
 
   if (!message.readBy.some((id) => String(id) === String(req.user?.id))) {

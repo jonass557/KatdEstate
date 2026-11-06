@@ -12,7 +12,9 @@ export const requireOrganizationMembership: RequestHandler = async (req, _res, n
       throw new AppError('UNAUTHENTICATED', 'Authentification requise.', 401);
     }
 
-    const organization = await Organization.findOne({ _id: organizationId, status: 'ACTIVE' }).select('_id').lean();
+    const organization = await Organization.findOne({ _id: organizationId, status: 'ACTIVE' })
+      .select('_id')
+      .lean();
     const membership = await Membership.findOne({
       organizationId,
       userId: req.user.id,

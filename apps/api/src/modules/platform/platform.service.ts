@@ -6,7 +6,13 @@ import { notFound } from '../../common/pagination.js';
 import { signAccessToken } from '../../common/tokens.js';
 import type { AppConfig } from '../../config/index.js';
 import { Membership, Organization, Session, User } from '../../models/identity.js';
-import { FEATURE_FLAGS, FeatureFlag, Plan, Subscription, SupportTicket } from '../../models/platform.js';
+import {
+  FEATURE_FLAGS,
+  FeatureFlag,
+  Plan,
+  Subscription,
+  SupportTicket,
+} from '../../models/platform.js';
 import { Property, Unit } from '../../models/property.js';
 import { Lease } from '../../models/lease.js';
 
@@ -30,7 +36,9 @@ export async function overview(_req: Request, res: Response): Promise<void> {
   ]);
   const plans = await Plan.find({});
   const priceByCode = new Map(plans.map((plan) => [plan.code, plan.priceMinor]));
-  const mrrMinor = subscriptions.filter((item) => item.status === 'ACTIVE').reduce((sum, item) => sum + (priceByCode.get(item.planCode) ?? 0), 0);
+  const mrrMinor = subscriptions
+    .filter((item) => item.status === 'ACTIVE')
+    .reduce((sum, item) => sum + (priceByCode.get(item.planCode) ?? 0), 0);
   res.locals.data = {
     users,
     organizations,
@@ -45,16 +53,36 @@ export async function listOrganizations(_req: Request, res: Response): Promise<v
 }
 
 export async function suspendOrganization(req: Request, res: Response): Promise<void> {
-  const organization = await Organization.findByIdAndUpdate(req.params.id, { status: 'SUSPENDED' }, { new: true });
+  const organization = await Organization.findByIdAndUpdate(
+    req.params.id,
+    { status: 'SUSPENDED' },
+    { new: true },
+  );
   if (!organization) throw notFound('Organisation');
-  await recordAudit({ actorId: actor(req), action: 'platform.organization.suspend', resourceType: 'Organization', resourceId: String(organization._id), requestId: req.requestId });
+  await recordAudit({
+    actorId: actor(req),
+    action: 'platform.organization.suspend',
+    resourceType: 'Organization',
+    resourceId: String(organization._id),
+    requestId: req.requestId,
+  });
   res.locals.data = { id: organization._id, status: organization.status };
 }
 
 export async function reactivateOrganization(req: Request, res: Response): Promise<void> {
-  const organization = await Organization.findByIdAndUpdate(req.params.id, { status: 'ACTIVE' }, { new: true });
+  const organization = await Organization.findByIdAndUpdate(
+    req.params.id,
+    { status: 'ACTIVE' },
+    { new: true },
+  );
   if (!organization) throw notFound('Organisation');
-  await recordAudit({ actorId: actor(req), action: 'platform.organization.reactivate', resourceType: 'Organization', resourceId: String(organization._id), requestId: req.requestId });
+  await recordAudit({
+    actorId: actor(req),
+    action: 'platform.organization.reactivate',
+    resourceType: 'Organization',
+    resourceId: String(organization._id),
+    requestId: req.requestId,
+  });
   res.locals.data = { id: organization._id, status: organization.status };
 }
 
@@ -65,20 +93,40 @@ export async function listPlans(_req: Request, res: Response): Promise<void> {
 export async function updatePlan(req: Request, res: Response): Promise<void> {
   const plan = await Plan.findOneAndUpdate({ code: req.params.code }, req.body, { new: true });
   if (!plan) throw notFound('Plan');
-  await recordAudit({ actorId: actor(req), action: 'platform.plan.update', resourceType: 'Plan', resourceId: plan.code, requestId: req.requestId, changes: req.body });
+  await recordAudit({
+    actorId: actor(req),
+    action: 'platform.plan.update',
+    resourceType: 'Plan',
+    resourceId: plan.code,
+    requestId: req.requestId,
+    changes: req.body,
+  });
   res.locals.data = plan;
 }
 
 export async function listFlags(_req: Request, res: Response): Promise<void> {
   const existing = await FeatureFlag.find({});
   const known = new Set(existing.map((flag) => flag.key));
-  const missing = FEATURE_FLAGS.filter((key) => !known.has(key)).map((key) => ({ key, enabled: false }));
+  const missing = FEATURE_FLAGS.filter((key) => !known.has(key)).map((key) => ({
+    key,
+    enabled: false,
+  }));
   res.locals.data = [...existing, ...missing];
 }
 
 export async function setFlag(req: Request, res: Response): Promise<void> {
-  const flag = await FeatureFlag.findOneAndUpdate({ key: req.params.key }, { enabled: req.body.enabled }, { new: true, upsert: true });
-  await recordAudit({ actorId: actor(req), action: 'platform.flag.update', resourceType: 'FeatureFlag', resourceId: req.params.key, requestId: req.requestId });
+  const flag = await FeatureFlag.findOneAndUpdate(
+    { key: req.params.key },
+    { enabled: req.body.enabled },
+    { new: true, upsert: true },
+  );
+  await recordAudit({
+    actorId: actor(req),
+    action: 'platform.flag.update',
+    resourceType: 'FeatureFlag',
+    resourceId: req.params.key,
+    requestId: req.requestId,
+  });
   res.locals.data = flag;
 }
 
@@ -93,11 +141,22 @@ export async function listTickets(_req: Request, res: Response): Promise<void> {
  */
 export async function impersonate(config: AppConfig, req: Request, res: Response): Promise<void> {
   const ticket = await SupportTicket.findOne({ _id: req.body.ticketId, status: 'OPEN' });
-  if (!ticket) throw new AppError('FORBIDDEN', 'L’impersonation exige un ticket de support ouvert.', 403);
+  if (!ticket)
+    throw new AppError('FORBIDDEN', 'L’impersonation exige un ticket de support ouvert.', 403);
   const target = await User.findById(req.body.userId);
-  if (!target || target.platformRole === 'SUPER_ADMIN') throw new AppError('FORBIDDEN', 'Cette impersonation n’est pas autorisée.', 403);
-  const membership = await Membership.findOne({ userId: target._id, organizationId: ticket.organizationId, status: 'ACTIVE' });
-  if (!membership) throw new AppError('FORBIDDEN', 'L’utilisateur n’appartient pas à l’organisation du ticket.', 403);
+  if (!target || target.platformRole === 'SUPER_ADMIN')
+    throw new AppError('FORBIDDEN', 'Cette impersonation n’est pas autorisée.', 403);
+  const membership = await Membership.findOne({
+    userId: target._id,
+    organizationId: ticket.organizationId,
+    status: 'ACTIVE',
+  });
+  if (!membership)
+    throw new AppError(
+      'FORBIDDEN',
+      'L’utilisateur n’appartient pas à l’organisation du ticket.',
+      403,
+    );
 
   const jti = randomBytes(16).toString('hex');
   const session = await Session.create({
@@ -120,7 +179,11 @@ export async function impersonate(config: AppConfig, req: Request, res: Response
     { userId: String(target._id), sessionId: String(session._id), jti },
     { ...config.tokens, accessTtl: '15m' },
   );
-  res.locals.data = { accessToken: token, expiresInSeconds: 15 * 60, banner: 'Session support. Chaque action est auditée.' };
+  res.locals.data = {
+    accessToken: token,
+    expiresInSeconds: 15 * 60,
+    banner: 'Session support. Chaque action est auditée.',
+  };
 }
 
 export async function listOwners(_req: Request, res: Response): Promise<void> {
@@ -147,7 +210,12 @@ export async function listOwners(_req: Request, res: Response): Promise<void> {
 
       const isPaid = subscription ? subscription.status === 'ACTIVE' : true;
       const planCode = subscription?.planCode || 'PRO';
-      const planName = planCode === 'PRO' ? 'Pack Pro Bailleur' : planCode === 'BUSINESS' ? 'Pack Patrimoine SCI' : 'Starter';
+      const planName =
+        planCode === 'PRO'
+          ? 'Pack Pro Bailleur'
+          : planCode === 'BUSINESS'
+            ? 'Pack Patrimoine SCI'
+            : 'Starter';
 
       return {
         _id: String(u._id),
@@ -158,7 +226,12 @@ export async function listOwners(_req: Request, res: Response): Promise<void> {
         createdAt: u.createdAt,
         organization: org
           ? { _id: String(org._id), name: org.name, slug: org.slug, status: org.status }
-          : { _id: 'org-diallo', name: 'Patrimoine & SCI Diallo', slug: 'sci-diallo', status: 'ACTIVE' },
+          : {
+              _id: 'org-diallo',
+              name: 'Patrimoine & SCI Diallo',
+              slug: 'sci-diallo',
+              status: 'ACTIVE',
+            },
         propertiesCount: propertiesCount || 3,
         unitsCount: unitsCount || 8,
         leasesCount: leasesCount || 6,
@@ -169,11 +242,13 @@ export async function listOwners(_req: Request, res: Response): Promise<void> {
           planName,
           priceMinor: planCode === 'BUSINESS' ? 95000 : 35000,
           currency: 'XOF',
-          expiresAt: subscription?.trialEndsAt || new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString(),
+          expiresAt:
+            subscription?.trialEndsAt ||
+            new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString(),
           paymentMethod: 'iKeepay Mobile Money (Orange Money / Wave)',
         },
       };
-    })
+    }),
   );
 
   // Profils par défaut de démonstration garantis
@@ -186,7 +261,12 @@ export async function listOwners(_req: Request, res: Response): Promise<void> {
         phone: '+225 07 10 20 30 40',
         status: 'ACTIVE',
         createdAt: new Date(Date.now() - 45 * 24 * 3600 * 1000).toISOString(),
-        organization: { _id: 'org-diallo', name: 'Patrimoine & SCI Diallo', slug: 'sci-diallo', status: 'ACTIVE' },
+        organization: {
+          _id: 'org-diallo',
+          name: 'Patrimoine & SCI Diallo',
+          slug: 'sci-diallo',
+          status: 'ACTIVE',
+        },
         propertiesCount: 3,
         unitsCount: 12,
         leasesCount: 10,
@@ -208,7 +288,12 @@ export async function listOwners(_req: Request, res: Response): Promise<void> {
         phone: '+225 05 44 33 22 11',
         status: 'ACTIVE',
         createdAt: new Date(Date.now() - 20 * 24 * 3600 * 1000).toISOString(),
-        organization: { _id: 'org-lagunes', name: 'Résidences Les Lagunes', slug: 'residences-lagunes', status: 'ACTIVE' },
+        organization: {
+          _id: 'org-lagunes',
+          name: 'Résidences Les Lagunes',
+          slug: 'residences-lagunes',
+          status: 'ACTIVE',
+        },
         propertiesCount: 2,
         unitsCount: 6,
         leasesCount: 5,
@@ -230,7 +315,12 @@ export async function listOwners(_req: Request, res: Response): Promise<void> {
         phone: '+225 01 02 03 04 05',
         status: 'SUSPENDED',
         createdAt: new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString(),
-        organization: { _id: 'org-kouassi', name: 'SCI Prestige Abidjan', slug: 'prestige-abidjan', status: 'SUSPENDED' },
+        organization: {
+          _id: 'org-kouassi',
+          name: 'SCI Prestige Abidjan',
+          slug: 'prestige-abidjan',
+          status: 'SUSPENDED',
+        },
         propertiesCount: 4,
         unitsCount: 16,
         leasesCount: 8,
@@ -244,7 +334,7 @@ export async function listOwners(_req: Request, res: Response): Promise<void> {
           expiresAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
           paymentMethod: 'iKeepay Mobile Money (En attente de régularisation)',
         },
-      }
+      },
     );
   }
 
@@ -268,21 +358,43 @@ export async function listOwners(_req: Request, res: Response): Promise<void> {
 export async function suspendOwner(req: Request, res: Response): Promise<void> {
   const user = await User.findByIdAndUpdate(req.params.id, { status: 'SUSPENDED' }, { new: true });
   if (!user) throw notFound('Propriétaire');
-  await recordAudit({ actorId: actor(req), action: 'platform.owner.suspend', resourceType: 'User', resourceId: String(user._id), requestId: req.requestId });
+  await recordAudit({
+    actorId: actor(req),
+    action: 'platform.owner.suspend',
+    resourceType: 'User',
+    resourceId: String(user._id),
+    requestId: req.requestId,
+  });
   res.locals.data = { id: user._id, status: user.status };
 }
 
 export async function reactivateOwner(req: Request, res: Response): Promise<void> {
   const user = await User.findByIdAndUpdate(req.params.id, { status: 'ACTIVE' }, { new: true });
   if (!user) throw notFound('Propriétaire');
-  await recordAudit({ actorId: actor(req), action: 'platform.owner.reactivate', resourceType: 'User', resourceId: String(user._id), requestId: req.requestId });
+  await recordAudit({
+    actorId: actor(req),
+    action: 'platform.owner.reactivate',
+    resourceType: 'User',
+    resourceId: String(user._id),
+    requestId: req.requestId,
+  });
   res.locals.data = { id: user._id, status: user.status };
 }
 
 export async function deleteOwner(req: Request, res: Response): Promise<void> {
-  const user = await User.findByIdAndUpdate(req.params.id, { status: 'SUSPENDED', deletedAt: new Date() }, { new: true });
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { status: 'SUSPENDED', deletedAt: new Date() },
+    { new: true },
+  );
   if (!user) throw notFound('Propriétaire');
-  await recordAudit({ actorId: actor(req), action: 'platform.owner.delete', resourceType: 'User', resourceId: String(user._id), requestId: req.requestId });
+  await recordAudit({
+    actorId: actor(req),
+    action: 'platform.owner.delete',
+    resourceType: 'User',
+    resourceId: String(user._id),
+    requestId: req.requestId,
+  });
   res.locals.data = { id: user._id, deleted: true };
 }
 
@@ -297,9 +409,16 @@ export async function updateOwnerSubscription(req: Request, res: Response): Prom
         status: isPaid ? 'ACTIVE' : status || 'TRIALING',
         trialEndsAt: new Date(Date.now() + 365 * 24 * 3600 * 1000),
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
   }
-  await recordAudit({ actorId: actor(req), action: 'platform.owner.subscription.update', resourceType: 'User', resourceId: req.params.id, requestId: req.requestId, changes: req.body });
+  await recordAudit({
+    actorId: actor(req),
+    action: 'platform.owner.subscription.update',
+    resourceType: 'User',
+    resourceId: req.params.id,
+    requestId: req.requestId,
+    changes: req.body,
+  });
   res.locals.data = { success: true, message: 'Abonnement propriétaire mis à jour.' };
 }

@@ -65,7 +65,9 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [activeId, setActiveId] = useState<string>(() => readStoredId() ?? '');
 
   const activeOrganization =
-    organizations.find((organization) => organization.id === activeId) ?? organizations[0] ?? DEFAULT_ORGANIZATION;
+    organizations.find((organization) => organization.id === activeId) ??
+    organizations[0] ??
+    DEFAULT_ORGANIZATION;
 
   useEffect(() => {
     if (activeOrganization && activeOrganization.id !== activeId) {

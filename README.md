@@ -3,15 +3,17 @@
 Plateforme SaaS professionnelle de **gestion immobilière, locative, foncière, marketplace et chefferie traditionnelle**, conçue avec une architecture modulaire et évolutive pour l'Afrique francophone (UEMOA / CEMAC) et l'international.
 
 > **État du projet :**
+>
 > - **Gestion Immobilière & Locative** : Baux, échéances, loyers, quittances PDF, comptabilité, charges, maintenance et portails dédiés (Locataire, Propriétaire, Gestionnaire).
 > - **Marketplace Immobilière & Module Agents** : Annonces certifiées, profils d'agents, visites, offres et commissions.
 > - **Recensement & Sécurité Quartier** : Découpage territorial (villes, arrondissements, quartiers, blocs), recensement avec QR codes et identifiant unique, signalements sécurisés d'incidents.
 > - **Chefferie & Foncier** : Ventes de maisons, locations avec horaires officiels (05h-22h), ventes de terrains, certificats officiels infalsifiables avec sceaux et vérification publique QR, gestion automatique des commissions.
 > - **Déploiement Automatisé** : Préconfiguré pour **Render** (API Backend) et **Vercel** (Frontend Web).
 > - **Base de données & Médias** : Connecté à **MongoDB Atlas** et **Cloudinary**.
-> Consultez le fichier [PROJECT_STATUS.md](PROJECT_STATUS.md) pour les détails d'implémentation et [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) pour le déploiement en ligne.
+>   Consultez le fichier [PROJECT_STATUS.md](PROJECT_STATUS.md) pour les détails d'implémentation et [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) pour le déploiement en ligne.
 
 ### Documentation de référence
+
 - [Architecture technique](docs/ARCHITECTURE.md)
 - [Exigences produit (PRD)](docs/PRODUCT_REQUIREMENTS.md)
 - [Schéma de base de données](docs/DATABASE_SCHEMA.md)

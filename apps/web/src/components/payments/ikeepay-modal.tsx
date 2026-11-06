@@ -3,7 +3,15 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { apiRequest } from '../../lib/api-client';
-import { CheckCircle2, AlertCircle, Loader2, Smartphone, ShieldCheck, ExternalLink, X } from 'lucide-react';
+import {
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Smartphone,
+  ShieldCheck,
+  ExternalLink,
+  X,
+} from 'lucide-react';
 
 export interface IkeepayModalProps {
   isOpen: boolean;
@@ -13,7 +21,12 @@ export interface IkeepayModalProps {
   amount?: number;
   defaultAmount?: number;
   currency?: string;
-  purpose?: 'RENT_PAYMENT' | 'CHEFFERIE_COMMISSION' | 'SUBSCRIPTION_PAYMENT' | 'MARKETPLACE_DEPOSIT' | 'OTHER';
+  purpose?:
+    | 'RENT_PAYMENT'
+    | 'CHEFFERIE_COMMISSION'
+    | 'SUBSCRIPTION_PAYMENT'
+    | 'MARKETPLACE_DEPOSIT'
+    | 'OTHER';
   referenceId?: string;
   title?: string;
   description?: string;
@@ -75,7 +88,8 @@ export function IkeepayModal({
 
       setSuccessData(resData);
       if (onSuccess) onSuccess(resData);
-      if (onPaymentSuccess) onPaymentSuccess(resData?.external_reference || resData?.reference || 'REF_OK');
+      if (onPaymentSuccess)
+        onPaymentSuccess(resData?.external_reference || resData?.reference || 'REF_OK');
     } catch (err: any) {
       setError(err?.message || 'Échec de la transaction. Veuillez vérifier vos coordonnées.');
     } finally {
@@ -100,7 +114,9 @@ export function IkeepayModal({
           </div>
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Propulsé par Ikeepay Africa</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Propulsé par Ikeepay Africa
+            </p>
           </div>
         </div>
 
@@ -130,10 +146,13 @@ export function IkeepayModal({
               <CheckCircle2 className="h-7 w-7" />
             </div>
             <div>
-              <h4 className="text-base font-bold text-slate-900 dark:text-white">Demande transmise avec succès !</h4>
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                Demande transmise avec succès !
+              </h4>
               <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                Un message de confirmation a été envoyé sur votre téléphone <strong>{phoneNumber}</strong>.
-                Veuillez valider avec votre code secret Mobile Money.
+                Un message de confirmation a été envoyé sur votre téléphone{' '}
+                <strong>{phoneNumber}</strong>. Veuillez valider avec votre code secret Mobile
+                Money.
               </p>
             </div>
 
@@ -157,7 +176,9 @@ export function IkeepayModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Choix de l'opérateur */}
             <div>
-              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Opérateur Mobile Money</Label>
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Opérateur Mobile Money
+              </Label>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {OPERATORS.map((op) => {
                   const isSelected = operator === op.id;
@@ -172,7 +193,9 @@ export function IkeepayModal({
                           : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                       }`}
                     >
-                      <span className={`flex h-6 w-8 items-center justify-center rounded text-[10px] font-bold ${op.color}`}>
+                      <span
+                        className={`flex h-6 w-8 items-center justify-center rounded text-[10px] font-bold ${op.color}`}
+                      >
                         {op.badge}
                       </span>
                       <span>{op.name}</span>
@@ -185,7 +208,9 @@ export function IkeepayModal({
             {/* Pays & Téléphone */}
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <Label htmlFor="country" className="text-xs">Pays</Label>
+                <Label htmlFor="country" className="text-xs">
+                  Pays
+                </Label>
                 <select
                   id="country"
                   value={country}
@@ -204,7 +229,9 @@ export function IkeepayModal({
               </div>
 
               <div className="col-span-2">
-                <Label htmlFor="phone" className="text-xs">Numéro Mobile Money *</Label>
+                <Label htmlFor="phone" className="text-xs">
+                  Numéro Mobile Money *
+                </Label>
                 <Input
                   id="phone"
                   required
@@ -218,7 +245,9 @@ export function IkeepayModal({
 
             {/* OTP optionnel */}
             <div>
-              <Label htmlFor="otp" className="text-xs text-slate-500">Code OTP / Autorisation (si requis par l'opérateur)</Label>
+              <Label htmlFor="otp" className="text-xs text-slate-500">
+                Code OTP / Autorisation (si requis par l'opérateur)
+              </Label>
               <Input
                 id="otp"
                 placeholder="Ex: #144# ou code reçu par SMS"
@@ -230,7 +259,9 @@ export function IkeepayModal({
 
             {/* Email client */}
             <div>
-              <Label htmlFor="email" className="text-xs text-slate-500">Email pour le reçu (optionnel)</Label>
+              <Label htmlFor="email" className="text-xs text-slate-500">
+                Email pour le reçu (optionnel)
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -253,7 +284,9 @@ export function IkeepayModal({
                     <span>Traitement en cours...</span>
                   </span>
                 ) : (
-                  <span>Payer {finalAmount.toLocaleString('fr-FR')} {currency}</span>
+                  <span>
+                    Payer {finalAmount.toLocaleString('fr-FR')} {currency}
+                  </span>
                 )}
               </Button>
             </div>

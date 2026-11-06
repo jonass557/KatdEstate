@@ -3,7 +3,11 @@ import type { Request, Response } from 'express';
 import type { AppConfig } from '../../config/index.js';
 import { AppError } from '../../common/errors.js';
 import { paginate } from '../../common/pagination.js';
-import { Notification, NotificationPreference, NotificationTemplate } from '../../models/operations.js';
+import {
+  Notification,
+  NotificationPreference,
+  NotificationTemplate,
+} from '../../models/operations.js';
 import { providersFor } from './providers.js';
 
 /** Templates par défaut. L'administrateur peut les remplacer par organisation. */
@@ -43,7 +47,10 @@ export const DEFAULT_TEMPLATES: Record<NotificationEvent, { subject: string; bod
 };
 
 export function renderTemplate(template: string, variables: Record<string, string>): string {
-  return template.replace(/\{\{\s*([a-zA-Z]+)\s*\}\}/g, (_match, name: string) => variables[name] ?? '');
+  return template.replace(
+    /\{\{\s*([a-zA-Z]+)\s*\}\}/g,
+    (_match, name: string) => variables[name] ?? '',
+  );
 }
 
 export interface NotifyInput {
@@ -85,10 +92,12 @@ export async function notify(config: AppConfig, input: NotifyInput): Promise<voi
     if (alreadySent) continue;
 
     const provider = providers[channel];
-    const result = await provider.send({ to: input.recipientAddress ?? '', subject, body }).catch((error: unknown) => ({
-      status: 'FAILED' as const,
-      detail: error instanceof Error ? error.message : 'Échec d’envoi',
-    }));
+    const result = await provider
+      .send({ to: input.recipientAddress ?? '', subject, body })
+      .catch((error: unknown) => ({
+        status: 'FAILED' as const,
+        detail: error instanceof Error ? error.message : 'Échec d’envoi',
+      }));
 
     await Notification.create({
       organizationId: input.organizationId,
@@ -128,7 +137,11 @@ export async function markRead(req: Request, res: Response): Promise<void> {
 
 export async function upsertTemplate(req: Request, res: Response): Promise<void> {
   const template = await NotificationTemplate.findOneAndUpdate(
-    { organizationId: req.organizationContext!.organizationId, event: req.body.event, channel: req.body.channel },
+    {
+      organizationId: req.organizationContext!.organizationId,
+      event: req.body.event,
+      channel: req.body.channel,
+    },
     { subject: req.body.subject, body: req.body.body },
     { upsert: true, new: true },
   );
@@ -136,12 +149,18 @@ export async function upsertTemplate(req: Request, res: Response): Promise<void>
 }
 
 export async function listTemplates(req: Request, res: Response): Promise<void> {
-  res.locals.data = await NotificationTemplate.find({ organizationId: req.organizationContext!.organizationId });
+  res.locals.data = await NotificationTemplate.find({
+    organizationId: req.organizationContext!.organizationId,
+  });
 }
 
 export async function upsertPreference(req: Request, res: Response): Promise<void> {
   const preference = await NotificationPreference.findOneAndUpdate(
-    { organizationId: req.organizationContext!.organizationId, userId: req.user!.id, event: req.body.event },
+    {
+      organizationId: req.organizationContext!.organizationId,
+      userId: req.user!.id,
+      event: req.body.event,
+    },
     { channels: req.body.channels },
     { upsert: true, new: true },
   );
@@ -167,7 +186,8 @@ export function createTriggerReminders(config: AppConfig) {
       .limit(10);
     res.locals.data = {
       success: true,
-      message: 'Vérification des échéances et alertes emails envoyées avec succès aux locataires et propriétaires.',
+      message:
+        'Vérification des échéances et alertes emails envoyées avec succès aux locataires et propriétaires.',
       dispatchedCount: recent.length,
       recentDispatched: recent,
     };

@@ -17,7 +17,7 @@ services:
       - key: PORT
         value: 10000
       - key: TRUST_PROXY
-        value: "true"
+        value: 'true'
       - key: SERVER_URL
         value: https://kadtestate-api.onrender.com
       - key: CLIENT_URL
@@ -25,7 +25,7 @@ services:
       - key: MONGODB_URI
         sync: false
       - key: MONGODB_SERVER_SELECTION_TIMEOUT_MS
-        value: "10000"
+        value: '10000'
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
@@ -41,25 +41,25 @@ services:
       - key: COOKIE_NAME
         value: kadtestate_refresh
       - key: COOKIE_SECURE
-        value: "true"
+        value: 'true'
       - key: RATE_LIMIT_GENERAL_WINDOW_MS
-        value: "60000"
+        value: '60000'
       - key: RATE_LIMIT_GENERAL_MAX
-        value: "120"
+        value: '120'
       - key: RATE_LIMIT_AUTH_WINDOW_MS
-        value: "900000"
+        value: '900000'
       - key: RATE_LIMIT_AUTH_MAX
-        value: "10"
+        value: '10'
       - key: RATE_LIMIT_SENSITIVE_WINDOW_MS
-        value: "60000"
+        value: '60000'
       - key: RATE_LIMIT_SENSITIVE_MAX
-        value: "30"
+        value: '30'
       - key: LOG_LEVEL
         value: info
       - key: CLOUDINARY_CLOUD_NAME
         value: dq2cw4tyo
       - key: CLOUDINARY_API_KEY
-        value: "822762149564633"
+        value: '822762149564633'
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: CLOUDINARY_FOLDER

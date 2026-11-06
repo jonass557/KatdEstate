@@ -10,6 +10,7 @@ Statut global : **PROMPT 1/5, 2/5, 3/5, MODULE AGENTS/MARKETPLACE, RECENSEMENT/S
 **KadtEstate** (anciennement DOMORA) est une plateforme SaaS professionnelle multi-tenant de gestion immobilière, locative, marketplace, citoyenne et de chefferie traditionnelle conçue pour l'Afrique francophone (espace UEMOA / CEMAC avec devises sans décimales XOF/XAF, baux conformes aux réglementations locales, intégration des moyens de paiement mobiles) avec une architecture évolutive pour l'international. Connectée à Cloudinary pour la gestion centralisée des médias et documents.
 
 Les modules majeurs développés et pleinement opérationnels comprennent :
+
 1. **PROMPT 1/5 — Fondations, Architecture et Gestion Immobilière** : Monorepo, Auth avec Argon2/PBKDF2 & refresh tokens, multi-tenancy strict, rôles & permissions, parc immobilier (10 types de biens), bâtiments, logements, locataires et contrats de bail.
 2. **PROMPT 2/5 — Finances, Opérations, Loyers & Trésorerie** : Échéanciers automatisés, gestion des loyers (mensuel, trimestriel, semestriel, annuel), pénalités de retard, cautions et dépôts de garantie, quittances et factures PDF, charges communes réparties, dashboard financier interactif (Recharts), exports XLSX/CSV.
 3. **PROMPT 3/5 — Portails, Documents, Maintenance, Analytics Avancés & Intelligence Artificielle (KadtEstate AI)** :
@@ -42,6 +43,7 @@ Les modules majeurs développés et pleinement opérationnels comprennent :
 ## 2. Stack Technique Validée
 
 ### Frontend (`apps/web`)
+
 - **ReactJS 19** avec **Vite 6** et **TypeScript 5.7**
 - **Tailwind CSS** & **shadcn/ui** (Design moderne, responsive mobile/desktop, mode sombre/clair)
 - **React Router 7** avec protection déclarative des routes basée sur les permissions (`RequirePermission`)
@@ -52,6 +54,7 @@ Les modules majeurs développés et pleinement opérationnels comprennent :
 - **Build de production vérifié** : `tsc -b && vite build` s'exécute avec succès (`dist/` généré sans aucune erreur).
 
 ### Backend (`apps/api`)
+
 - **Node.js (>= 22)** avec **Express.js** et **TypeScript**
 - **MongoDB** & **Mongoose** avec schémas typés et indexation optimisée
 - **Architecture modulaire REST API** (`/modules/*`, `/middleware/*`, `/common/*`)
@@ -59,6 +62,7 @@ Les modules majeurs développés et pleinement opérationnels comprennent :
 - **Sécurité HTTP** : Helmet, CORS en allowlist, limitation de débit (`rate-limiters`), gestion centralisée des erreurs (`AppError`), journalisation d'audit immuable (`AuditLog`).
 
 ### Shared (`packages/shared`)
+
 - Schémas Zod partagés, types, rôles, permissions et statuts.
 - Typage strict validé (`tsc -p packages/shared/tsconfig.json` exit 0, tests unitaires passés 11/11).
 
@@ -66,16 +70,16 @@ Les modules majeurs développés et pleinement opérationnels comprennent :
 
 ## 3. Conformité aux Exigences du PROMPT 3/5
 
-| Module / Fonctionnalité | Description fonctionnelle | Statut |
-| :--- | :--- | :---: |
-| **Portail Locataire** | Profil, logement, contrat, échéances, quittances, factures PDF, signalement de maintenance avec photos, contact gestionnaire, notifications. | **Validé** |
-| **Portail Propriétaire** | Vue consolidée multi-biens, logements occupés/vacants, revenus, dépenses, impayés, cashflow net, performances financières, journal d'audit gestionnaires, rapport PDF téléchargeable. | **Validé** |
-| **Gestion Documentaire** | Bibliothèque centrale, classement par catégorie (10 catégories), suivi du quota stockage SaaS en Mo, recherche, alertes d'expiration, archivage, restauration, suppression sécurisée. | **Validé** |
-| **Maintenance & Travaux** | Demandes d'intervention, priorités, artisans/prestataires, estimation et coût réel, validation des travaux et création automatique de la dépense dans le module financier. | **Validé** |
-| **Analytics & Rapports** | Indicateurs calculés sur données réelles (taux d'occupation, revenus, charges, rentabilité par bien, taux de recouvrement, retards, coût moyen maintenance), exports PDF et tableurs. | **Validé** |
+| Module / Fonctionnalité                 | Description fonctionnelle                                                                                                                                                                      |   Statut   |
+| :-------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------: |
+| **Portail Locataire**                   | Profil, logement, contrat, échéances, quittances, factures PDF, signalement de maintenance avec photos, contact gestionnaire, notifications.                                                   | **Validé** |
+| **Portail Propriétaire**                | Vue consolidée multi-biens, logements occupés/vacants, revenus, dépenses, impayés, cashflow net, performances financières, journal d'audit gestionnaires, rapport PDF téléchargeable.          | **Validé** |
+| **Gestion Documentaire**                | Bibliothèque centrale, classement par catégorie (10 catégories), suivi du quota stockage SaaS en Mo, recherche, alertes d'expiration, archivage, restauration, suppression sécurisée.          | **Validé** |
+| **Maintenance & Travaux**               | Demandes d'intervention, priorités, artisans/prestataires, estimation et coût réel, validation des travaux et création automatique de la dépense dans le module financier.                     | **Validé** |
+| **Analytics & Rapports**                | Indicateurs calculés sur données réelles (taux d'occupation, revenus, charges, rentabilité par bien, taux de recouvrement, retards, coût moyen maintenance), exports PDF et tableurs.          | **Validé** |
 | **Intelligence Artificielle DOMORA AI** | Assistant conversationnel connecté à la base de données réelle (chiffres exacts), suggestions en 1 clic, générateur de lettres juridiques (mise en demeure 8 jours, relances, renouvellement). | **Validé** |
-| **Recherche Globale (Ctrl+K)** | Recherche universelle en temps réel sur 10 types d'entités avec redirection instantanée. | **Validé** |
-| **Messagerie Interne** | Échanges sécurisés catégorisés (Général, Paiement, Maintenance, Bail, Urgent) avec historique et réponses imbriquées. | **Validé** |
+| **Recherche Globale (Ctrl+K)**          | Recherche universelle en temps réel sur 10 types d'entités avec redirection instantanée.                                                                                                       | **Validé** |
+| **Messagerie Interne**                  | Échanges sécurisés catégorisés (Général, Paiement, Maintenance, Bail, Urgent) avec historique et réponses imbriquées.                                                                          | **Validé** |
 
 ---
 

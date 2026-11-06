@@ -82,60 +82,60 @@ déclaré renverrait « ok » alors que la base est devenue injoignable.
 
 Routes opérationnelles livrées :
 
-| Méthode | Route                                                     | Auth         | Permission            | Description                                              |
-| ------- | --------------------------------------------------------- | ------------ | --------------------- | -------------------------------------------------------- |
-| GET     | `/api/health`                                             | non          | aucune                | Sonde de santé avec ping MongoDB                         |
-| POST    | `/api/v1/auth/register`                                   | non          | aucune                | Inscription utilisateur + création organisation initiale |
-| POST    | `/api/v1/auth/login`                                      | non          | aucune                | Connexion, délivrance token + refresh cookie             |
-| POST    | `/api/v1/auth/refresh`                                    | refresh      | aucune                | Rotation de session refresh token                        |
-| POST    | `/api/v1/auth/logout`                                     | session      | aucune                | Révocation de la session                                 |
-| GET     | `/api/v1/auth/me`                                         | oui          | aucune                | Profil utilisateur & organisations rattachées            |
-| POST    | `/api/v1/auth/request-password-reset`                     | non          | aucune                | Demande de réinitialisation de mot de passe              |
-| POST    | `/api/v1/auth/reset-password`                             | non          | aucune                | Validation réinitialisation de mot de passe              |
-| POST    | `/api/v1/auth/change-password`                            | oui          | aucune                | Changement de mot de passe pour utilisateur connecté     |
-| POST    | `/api/v1/auth/verify-email`                               | non          | aucune                | Validation d'adresse email                               |
-| GET     | `/api/v1/organizations`                                   | oui          | aucune                | Liste des organisations de l'utilisateur                 |
-| POST    | `/api/v1/organizations`                                   | oui          | aucune                | Création d'une organisation SaaS multi-tenant            |
-| GET     | `/api/v1/organizations/:id`                               | oui          | organizations.view    | Paramètres complets d'une organisation                   |
-| PATCH   | `/api/v1/organizations/:id`                               | oui          | organizations.update  | Mise à jour des paramètres (logo, devises, biling, etc.) |
-| GET     | `/api/v1/organizations/:id/members`                       | oui          | users.view            | Liste des membres d'une organisation                     |
-| POST    | `/api/v1/organizations/:id/members`                       | oui          | users.invite          | Invitation d'un nouveau membre                           |
-| PATCH   | `/api/v1/organizations/:id/members/:memberId`             | oui          | users.manage          | Modification de rôle ou statut de membre                 |
-| DELETE  | `/api/v1/organizations/:id/members/:memberId`             | oui          | users.remove          | Retrait d'un membre de l'organisation                    |
-| GET     | `/api/v1/organizations/:id/properties`                    | oui          | properties.view       | Liste paginée des biens (10 types, filtres, recherche)   |
-| POST    | `/api/v1/organizations/:id/properties`                    | oui          | properties.create     | Création d'un bien immobilier                            |
-| GET     | `/api/v1/organizations/:id/properties/:propId/stats`      | oui          | properties.view       | Métriques du bien : taux occupation, loyers potentiels   |
-| GET     | `/api/v1/organizations/:id/tenants/:tenantId/timeline`    | oui          | tenants.view          | Chronologie locataire (arrivée, bail, paiements, etc.)   |
-| GET     | `/api/v1/organizations/:id/leases/:leaseId/pdf`           | oui          | leases.view           | Génération PDF du contrat de bail                        |
-| GET     | `/api/v1/organizations/:id/rent-schedules`                | oui          | rentSchedules.view    | Liste des échéances de loyers, filtrage statut           |
-| PATCH   | `/api/v1/organizations/:id/rent-schedules/:schedId`       | oui          | rentSchedules.manage  | Modification d'échéance (date, montant, pénalité) + audit|
-| POST    | `/api/v1/organizations/:id/rent-schedules/:schedId/cancel`| oui          | invoices.cancel       | Annulation motivée d'une échéance                        |
-| POST    | `/api/v1/organizations/:id/rent-schedules/apply-penalties`| oui          | rentSchedules.manage  | Calcul et application automatisée des pénalités de retard|
-| GET     | `/api/v1/organizations/:id/finance/summary`               | oui          | payments.view         | Synthèse loyers (attendu, encaissé, restant, en retard)  |
-| GET     | `/api/v1/organizations/:id/finance/dashboard`             | oui          | payments.view         | Dashboard financier complet (Revenus, KPI, Recharts)     |
-| GET     | `/api/v1/organizations/:id/finance/tenants/:tId/history`  | oui          | payments.view         | Historique financier complet d'un locataire              |
-| POST    | `/api/v1/organizations/:id/finance/split-charges`         | oui          | invoices.create       | Répartition charges communes (parts égales ou surface)   |
-| GET     | `/api/v1/organizations/:id/payments`                      | oui          | payments.view         | Liste des paiements enregistrés, filtres mode et statut  |
-| POST    | `/api/v1/organizations/:id/payments`                      | oui          | payments.create       | Encaissement partiel/total avec clé d'idempotence        |
-| POST    | `/api/v1/organizations/:id/payments/:pId/confirm`         | oui          | payments.create       | Confirmation d'un paiement en attente (Mobile Money)     |
-| POST    | `/api/v1/organizations/:id/payments/:pId/refund`          | oui          | payments.refund       | Remboursement avec motif et réouverture d'échéance       |
-| GET     | `/api/v1/organizations/:id/payments/export`               | oui          | reports.export        | Export des transactions financières (XLSX, CSV)          |
-| GET     | `/api/v1/organizations/:id/invoices`                      | oui          | invoices.view         | Liste des factures locataires émises                     |
-| GET     | `/api/v1/organizations/:id/invoices/:invId/pdf`           | oui          | invoices.view         | Téléchargement officiel PDF de la facture                |
-| GET     | `/api/v1/organizations/:id/receipts/:recId/pdf`           | oui          | receipts.view         | Téléchargement officiel PDF de la quittance de loyer     |
-| POST    | `/api/v1/organizations/:id/receipts/:recId/send`          | oui          | receipts.generate     | Envoi quittance par email et notification in-app         |
-| POST    | `/api/v1/organizations/:id/deposits`                      | oui          | deposits.manage       | Gestion des cautions (perçue, restituée, retenue déduction)|
-| GET     | `/api/v1/organizations/:id/transactions`                  | oui          | expenses.view         | Liste des dépenses et recettes comptables, filtres statut|
-| POST    | `/api/v1/organizations/:id/transactions`                  | oui          | expenses.create       | Création d'une dépense avec bénéficiaire et justificatif |
-| PATCH   | `/api/v1/organizations/:id/transactions/:txId`            | oui          | expenses.update       | Modification d'une dépense avec traçabilité d'audit      |
-| POST    | `/api/v1/organizations/:id/transactions/:txId/approve`    | oui          | expenses.update       | Validation / approbation d'une dépense en attente        |
-| POST    | `/api/v1/organizations/:id/transactions/:txId/reject`     | oui          | expenses.update       | Rejet d'une dépense avec motif obligatoire               |
-| POST    | `/api/v1/organizations/:id/transactions/:txId/pay`        | oui          | expenses.update       | Passage au statut payé après décaissement                |
-| DELETE  | `/api/v1/organizations/:id/transactions/:txId`            | oui          | expenses.delete       | Suppression logique (soft-delete) d'une dépense          |
-| GET     | `/api/v1/organizations/:id/transactions/export`           | oui          | reports.export        | Export CSV du journal des dépenses                       |
-| GET     | `/api/v1/organizations/:id/reports/finance`               | oui          | reports.view          | Rapport comptable période libre                          |
-| GET     | `/api/v1/organizations/:id/reports/finance/pdf`           | oui          | reports.export        | Téléchargement PDF du rapport financier                  |
-| GET     | `/api/v1/organizations/:id/reports/forecast`              | oui          | reports.view          | Prévision de trésorerie sur échéances connues futures    |
+| Méthode | Route                                                      | Auth    | Permission           | Description                                                 |
+| ------- | ---------------------------------------------------------- | ------- | -------------------- | ----------------------------------------------------------- |
+| GET     | `/api/health`                                              | non     | aucune               | Sonde de santé avec ping MongoDB                            |
+| POST    | `/api/v1/auth/register`                                    | non     | aucune               | Inscription utilisateur + création organisation initiale    |
+| POST    | `/api/v1/auth/login`                                       | non     | aucune               | Connexion, délivrance token + refresh cookie                |
+| POST    | `/api/v1/auth/refresh`                                     | refresh | aucune               | Rotation de session refresh token                           |
+| POST    | `/api/v1/auth/logout`                                      | session | aucune               | Révocation de la session                                    |
+| GET     | `/api/v1/auth/me`                                          | oui     | aucune               | Profil utilisateur & organisations rattachées               |
+| POST    | `/api/v1/auth/request-password-reset`                      | non     | aucune               | Demande de réinitialisation de mot de passe                 |
+| POST    | `/api/v1/auth/reset-password`                              | non     | aucune               | Validation réinitialisation de mot de passe                 |
+| POST    | `/api/v1/auth/change-password`                             | oui     | aucune               | Changement de mot de passe pour utilisateur connecté        |
+| POST    | `/api/v1/auth/verify-email`                                | non     | aucune               | Validation d'adresse email                                  |
+| GET     | `/api/v1/organizations`                                    | oui     | aucune               | Liste des organisations de l'utilisateur                    |
+| POST    | `/api/v1/organizations`                                    | oui     | aucune               | Création d'une organisation SaaS multi-tenant               |
+| GET     | `/api/v1/organizations/:id`                                | oui     | organizations.view   | Paramètres complets d'une organisation                      |
+| PATCH   | `/api/v1/organizations/:id`                                | oui     | organizations.update | Mise à jour des paramètres (logo, devises, biling, etc.)    |
+| GET     | `/api/v1/organizations/:id/members`                        | oui     | users.view           | Liste des membres d'une organisation                        |
+| POST    | `/api/v1/organizations/:id/members`                        | oui     | users.invite         | Invitation d'un nouveau membre                              |
+| PATCH   | `/api/v1/organizations/:id/members/:memberId`              | oui     | users.manage         | Modification de rôle ou statut de membre                    |
+| DELETE  | `/api/v1/organizations/:id/members/:memberId`              | oui     | users.remove         | Retrait d'un membre de l'organisation                       |
+| GET     | `/api/v1/organizations/:id/properties`                     | oui     | properties.view      | Liste paginée des biens (10 types, filtres, recherche)      |
+| POST    | `/api/v1/organizations/:id/properties`                     | oui     | properties.create    | Création d'un bien immobilier                               |
+| GET     | `/api/v1/organizations/:id/properties/:propId/stats`       | oui     | properties.view      | Métriques du bien : taux occupation, loyers potentiels      |
+| GET     | `/api/v1/organizations/:id/tenants/:tenantId/timeline`     | oui     | tenants.view         | Chronologie locataire (arrivée, bail, paiements, etc.)      |
+| GET     | `/api/v1/organizations/:id/leases/:leaseId/pdf`            | oui     | leases.view          | Génération PDF du contrat de bail                           |
+| GET     | `/api/v1/organizations/:id/rent-schedules`                 | oui     | rentSchedules.view   | Liste des échéances de loyers, filtrage statut              |
+| PATCH   | `/api/v1/organizations/:id/rent-schedules/:schedId`        | oui     | rentSchedules.manage | Modification d'échéance (date, montant, pénalité) + audit   |
+| POST    | `/api/v1/organizations/:id/rent-schedules/:schedId/cancel` | oui     | invoices.cancel      | Annulation motivée d'une échéance                           |
+| POST    | `/api/v1/organizations/:id/rent-schedules/apply-penalties` | oui     | rentSchedules.manage | Calcul et application automatisée des pénalités de retard   |
+| GET     | `/api/v1/organizations/:id/finance/summary`                | oui     | payments.view        | Synthèse loyers (attendu, encaissé, restant, en retard)     |
+| GET     | `/api/v1/organizations/:id/finance/dashboard`              | oui     | payments.view        | Dashboard financier complet (Revenus, KPI, Recharts)        |
+| GET     | `/api/v1/organizations/:id/finance/tenants/:tId/history`   | oui     | payments.view        | Historique financier complet d'un locataire                 |
+| POST    | `/api/v1/organizations/:id/finance/split-charges`          | oui     | invoices.create      | Répartition charges communes (parts égales ou surface)      |
+| GET     | `/api/v1/organizations/:id/payments`                       | oui     | payments.view        | Liste des paiements enregistrés, filtres mode et statut     |
+| POST    | `/api/v1/organizations/:id/payments`                       | oui     | payments.create      | Encaissement partiel/total avec clé d'idempotence           |
+| POST    | `/api/v1/organizations/:id/payments/:pId/confirm`          | oui     | payments.create      | Confirmation d'un paiement en attente (Mobile Money)        |
+| POST    | `/api/v1/organizations/:id/payments/:pId/refund`           | oui     | payments.refund      | Remboursement avec motif et réouverture d'échéance          |
+| GET     | `/api/v1/organizations/:id/payments/export`                | oui     | reports.export       | Export des transactions financières (XLSX, CSV)             |
+| GET     | `/api/v1/organizations/:id/invoices`                       | oui     | invoices.view        | Liste des factures locataires émises                        |
+| GET     | `/api/v1/organizations/:id/invoices/:invId/pdf`            | oui     | invoices.view        | Téléchargement officiel PDF de la facture                   |
+| GET     | `/api/v1/organizations/:id/receipts/:recId/pdf`            | oui     | receipts.view        | Téléchargement officiel PDF de la quittance de loyer        |
+| POST    | `/api/v1/organizations/:id/receipts/:recId/send`           | oui     | receipts.generate    | Envoi quittance par email et notification in-app            |
+| POST    | `/api/v1/organizations/:id/deposits`                       | oui     | deposits.manage      | Gestion des cautions (perçue, restituée, retenue déduction) |
+| GET     | `/api/v1/organizations/:id/transactions`                   | oui     | expenses.view        | Liste des dépenses et recettes comptables, filtres statut   |
+| POST    | `/api/v1/organizations/:id/transactions`                   | oui     | expenses.create      | Création d'une dépense avec bénéficiaire et justificatif    |
+| PATCH   | `/api/v1/organizations/:id/transactions/:txId`             | oui     | expenses.update      | Modification d'une dépense avec traçabilité d'audit         |
+| POST    | `/api/v1/organizations/:id/transactions/:txId/approve`     | oui     | expenses.update      | Validation / approbation d'une dépense en attente           |
+| POST    | `/api/v1/organizations/:id/transactions/:txId/reject`      | oui     | expenses.update      | Rejet d'une dépense avec motif obligatoire                  |
+| POST    | `/api/v1/organizations/:id/transactions/:txId/pay`         | oui     | expenses.update      | Passage au statut payé après décaissement                   |
+| DELETE  | `/api/v1/organizations/:id/transactions/:txId`             | oui     | expenses.delete      | Suppression logique (soft-delete) d'une dépense             |
+| GET     | `/api/v1/organizations/:id/transactions/export`            | oui     | reports.export       | Export CSV du journal des dépenses                          |
+| GET     | `/api/v1/organizations/:id/reports/finance`                | oui     | reports.view         | Rapport comptable période libre                             |
+| GET     | `/api/v1/organizations/:id/reports/finance/pdf`            | oui     | reports.export       | Téléchargement PDF du rapport financier                     |
+| GET     | `/api/v1/organizations/:id/reports/forecast`               | oui     | reports.view         | Prévision de trésorerie sur échéances connues futures       |
 
 Les routes métier à implémenter par incréments :
 
@@ -184,19 +184,23 @@ Limiter auth par IP + identifiant, général par IP/session, opérations sensibl
 ## Endpoints ajoutés au Jalon 3 (PROMPT 3/5)
 
 ### Portail Locataire (`/portal/*`)
+
 - `GET /organizations/:orgId/portal/invoices` : Liste des factures du locataire authentifié.
 - `GET /organizations/:orgId/portal/invoices/:id/pdf` : Téléchargement sécurisé de la facture au format PDF.
 
 ### Espace Propriétaire (`/owner/*`)
+
 - `GET /organizations/:orgId/owner/overview` : Synthèse consolidée multi-immeubles (taux d'occupation, loyers encaissés, dépenses, cashflow net, arriérés, répartition par bien, audit gestionnaire).
 - `GET /organizations/:orgId/owner/report/pdf` : Téléchargement du rapport exécutif de gestion pour propriétaire (PDF).
 
 ### Intelligence Artificielle DOMORA AI (`/ai/*`)
+
 - `POST /organizations/:orgId/ai/chat` : Conseiller virtuel analysant les données financières et d'occupation réelles de la base (zéro hallucination de chiffres).
 - `POST /organizations/:orgId/ai/draft` : Générateur de correspondances juridiques et de relances (`RENT_REMINDER`, `LATE_NOTICE`, `FORMAL_NOTICE` avec délai de 8 jours, `RENEWAL_PROPOSAL`, `MAINTENANCE_UPDATE`).
 - `GET /organizations/:orgId/ai/conversations` : Historique des échanges avec l'assistant.
 
 ### Gestion Documentaire (`/documents/*`)
+
 - `GET /organizations/:orgId/documents` : Liste avec filtres (`category`, `q`, `archived`).
 - `GET /organizations/:orgId/documents/storage-usage` : Consommation de l'espace de stockage SaaS en Mo et calcul du pourcentage de quota.
 - `POST /organizations/:orgId/documents/:id/archive` : Archivage d'une pièce.
@@ -204,6 +208,7 @@ Limiter auth par IP + identifiant, général par IP/session, opérations sensibl
 - `DELETE /organizations/:orgId/documents/:id` : Suppression sécurisée.
 
 ### Messagerie Interne (`/messages/*`)
+
 - `GET /organizations/:orgId/messages` : Liste des conversations (filtres par `category` et `status`).
 - `POST /organizations/:orgId/messages` : Création d'un fil de discussion.
 - `GET /organizations/:orgId/messages/:id` : Détails d'un fil et de ses réponses.
@@ -211,11 +216,13 @@ Limiter auth par IP + identifiant, général par IP/session, opérations sensibl
 - `POST /organizations/:orgId/messages/:id/read` : Marquage comme lu.
 
 ### Recherche Universelle (`/search`)
+
 - `GET /organizations/:orgId/search?q=...` : Recherche globale temps réel sur 10 types d'entités (propriétés, bâtiments, logements, locataires, baux, factures, paiements, tickets de maintenance, documents, artisans).
 
 ## Endpoints ajoutés au Module Agents Immobiliers & Marketplace
 
 ### Marketplace Publique (`/api/v1/marketplace/*`)
+
 - `GET /marketplace/listings` : Recherche multi-critères (mots-clés, ville, quartier, catégorie, type de bien, vente/location, fourchette de prix, superficie, chambres, titre foncier vérifié, badge bien vérifié, tri).
 - `GET /marketplace/listings/:id` : Consultation détaillée d'un bien (incrémentation vue, masquage de l'adresse exacte si requis, données agent/propriétaire).
 - `POST /marketplace/listings/:id/inquiries` : Demande de renseignement public (crée un lead dans le CRM de l'agent).
@@ -223,6 +230,7 @@ Limiter auth par IP + identifiant, général par IP/session, opérations sensibl
 - `POST /marketplace/listings/:id/offers` : Soumission d'une proposition formelle d'achat ou de loyer.
 
 ### Espace Agent Immobilier (`/organizations/:orgId/agent/*`)
+
 - `GET /organizations/:orgId/agent/dashboard` : Synthèse KPIs (annonces actives, ventes/locations conclues, leads, visites, mandats, commissions estimées vs encaissées).
 - `GET /organizations/:orgId/agent/profile` : Profil professionnel de l'agent.
 - `PATCH /organizations/:orgId/agent/profile` : Mise à jour du profil professionnel (champs d'audit et de vérification protégés).
@@ -246,6 +254,7 @@ Limiter auth par IP + identifiant, général par IP/session, opérations sensibl
 - `POST /organizations/:orgId/agent/mandates/:id/reject` : Refus d'un mandat avec motif.
 
 ### Espace Propriétaire — Annonces & Mandats (`/organizations/:orgId/owner/*`)
+
 - `GET /organizations/:orgId/owner/listings` : Annonces créées directement par le propriétaire.
 - `POST /organizations/:orgId/owner/listings` : Publication directe par le propriétaire.
 - `PATCH /organizations/:orgId/owner/listings/:id` : Modification d'annonce propriétaire.
@@ -257,6 +266,7 @@ Limiter auth par IP + identifiant, général par IP/session, opérations sensibl
 - `POST /organizations/:orgId/owner/mandates/:id/revoke` : Révocation immédiate d'un mandat (suspension automatique de toutes les annonces publiées par l'agent sur ce bien).
 
 ### Modération Super Admin & Administration Marketplace (`/organizations/:orgId/admin/marketplace/*`)
+
 - `GET /organizations/:orgId/admin/marketplace/listings` : File de modération des annonces.
 - `POST /organizations/:orgId/admin/marketplace/listings/:id/approve` : Approbation et publication officielle sur la marketplace.
 - `POST /organizations/:orgId/admin/marketplace/listings/:id/reject` : Rejet avec motif obligatoire.
@@ -273,6 +283,7 @@ Limiter auth par IP + identifiant, général par IP/session, opérations sensibl
 Branche citoyenne, foncière et coutumière de KadtEstate dédiée au recensement cadastral local des résidences et parcelles, à la gestion administrative et financière de la chefferie (ventes de maisons, gestion locative de 05h00 à 22h00, transactions foncières, commissions et certificats officiels) et à la sécurité communautaire.
 
 ### Accès Public Résidents & Citoyens (`/quartier/*`)
+
 - `GET /quartier/cities` : Liste des villes configurées.
 - `GET /quartier/neighborhoods?cityId=` : Quartiers d'une ville donnée.
 - `GET /quartier/blocks?neighborhoodId=` : Blocs / carrés d'un quartier avec jetons d'enregistrement QR code.
@@ -287,6 +298,7 @@ Branche citoyenne, foncière et coutumière de KadtEstate dédiée au recensemen
 - `GET /quartier/chefferie/service-hours` : Statut en temps réel des horaires d'ouverture du service de gestion locative (Ouverture: 05h00 - Fermeture: 22h00).
 
 ### Espace Chefferie Traditionnelle & Immobilière (`/organizations/:orgId/quartier/chefferie/*`)
+
 - `GET /organizations/:orgId/quartier/chefferie/dashboard` : Tableau de bord de suivi consolidé de la chefferie (KPIs : maisons vendues, maisons en location, terrains vendus, volume total des transactions, commissions chefferie générées vs encaissées, solde restant, nombre de certificats délivrés, historique complet).
 - `GET /organizations/:orgId/quartier/chefferie/commissions/settings?neighborhoodId=` : Consultation des taux de commission configurés pour le quartier.
 - `POST /organizations/:orgId/quartier/chefferie/commissions/settings` : Paramétrage des taux de commission par l'administration supérieure (% maison vendue, % maison louée, % terrain vendu).
@@ -300,6 +312,7 @@ Branche citoyenne, foncière et coutumière de KadtEstate dédiée au recensemen
 - `GET /organizations/:orgId/quartier/chefferie/certificates` : Registre et conservation des copies numériques des certificats délivrés pour consultation, téléchargement PDF et réimpression.
 
 ### Espace Chef de Bloc (`/organizations/:orgId/quartier/*` avec rôle `BLOCK_LEADER`)
+
 - `GET /organizations/:orgId/quartier/dashboard/block-leader` : Tableau de bord du bloc (KPIs : maisons recensées, logements, taux de couverture, résidents déclarés, alertes actives, consommation du quota de forfait).
 - `GET /organizations/:orgId/quartier/submissions/pending?blockId=` : File des demandes d'enregistrement citoyennes en attente de vérification géographique.
 - `POST /organizations/:orgId/quartier/submissions/:id/validate` : Décision du chef de bloc (validation officielle ou rejet avec motif obligatoire notifié au déclarant).
@@ -310,11 +323,13 @@ Branche citoyenne, foncière et coutumière de KadtEstate dédiée au recensemen
 - `POST /organizations/:orgId/quartier/announcements` : Diffusion d'une communication ciblée aux résidents du bloc (Information, Réunion de bloc, Travaux/Voirie, Alerte urgente).
 
 ### Espace Chef de Quartier (`/organizations/:orgId/quartier/*` avec rôle `NEIGHBORHOOD_LEADER`)
+
 - `GET /organizations/:orgId/quartier/dashboard/neighborhood-leader` : Tableau de bord consolidé du quartier (comparatif des blocs, taux de couverture respectifs, chefs actifs vs blocs sans responsable).
 - `GET /organizations/:orgId/quartier/incidents?neighborhoodId=` : Vue consolidée des incidents et urgences à l'échelle du quartier.
 - `POST /organizations/:orgId/quartier/announcements` : Diffusion d'un communiqué officiel à l'ensemble des blocs et habitants du quartier.
 
 ### Supervision Nationale & Administration Super Admin (`/organizations/:orgId/quartier/*` avec rôle `SUPER_ADMIN`)
+
 - `GET /organizations/:orgId/quartier/dashboard/super-admin` : Statistiques nationales de recensement (villes, quartiers, blocs, résidences, foyers, taux de couverture moyen, incidents traités).
 - `POST /organizations/:orgId/quartier/cities` : Création et administration d'une ville.
 - `POST /organizations/:orgId/quartier/neighborhoods` : Création et découpage d'un quartier.

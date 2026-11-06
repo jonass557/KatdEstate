@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { EXPENSE_CATEGORIES, EXPENSE_STATUSES, TRANSACTION_DIRECTIONS } from '../constants/statuses.js';
+import {
+  EXPENSE_CATEGORIES,
+  EXPENSE_STATUSES,
+  TRANSACTION_DIRECTIONS,
+} from '../constants/statuses.js';
 import { objectIdSchema, paginationSchema } from './common.js';
 
 const amount = z.number().int().positive().max(100_000_000_000);

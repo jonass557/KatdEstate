@@ -13,7 +13,11 @@ import { Badge } from '../components/ui/badge';
 
 function Brand() {
   return (
-    <Link to="/dashboard" className="flex items-center gap-2 group cursor-pointer" title="Retour au tableau de bord KatdEstate">
+    <Link
+      to="/dashboard"
+      className="flex items-center gap-2 group cursor-pointer"
+      title="Retour au tableau de bord KatdEstate"
+    >
       <span className="flex size-9 items-center justify-center rounded-xl bg-emerald-500 text-slate-950 text-sm font-black shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
         KE
       </span>
@@ -74,7 +78,6 @@ export function AppShell() {
 
       {/* Header unifié sans menu déroulant / hamburger : navigation exclusivement sur le tableau de bord */}
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-border/80 bg-background/95 px-4 backdrop-blur-md sm:px-6">
-        
         {/* Logo Brand + Organisation */}
         <div className="flex items-center gap-3">
           <Brand />
@@ -151,10 +154,7 @@ export function AppShell() {
       </header>
 
       {/* Contenu principal plein écran sans barre latérale parasite */}
-      <main
-        id="main-content"
-        className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8"
-      >
+      <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
         <Outlet />
       </main>
 

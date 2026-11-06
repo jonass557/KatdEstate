@@ -15,8 +15,14 @@ import { requirePermission } from '../../middleware/permissions.js';
 import { validateRequest } from '../../middleware/validate-request.js';
 import * as service from './organizations.service.js';
 
-function respond(handler: (req: import('express').Request, res: import('express').Response) => Promise<void>) {
-  return (req: import('express').Request, res: import('express').Response, next: (error: unknown) => void) => {
+function respond(
+  handler: (req: import('express').Request, res: import('express').Response) => Promise<void>,
+) {
+  return (
+    req: import('express').Request,
+    res: import('express').Response,
+    next: (error: unknown) => void,
+  ) => {
     handler(req, res)
       .then(() => {
         if (!res.headersSent) sendSuccess(res, res.locals.data, { statusCode: res.statusCode });
@@ -31,7 +37,12 @@ export function createOrganizationsRouter(config: AppConfig) {
 
   // User-level organization endpoints
   router.get('/', authenticate, respond(service.listUserOrganizations));
-  router.post('/', authenticate, validateRequest(createOrganizationSchema), respond(service.createOrganization));
+  router.post(
+    '/',
+    authenticate,
+    validateRequest(createOrganizationSchema),
+    respond(service.createOrganization),
+  );
 
   // Tenant-scoped organization management
   router.get(

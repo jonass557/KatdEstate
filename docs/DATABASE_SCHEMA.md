@@ -11,6 +11,7 @@
 ## Collections et relations
 
 ### 1. Identité et multi-tenancy
+
 - **users** : email normalisé (index unique), displayName, passwordHash (Argon2 / PBKDF2), status (ACTIVE, SUSPENDED), emailVerifiedAt, platformRole (SUPER_ADMIN).
 - **organizations** : nom, slug (unique), logo, adresse, téléphone, email, country (ISO 2 lettres), currency (ISO 3 lettres), timezone (IANA), locale ('fr'), notificationSettings (rappels email/sms/whatsapp, délai), billingSettings (préfixes factures/quittances, pénalités de retard), status (ACTIVE, SUSPENDED).
 - **memberships** : `organizationId`, `userId`, `role` (ADMIN, OWNER, PROPERTY_MANAGER, ACCOUNTANT, AGENT, TENANT), grantedPermissions, revokedPermissions, status (INVITED, ACTIVE, SUSPENDED, REMOVED). Index unique composé `{ organizationId, userId }`.
@@ -19,11 +20,13 @@
 - **auditLogs** : organizationId, actorId, action, resourceType, resourceId, result, requestId, changes. Append-only immuable.
 
 ### 2. Hiérarchie immobilière
+
 - **properties** : organizationId, name, type (BUILDING, HOUSE, APARTMENT, VILLA, STUDIO, OFFICE, SHOP, COMMERCIAL, LAND, OTHER), address, city, country, description, status (DRAFT, ACTIVE, ARCHIVED), owner, manager, acquisitionDate, value, photos, documents, deletedAt.
 - **buildings** : organizationId, propertyId, name, address, floors, deletedAt.
 - **units** : organizationId, propertyId, buildingId (optionnel), name, number, floor, type (ROOM, STUDIO, APARTMENT, HOUSE, OFFICE, SHOP, COMMERCIAL, PARKING, OTHER), surfaceM2, bedrooms, bathrooms, rentAmountMinor, chargesAmountMinor, depositAmountMinor, status (AVAILABLE, OCCUPIED, RESERVED, MAINTENANCE, UNAVAILABLE), description, amenities, photos, documents, deletedAt.
 
 ### 3. Locataires et Baux
+
 - **tenants** : organizationId, firstName, lastName, fullName, phone, email, address, identityDocumentType (NATIONAL_ID, PASSPORT, RESIDENCE_PERMIT, OTHER), identityDocumentNumberEnc (chiffré AES-256-GCM), emergencyContactName, emergencyContactPhone, profession, documents, notes, status (ACTIVE, INACTIVE, ARCHIVED), userId (lien espace locataire).
 - **leases** : organizationId, number (unique par org), tenantId, unitId, propertyId, ownerId, startDate, endDate, rentAmountMinor, depositAmountMinor, chargesAmountMinor, currency, frequency (MONTHLY, QUARTERLY, YEARLY), dueDay (1-28), penalty (type, value, graceDays), terms, status (DRAFT, ACTIVE, EXPIRING, EXPIRED, TERMINATED, RENEWED), renewedFromId, terminationDate, terminationReason, signature.
 - **rentSchedules** : organizationId, leaseId, dueDate, amountDueMinor, amountPaidMinor, penaltyMinor, currency, status (PENDING, PARTIAL, PAID, OVERDUE, CANCELLED), frequency (MONTHLY, QUARTERLY, SEMI_ANNUAL, YEARLY). Traçabilité des modifications via auditLogs.

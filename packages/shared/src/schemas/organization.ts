@@ -55,21 +55,25 @@ export const localeSchema = z.string().trim().min(2).max(10);
 
 export const organizationNameSchema = z.string().trim().min(2).max(160);
 
-export const notificationSettingsSchema = z.object({
-  emailRentReminder: z.boolean().default(true),
-  smsRentReminder: z.boolean().default(false),
-  whatsappRentReminder: z.boolean().default(false),
-  emailMaintenanceAlert: z.boolean().default(true),
-  reminderDaysBeforeDue: z.number().int().min(1).max(30).default(5),
-}).partial();
+export const notificationSettingsSchema = z
+  .object({
+    emailRentReminder: z.boolean().default(true),
+    smsRentReminder: z.boolean().default(false),
+    whatsappRentReminder: z.boolean().default(false),
+    emailMaintenanceAlert: z.boolean().default(true),
+    reminderDaysBeforeDue: z.number().int().min(1).max(30).default(5),
+  })
+  .partial();
 
-export const billingSettingsSchema = z.object({
-  taxIdentificationNumber: z.string().trim().max(64).optional(),
-  invoicePrefix: z.string().trim().max(16).default('FACT-'),
-  receiptPrefix: z.string().trim().max(16).default('RECU-'),
-  lateFeePercentage: z.number().min(0).max(100).default(0),
-  defaultPaymentTermsDays: z.number().int().min(0).max(90).default(5),
-}).partial();
+export const billingSettingsSchema = z
+  .object({
+    taxIdentificationNumber: z.string().trim().max(64).optional(),
+    invoicePrefix: z.string().trim().max(16).default('FACT-'),
+    receiptPrefix: z.string().trim().max(16).default('RECU-'),
+    lateFeePercentage: z.number().min(0).max(100).default(0),
+    defaultPaymentTermsDays: z.number().int().min(0).max(90).default(5),
+  })
+  .partial();
 
 export const createOrganizationSchema = z.object({
   name: organizationNameSchema,

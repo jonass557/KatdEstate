@@ -8,13 +8,10 @@ describe('authentification et gestion de compte', () => {
     const actor = await createActor('ADMIN');
 
     // Mot de passe initial dans les fixtures est 'CorrectHorseBattery1!'
-    const res = await api()
-      .post('/api/v1/auth/change-password')
-      .set(authed(actor))
-      .send({
-        currentPassword: 'CorrectHorseBattery1!',
-        newPassword: 'NouveauMotDePasse2026!',
-      });
+    const res = await api().post('/api/v1/auth/change-password').set(authed(actor)).send({
+      currentPassword: 'CorrectHorseBattery1!',
+      newPassword: 'NouveauMotDePasse2026!',
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -39,13 +36,10 @@ describe('authentification et gestion de compte', () => {
   it('rejette la modification si le mot de passe actuel est faux', async () => {
     const actor = await createActor('ADMIN');
 
-    const res = await api()
-      .post('/api/v1/auth/change-password')
-      .set(authed(actor))
-      .send({
-        currentPassword: 'MauvaisMotDePasse!',
-        newPassword: 'NouveauMotDePasse2026!',
-      });
+    const res = await api().post('/api/v1/auth/change-password').set(authed(actor)).send({
+      currentPassword: 'MauvaisMotDePasse!',
+      newPassword: 'NouveauMotDePasse2026!',
+    });
 
     expect(res.status).toBe(401);
   });

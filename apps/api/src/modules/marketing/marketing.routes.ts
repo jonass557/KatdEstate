@@ -14,10 +14,22 @@ export function createMarketingRouter(): Router {
       if (!settings) {
         settings = await MarketingSettings.create({
           tickerBanners: [
-            { text: '👑 Chefferie : Service de gestion locative ouvert 05h00 - 22h00', tag: 'OFFICIEL' },
-            { text: '✨ Nouveaux terrains titrés disponibles à Cocody et Almadies avec certification immédiate', tag: 'IMMO' },
-            { text: '🚀 Paiements mobiles 100% sécurisés via Orange Money, MTN, Wave et Moov (Ikeepay)', tag: 'PAIEMENT' },
-            { text: '🛡️ Sécurité citoyenne : Recensement cadastral et signalements confidentiels actifs', tag: 'SÉCURITÉ' },
+            {
+              text: '👑 Chefferie : Service de gestion locative ouvert 05h00 - 22h00',
+              tag: 'OFFICIEL',
+            },
+            {
+              text: '✨ Nouveaux terrains titrés disponibles à Cocody et Almadies avec certification immédiate',
+              tag: 'IMMO',
+            },
+            {
+              text: '🚀 Paiements mobiles 100% sécurisés via Orange Money, MTN, Wave et Moov (Ikeepay)',
+              tag: 'PAIEMENT',
+            },
+            {
+              text: '🛡️ Sécurité citoyenne : Recensement cadastral et signalements confidentiels actifs',
+              tag: 'SÉCURITÉ',
+            },
           ],
           contactInfo: {
             email: 'contact@katdestate.immo',
@@ -44,7 +56,11 @@ export function createMarketingRouter(): Router {
     try {
       const { fullName, email, phoneNumber, subject, message } = req.body;
       if (!fullName || !email || !subject || !message) {
-        throw new AppError('VALIDATION_ERROR', 'Veuillez remplir tous les champs obligatoires.', 400);
+        throw new AppError(
+          'VALIDATION_ERROR',
+          'Veuillez remplir tous les champs obligatoires.',
+          400,
+        );
       }
 
       const record = await ContactMessage.create({

@@ -25,7 +25,11 @@ function createTransporter(config: AppConfig): Transporter | null {
   });
 }
 
-function buildVerificationMessage(config: AppConfig, email: string, token: string): DeliveryMessage {
+function buildVerificationMessage(
+  config: AppConfig,
+  email: string,
+  token: string,
+): DeliveryMessage {
   return {
     to: email,
     subject: 'Vérifiez votre adresse email RentFlow Africa',
@@ -33,7 +37,11 @@ function buildVerificationMessage(config: AppConfig, email: string, token: strin
   };
 }
 
-function buildPasswordResetMessage(config: AppConfig, email: string, token: string): DeliveryMessage {
+function buildPasswordResetMessage(
+  config: AppConfig,
+  email: string,
+  token: string,
+): DeliveryMessage {
   return {
     to: email,
     subject: 'Réinitialisez votre mot de passe RentFlow Africa',

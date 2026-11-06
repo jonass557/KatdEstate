@@ -1,5 +1,10 @@
 import { HttpError } from '../../common/errors.js';
-import { QuartierPlan, QuartierSubscription, QuartierResidence, GeoBlock } from '../../models/quartier.js';
+import {
+  QuartierPlan,
+  QuartierSubscription,
+  QuartierResidence,
+  GeoBlock,
+} from '../../models/quartier.js';
 
 export const DEFAULT_QUARTIER_PLANS = [
   {
@@ -62,11 +67,7 @@ export const DEFAULT_QUARTIER_PLANS = [
 
 export async function ensureDefaultQuartierPlans(): Promise<void> {
   for (const plan of DEFAULT_QUARTIER_PLANS) {
-    await QuartierPlan.updateOne(
-      { code: plan.code },
-      { $setOnInsert: plan },
-      { upsert: true }
-    );
+    await QuartierPlan.updateOne({ code: plan.code }, { $setOnInsert: plan }, { upsert: true });
   }
 }
 
@@ -93,13 +94,18 @@ export async function getLeaderSubscription(userId: string) {
     await sub.save();
   }
 
-  const plan = (await QuartierPlan.findOne({ code: sub.planCode })) ?? (await QuartierPlan.findOne({ code: 'QUARTIER_DISCOVERY' }));
+  const plan =
+    (await QuartierPlan.findOne({ code: sub.planCode })) ??
+    (await QuartierPlan.findOne({ code: 'QUARTIER_DISCOVERY' }));
   if (!plan) {
     throw new HttpError(500, 'Grille tarifaire quartier introuvable.');
   }
 
   const blocksCount = await GeoBlock.countDocuments({ blockLeaderId: userId });
-  const residencesCount = await QuartierResidence.countDocuments({ registeredBy: userId, deletedAt: null });
+  const residencesCount = await QuartierResidence.countDocuments({
+    registeredBy: userId,
+    deletedAt: null,
+  });
 
   return {
     subscription: sub,
@@ -124,14 +130,14 @@ export async function checkResidenceQuota(userId: string): Promise<void> {
   if (isExpired) {
     throw new HttpError(
       403,
-      'Votre abonnement chef de secteur a expiré. Veuillez renouveler votre formule pour poursuivre le recensement de votre bloc.'
+      'Votre abonnement chef de secteur a expiré. Veuillez renouveler votre formule pour poursuivre le recensement de votre bloc.',
     );
   }
 
   if (usage.residencesCount >= plan.maxResidences) {
     throw new HttpError(
       403,
-      `Limite de recensement atteinte (${usage.residencesCount}/${plan.maxResidences} résidences). Passez à la formule supérieure pour recenser davantage de résidences.`
+      `Limite de recensement atteinte (${usage.residencesCount}/${plan.maxResidences} résidences). Passez à la formule supérieure pour recenser davantage de résidences.`,
     );
   }
 }

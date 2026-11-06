@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { PROPERTY_STATUSES, PROPERTY_TYPES, UNIT_STATUSES, UNIT_TYPES } from '../constants/statuses.js';
+import {
+  PROPERTY_STATUSES,
+  PROPERTY_TYPES,
+  UNIT_STATUSES,
+  UNIT_TYPES,
+} from '../constants/statuses.js';
 import { objectIdSchema, paginationSchema } from './common.js';
 
 const trimmed = (max: number) => z.string().trim().min(1).max(max);

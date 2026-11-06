@@ -116,12 +116,13 @@ export async function revokeMandate(req: Request, res: Response): Promise<void> 
   // Withdraw any active listings linked to this mandate immediately
   await Listing.updateMany(
     { mandateId: mandate._id, status: { $in: ['PUBLISHED', 'PENDING_REVIEW'] } },
-    { $set: { status: 'WITHDRAWN', moderationComment: 'Retiré suite à la révocation du mandat.' } }
+    { $set: { status: 'WITHDRAWN', moderationComment: 'Retiré suite à la révocation du mandat.' } },
   );
 
   res.locals.data = {
     mandate,
-    message: 'Le mandat a été révoqué. Les droits et annonces associées ont été immédiatement suspendus.',
+    message:
+      'Le mandat a été révoqué. Les droits et annonces associées ont été immédiatement suspendus.',
   };
 }
 
@@ -236,7 +237,10 @@ export async function decideOwnerOffer(req: Request, res: Response): Promise<voi
 
   // Check that the offer is for a listing of this owner
   const listing = await Listing.findById(offer.listingId);
-  if (!listing || (String(listing.publisherId) !== String(ownerId) && String(offer.ownerId) !== String(ownerId))) {
+  if (
+    !listing ||
+    (String(listing.publisherId) !== String(ownerId) && String(offer.ownerId) !== String(ownerId))
+  ) {
     throw new HttpError(403, 'Action non autorisée sur cette offre.');
   }
 

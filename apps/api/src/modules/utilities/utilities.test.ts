@@ -7,7 +7,10 @@ describe('utilities', () => {
   it('calcule la consommation et émet une facture', async () => {
     const manager = await createActor('PROPERTY_MANAGER');
     const base = `/api/v1/organizations/${manager.organizationId}`;
-    const meter = await api().post(`${base}/meters`).set(authed(manager)).send({ type: 'ELECTRICITY', label: 'Compteur général', unitPriceMinor: 100 });
+    const meter = await api()
+      .post(`${base}/meters`)
+      .set(authed(manager))
+      .send({ type: 'ELECTRICITY', label: 'Compteur général', unitPriceMinor: 100 });
 
     const reading = await api().post(`${base}/meter-readings`).set(authed(manager)).send({
       meterId: meter.body.data._id,
@@ -24,7 +27,10 @@ describe('utilities', () => {
   it('rejette un index inférieur au précédent', async () => {
     const manager = await createActor('PROPERTY_MANAGER');
     const base = `/api/v1/organizations/${manager.organizationId}`;
-    const meter = await api().post(`${base}/meters`).set(authed(manager)).send({ type: 'WATER', label: 'Compteur eau', unitPriceMinor: 50 });
+    const meter = await api()
+      .post(`${base}/meters`)
+      .set(authed(manager))
+      .send({ type: 'WATER', label: 'Compteur eau', unitPriceMinor: 50 });
     const response = await api().post(`${base}/meter-readings`).set(authed(manager)).send({
       meterId: meter.body.data._id,
       previousIndex: 500,
@@ -37,15 +43,25 @@ describe('utilities', () => {
   it('signale une consommation anormale après un historique stable', async () => {
     const manager = await createActor('PROPERTY_MANAGER');
     const base = `/api/v1/organizations/${manager.organizationId}`;
-    const meter = await api().post(`${base}/meters`).set(authed(manager)).send({ type: 'WATER', label: 'Compteur eau', unitPriceMinor: 50, anomalyMultiplier: 2 });
+    const meter = await api()
+      .post(`${base}/meters`)
+      .set(authed(manager))
+      .send({ type: 'WATER', label: 'Compteur eau', unitPriceMinor: 50, anomalyMultiplier: 2 });
 
-    for (const [index, day] of [['01', 100], ['02', 110], ['03', 105]] as const) {
-      const response = await api().post(`${base}/meter-readings`).set(authed(manager)).send({
-        meterId: meter.body.data._id,
-        previousIndex: 0,
-        currentIndex: day,
-        readAt: `2026-0${index}-01`,
-      });
+    for (const [index, day] of [
+      ['01', 100],
+      ['02', 110],
+      ['03', 105],
+    ] as const) {
+      const response = await api()
+        .post(`${base}/meter-readings`)
+        .set(authed(manager))
+        .send({
+          meterId: meter.body.data._id,
+          previousIndex: 0,
+          currentIndex: day,
+          readAt: `2026-0${index}-01`,
+        });
       expect(response.body.data.abnormal).toBe(false);
     }
 
@@ -60,7 +76,10 @@ describe('utilities', () => {
 
   it('refuse l’OCR tant qu’aucun fournisseur n’est branché', async () => {
     const manager = await createActor('PROPERTY_MANAGER');
-    const response = await api().post(`/api/v1/organizations/${manager.organizationId}/meter-readings/ocr`).set(authed(manager)).send({});
+    const response = await api()
+      .post(`/api/v1/organizations/${manager.organizationId}/meter-readings/ocr`)
+      .set(authed(manager))
+      .send({});
     expect(response.status).toBe(501);
     expect(response.body.error.message).toContain('OCR');
   });

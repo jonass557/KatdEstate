@@ -53,7 +53,9 @@ export function renderPdf(input: PdfDocumentInput): Promise<Buffer> {
     }
 
     if (input.table && input.table.rows.length > 0) {
-      const width = (doc.page.width - doc.page.margins.left - doc.page.margins.right) / input.table.columns.length;
+      const width =
+        (doc.page.width - doc.page.margins.left - doc.page.margins.right) /
+        input.table.columns.length;
       doc.fontSize(9).fillColor('#0f172a');
       input.table.columns.forEach((column, index) => {
         doc.text(column, doc.page.margins.left + index * width, doc.y, { width, continued: false });

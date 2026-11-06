@@ -22,13 +22,23 @@ const planUpdate = z.object({
   priceMinor: z.number().int().nonnegative().optional(),
   currency: z.string().length(3).optional(),
   trialDays: z.number().int().nonnegative().optional(),
-  limits: z.object({ properties: z.number().int(), users: z.number().int(), units: z.number().int() }).optional(),
+  limits: z
+    .object({ properties: z.number().int(), users: z.number().int(), units: z.number().int() })
+    .optional(),
   features: z.array(z.string()).optional(),
 });
 
-function respond(handler: (req: import('express').Request, res: import('express').Response) => Promise<void>) {
-  return (req: import('express').Request, res: import('express').Response, next: (error: unknown) => void) => {
-    handler(req, res).then(() => sendSuccess(res, res.locals.data)).catch(next);
+function respond(
+  handler: (req: import('express').Request, res: import('express').Response) => Promise<void>,
+) {
+  return (
+    req: import('express').Request,
+    res: import('express').Response,
+    next: (error: unknown) => void,
+  ) => {
+    handler(req, res)
+      .then(() => sendSuccess(res, res.locals.data))
+      .catch(next);
   };
 }
 
@@ -43,17 +53,40 @@ export function createPlatformRouter(config: AppConfig) {
   router.delete('/owners/:id', respond(service.deleteOwner));
   router.patch('/owners/:id/subscription', respond(service.updateOwnerSubscription));
   router.get('/organizations', respond(service.listOrganizations));
-  router.post('/organizations/:id/suspend', validateRequest(z.object({ id: objectIdSchema }), 'params'), respond(service.suspendOrganization));
-  router.post('/organizations/:id/reactivate', validateRequest(z.object({ id: objectIdSchema }), 'params'), respond(service.reactivateOrganization));
+  router.post(
+    '/organizations/:id/suspend',
+    validateRequest(z.object({ id: objectIdSchema }), 'params'),
+    respond(service.suspendOrganization),
+  );
+  router.post(
+    '/organizations/:id/reactivate',
+    validateRequest(z.object({ id: objectIdSchema }), 'params'),
+    respond(service.reactivateOrganization),
+  );
   router.get('/plans', respond(service.listPlans));
-  router.patch('/plans/:code', validateRequest(z.object({ code: z.enum(PLAN_CODE_VALUES) }), 'params'), validateRequest(planUpdate), respond(service.updatePlan));
+  router.patch(
+    '/plans/:code',
+    validateRequest(z.object({ code: z.enum(PLAN_CODE_VALUES) }), 'params'),
+    validateRequest(planUpdate),
+    respond(service.updatePlan),
+  );
   router.get('/flags', respond(service.listFlags));
-  router.put('/flags/:key', validateRequest(z.object({ key: z.enum(FEATURE_FLAGS) }), 'params'), validateRequest(z.object({ enabled: z.boolean() })), respond(service.setFlag));
+  router.put(
+    '/flags/:key',
+    validateRequest(z.object({ key: z.enum(FEATURE_FLAGS) }), 'params'),
+    validateRequest(z.object({ enabled: z.boolean() })),
+    respond(service.setFlag),
+  );
   router.get('/support-tickets', respond(service.listTickets));
   router.post(
     '/impersonate',
     validateRequest(z.object({ ticketId: objectIdSchema, userId: objectIdSchema })),
-    (req, res, next) => { service.impersonate(config, req, res).then(() => sendSuccess(res, res.locals.data)).catch(next); },
+    (req, res, next) => {
+      service
+        .impersonate(config, req, res)
+        .then(() => sendSuccess(res, res.locals.data))
+        .catch(next);
+    },
   );
 
   return router;

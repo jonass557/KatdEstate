@@ -69,7 +69,9 @@ export function PortalShell() {
               className={({ isActive }) =>
                 cn(
                   'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm',
-                  isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted',
                 )
               }
             >

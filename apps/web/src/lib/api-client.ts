@@ -193,8 +193,7 @@ axiosInstance.interceptors.response.use(
       // Ne JAMAIS déconnecter automatiquement l'utilisateur lors d'un échec sur une requête de données
       // (ex: /dashboard, /properties, /notifications). On vérifie s'il existe une session locale active.
       const hasActiveSession =
-        typeof localStorage !== 'undefined' &&
-        !!localStorage.getItem('katdestate_active_session');
+        typeof localStorage !== 'undefined' && !!localStorage.getItem('katdestate_active_session');
 
       const url = config.url || '';
       const isAuthCheck = url.includes('/auth/me') || url.includes('/auth/refresh');

@@ -8,23 +8,47 @@ describe('finance avancée', () => {
     const accountant = await createActor('ACCOUNTANT');
     const base = `/api/v1/organizations/${accountant.organizationId}`;
 
-    await api().post(`${base}/transactions`).set(authed(accountant)).send({ direction: 'INCOME', category: 'OTHER', amountMinor: 300_000, date: '2026-01-15', label: 'Loyer encaissé' });
-    await api().post(`${base}/transactions`).set(authed(accountant)).send({ direction: 'EXPENSE', category: 'ELECTRICITY', amountMinor: 40_000, date: '2026-01-20', label: 'Facture Senelec' });
-    await api().post(`${base}/transactions`).set(authed(accountant)).send({ direction: 'EXPENSE', category: 'MAINTENANCE', amountMinor: 25_000, date: '2026-02-02', label: 'Réparation' });
+    await api().post(`${base}/transactions`).set(authed(accountant)).send({
+      direction: 'INCOME',
+      category: 'OTHER',
+      amountMinor: 300_000,
+      date: '2026-01-15',
+      label: 'Loyer encaissé',
+    });
+    await api().post(`${base}/transactions`).set(authed(accountant)).send({
+      direction: 'EXPENSE',
+      category: 'ELECTRICITY',
+      amountMinor: 40_000,
+      date: '2026-01-20',
+      label: 'Facture Senelec',
+    });
+    await api().post(`${base}/transactions`).set(authed(accountant)).send({
+      direction: 'EXPENSE',
+      category: 'MAINTENANCE',
+      amountMinor: 25_000,
+      date: '2026-02-02',
+      label: 'Réparation',
+    });
 
-    const report = await api().get(`${base}/reports/finance?from=2026-01-01&to=2026-03-31`).set(authed(accountant));
+    const report = await api()
+      .get(`${base}/reports/finance?from=2026-01-01&to=2026-03-31`)
+      .set(authed(accountant));
     expect(report.body.data.incomeMinor).toBe(300_000);
     expect(report.body.data.expenseMinor).toBe(65_000);
     expect(report.body.data.netMinor).toBe(235_000);
     expect(report.body.data.expenseByCategory).toHaveLength(2);
 
-    const january = await api().get(`${base}/reports/finance?from=2026-01-01&to=2026-01-31`).set(authed(accountant));
+    const january = await api()
+      .get(`${base}/reports/finance?from=2026-01-01&to=2026-01-31`)
+      .set(authed(accountant));
     expect(january.body.data.expenseMinor).toBe(40_000);
   });
 
   it('présente la prévision comme une estimation, jamais comme une garantie', async () => {
     const accountant = await createActor('ACCOUNTANT');
-    const response = await api().get(`/api/v1/organizations/${accountant.organizationId}/reports/forecast`).set(authed(accountant));
+    const response = await api()
+      .get(`/api/v1/organizations/${accountant.organizationId}/reports/forecast`)
+      .set(authed(accountant));
     expect(response.status).toBe(200);
     expect(response.body.data.disclaimer).toContain('Estimation calculée');
     expect(response.body.data.disclaimer).toContain('pas une garantie');
@@ -33,7 +57,13 @@ describe('finance avancée', () => {
   it('exporte les transactions en CSV', async () => {
     const accountant = await createActor('ACCOUNTANT');
     const base = `/api/v1/organizations/${accountant.organizationId}`;
-    await api().post(`${base}/transactions`).set(authed(accountant)).send({ direction: 'EXPENSE', category: 'WATER', amountMinor: 12_000, date: '2026-03-01', label: 'Eau' });
+    await api().post(`${base}/transactions`).set(authed(accountant)).send({
+      direction: 'EXPENSE',
+      category: 'WATER',
+      amountMinor: 12_000,
+      date: '2026-03-01',
+      label: 'Eau',
+    });
     const response = await api().get(`${base}/transactions/export`).set(authed(accountant));
     expect(response.headers['content-type']).toContain('text/csv');
     expect(response.text).toContain('WATER');

@@ -7,6 +7,7 @@ Chaque jalon (Prompt) livre des briques métier réelles, typées, testées et i
 ---
 
 ## Jalon 1 (PROMPT 1/5) — Fondations & Gestion Immobilière (LIVRÉ & VALIDÉ)
+
 - Architecture Monorepo workspaces (`apps/web`, `apps/api`, `packages/shared`).
 - Documentation complète (`ARCHITECTURE.md`, `PRODUCT_REQUIREMENTS.md`, `DATABASE_SCHEMA.md`, `API_SPECIFICATION.md`, `SECURITY.md`, `ROADMAP.md`, `PROJECT_STATUS.md`).
 - Authentification complète : inscription, connexion, déconnexion, refresh tokens avec rotation & familles, vérification email, réinitialisation et changement de mot de passe.
@@ -20,6 +21,7 @@ Chaque jalon (Prompt) livre des briques métier réelles, typées, testées et i
 ---
 
 ## Jalon 2 (PROMPT 2/5) — Finances, Loyers & Trésorerie (LIVRÉ & VALIDÉ)
+
 - Système complet de gestion des loyers : échéanciers mensuels, trimestriels, semestriels et annuels.
 - Suivi précis : payés, impayés, partiellement payés, en retard, annulés.
 - Moteur de pénalités de retard : application automatisée selon seuil de jours, période de grâce et taux.
@@ -36,6 +38,7 @@ Chaque jalon (Prompt) livre des briques métier réelles, typées, testées et i
 ---
 
 ## Jalon 3 (PROMPT 3/5) — Portails, Documents, Maintenance, Analytics & IA (LIVRÉ & VALIDÉ)
+
 - **Portail Locataire autonome** : Tableau de bord personnel, consultation du bail actif, suivi des loyers et échéances, téléchargement des quittances et factures PDF, signalement d'incidents avec photos et priorités, messagerie directe avec le gestionnaire.
 - **Portail Propriétaire professionnel** : Vue consolidée multi-immeubles, tableau de bord des rendements (taux d'occupation, loyers perçus, dépenses, cashflow net, arriérés), état détaillé par propriété, suivi des baux et des interventions, journal d'audit des actions gestionnaires, téléchargement du rapport exécutif PDF.
 - **Gestion documentaire centrale** : Classement par 10 catégories (Baux, Pièces d'identité, Dossiers locataires, Propriétaires, Titres de propriété, Factures, Quittances, Rapports, Maintenance, Photos), suivi en temps réel de la jauge de stockage SaaS (Mo utilisés / forfait), recherche textuelle, alertes d'expiration à 60 jours, archivage, restauration et suppression sécurisée.
@@ -50,6 +53,7 @@ Chaque jalon (Prompt) livre des briques métier réelles, typées, testées et i
 ---
 
 ## Jalon 4 (PROMPT 4/5) — Communication avancée, Intégrations & Comptabilité SYSCOHADA
+
 - Passerelles de paiement Mobile Money en production (MTN MoMo, Orange Money, Wave) et webhooks sécurisés.
 - Rapprochement bancaire et plan comptable SYSCOHADA révisé.
 - Automatisations avancées et relances programmées (SMS / WhatsApp).
@@ -57,6 +61,7 @@ Chaque jalon (Prompt) livre des briques métier réelles, typées, testées et i
 ---
 
 ## Jalon 5 (PROMPT 5/5) — Optimisations PWA, Mode Hors-ligne & Mise en Production
+
 - Optimisations PWA complètes, synchronisation hors-ligne avec cache IndexedDB.
 - Monitoring de production, audit de sécurité et déploiement cloud final.
 

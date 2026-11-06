@@ -15,7 +15,7 @@ import {
   Compass,
   Smartphone,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -80,7 +80,8 @@ const SEED_LISTINGS: MarketplaceListing[] = [
   {
     _id: 'seed-1',
     title: 'Studio Meublé Tout Confort — Climatisation & Wifi Fibre',
-    description: 'Magnifique studio meublé situé au cœur de la zone résidentielle. Idéal pour séjours d’affaires, vacances ou courtes durées. Cuisine équipée, chauffe-eau, ménage inclus et sécurité 24h/24.',
+    description:
+      'Magnifique studio meublé situé au cœur de la zone résidentielle. Idéal pour séjours d’affaires, vacances ou courtes durées. Cuisine équipée, chauffe-eau, ménage inclus et sécurité 24h/24.',
     category: 'STUDIO_MEUBLE_JOURNALIER',
     propertyType: 'STUDIO_MEUBLE_JOURNALIER',
     transactionType: 'RENT',
@@ -99,9 +100,16 @@ const SEED_LISTINGS: MarketplaceListing[] = [
     bathrooms: 1,
     isVerified: true,
     photos: [
-      { url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80', isPrimary: true },
-      { url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80' },
-      { url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80' },
+      {
+        url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
+        isPrimary: true,
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80',
+      },
     ],
     contact: {
       name: 'M. Koffi N’Dri (Gestionnaire Agréé)',
@@ -113,7 +121,8 @@ const SEED_LISTINGS: MarketplaceListing[] = [
   {
     _id: 'seed-2',
     title: 'Appartement Haut Standing 4 Pièces Meublé avec Vue Panoramique',
-    description: 'Superbe appartement 4 pièces meublé composé d’un vaste salon lumineux, 3 chambres autonomes, dressing, cuisine équipée avec buanderie et balcon filant. Parking sécurisé en sous-sol.',
+    description:
+      'Superbe appartement 4 pièces meublé composé d’un vaste salon lumineux, 3 chambres autonomes, dressing, cuisine équipée avec buanderie et balcon filant. Parking sécurisé en sous-sol.',
     category: 'APPARTEMENT_MEUBLE',
     propertyType: 'APPARTEMENT_MEUBLE',
     transactionType: 'RENT',
@@ -134,8 +143,13 @@ const SEED_LISTINGS: MarketplaceListing[] = [
     isTitled: true,
     landTitleNumber: 'TF-68421/ABJ',
     photos: [
-      { url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80', isPrimary: true },
-      { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80' },
+      {
+        url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
+        isPrimary: true,
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
+      },
     ],
     contact: {
       name: 'SCI Diallo & Associés',
@@ -147,7 +161,8 @@ const SEED_LISTINGS: MarketplaceListing[] = [
   {
     _id: 'seed-3',
     title: 'Chambre Moderne Autonome avec Douche & Balcon Privatif',
-    description: 'Chambre moderne spacieuse dans un immeuble récent et propre. Douche et WC internes, placard intégré, carrelage blanc et compteur individuel CIE/SODECI. Quartier paisible et accessible.',
+    description:
+      'Chambre moderne spacieuse dans un immeuble récent et propre. Douche et WC internes, placard intégré, carrelage blanc et compteur individuel CIE/SODECI. Quartier paisible et accessible.',
     category: 'CHAMBRE_MODERNE',
     propertyType: 'CHAMBRE_MODERNE',
     transactionType: 'RENT',
@@ -166,8 +181,13 @@ const SEED_LISTINGS: MarketplaceListing[] = [
     bathrooms: 1,
     isVerified: true,
     photos: [
-      { url: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=800&q=80', isPrimary: true },
-      { url: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80' },
+      {
+        url: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=800&q=80',
+        isPrimary: true,
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80',
+      },
     ],
     contact: {
       name: 'Mme Bakayoko Fatoumata',
@@ -179,7 +199,8 @@ const SEED_LISTINGS: MarketplaceListing[] = [
   {
     _id: 'seed-4',
     title: 'Chambre Simple Aérée dans Cour Propre et Clôturée',
-    description: 'Chambre simple accessible, bien aérée avec plafondStaff, fenêtre vitrée avec moustiquaire. Eau courante dans la cour, toilette extérieure carrelée et sécurité nocturne assurée.',
+    description:
+      'Chambre simple accessible, bien aérée avec plafondStaff, fenêtre vitrée avec moustiquaire. Eau courante dans la cour, toilette extérieure carrelée et sécurité nocturne assurée.',
     category: 'CHAMBRE_SIMPLE',
     propertyType: 'CHAMBRE_SIMPLE',
     transactionType: 'RENT',
@@ -198,7 +219,10 @@ const SEED_LISTINGS: MarketplaceListing[] = [
     bathrooms: 1,
     isVerified: true,
     photos: [
-      { url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80', isPrimary: true },
+      {
+        url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
+        isPrimary: true,
+      },
     ],
     contact: {
       name: 'M. Yao Konan',
@@ -210,7 +234,8 @@ const SEED_LISTINGS: MarketplaceListing[] = [
   {
     _id: 'seed-5',
     title: 'Superbe Villa Duplex 5 Pièces avec Jardin et Piscine',
-    description: 'Villa contemporaine d’architecte avec finitions de luxe. Grand salon double hauteur, suite parentale avec dressing et jacuzzi, cuisine américaine, garage 2 véhicules et groupe électrogène automatique.',
+    description:
+      'Villa contemporaine d’architecte avec finitions de luxe. Grand salon double hauteur, suite parentale avec dressing et jacuzzi, cuisine américaine, garage 2 véhicules et groupe électrogène automatique.',
     category: 'VILLA',
     propertyType: 'VILLA',
     transactionType: 'SALE',
@@ -231,9 +256,16 @@ const SEED_LISTINGS: MarketplaceListing[] = [
     isTitled: true,
     landTitleNumber: 'ACD-0145892-CI',
     photos: [
-      { url: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80', isPrimary: true },
-      { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80' },
-      { url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80' },
+      {
+        url: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80',
+        isPrimary: true,
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
+      },
     ],
     contact: {
       name: 'Agence Immobilière Ivoire (Agréée KatdEstate)',
@@ -245,7 +277,8 @@ const SEED_LISTINGS: MarketplaceListing[] = [
   {
     _id: 'seed-6',
     title: 'Terrain Foncier Borné 600 m² avec Approbation Ministérielle & Titre Foncier',
-    description: 'Parcelle viabilisée avec eau et électricité en bordure de voie bitumée. Idéal pour construction immédiate de villa duplex ou immeuble de rapport locatif. Acte coutumier visé par la chefferie.',
+    description:
+      'Parcelle viabilisée avec eau et électricité en bordure de voie bitumée. Idéal pour construction immédiate de villa duplex ou immeuble de rapport locatif. Acte coutumier visé par la chefferie.',
     category: 'LAND',
     propertyType: 'LAND',
     transactionType: 'SALE',
@@ -264,7 +297,10 @@ const SEED_LISTINGS: MarketplaceListing[] = [
     isTitled: true,
     landTitleNumber: 'TF-90412-RIVIERA',
     photos: [
-      { url: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80', isPrimary: true },
+      {
+        url: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
+        isPrimary: true,
+      },
     ],
     contact: {
       name: 'Chefferie Coutumière & M. Kouamé',
@@ -332,20 +368,20 @@ export function MarketplacePage() {
     if (!isAuthenticated) {
       setAuthPromptOpen(true);
     } else {
-      navigate(`/messages?target=${encodeURIComponent(listing.contact?.name || 'Bailleur')}&title=${encodeURIComponent(listing.title)}`);
+      navigate(
+        `/messages?target=${encodeURIComponent(listing.contact?.name || 'Bailleur')}&title=${encodeURIComponent(listing.title)}`,
+      );
     }
   };
 
   return (
     <div className="min-h-screen bg-background pb-16">
-      
       {/* 1. Header Banner */}
       <div className="border-b border-border bg-card px-4 py-8 sm:px-8">
         <div className="mx-auto max-w-6xl space-y-4">
-          
           <div className="flex flex-wrap items-center justify-between gap-3">
             <BackButton to="/dashboard" label="Tableau de bord" />
-            
+
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
@@ -367,7 +403,8 @@ export function MarketplacePage() {
               Chambres, Studios Meublés, Appartements & Terrains
             </h1>
             <p className="max-w-2xl text-xs sm:text-sm text-muted-foreground">
-              Trouvez votre logement vérifié en location journalière, mensuelle ou vente définitive avec localisation GPS et contact direct.
+              Trouvez votre logement vérifié en location journalière, mensuelle ou vente définitive
+              avec localisation GPS et contact direct.
             </p>
           </div>
 
@@ -420,24 +457,27 @@ export function MarketplacePage() {
               </button>
             ))}
           </div>
-
         </div>
       </div>
 
       {/* 2. Listings Grid */}
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 space-y-4">
-        
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{filteredListings.length} bien(s) répertorié(s)</span>
-          <span className="font-semibold text-emerald-500">Localisation GPS & Photos Vérifiées</span>
+          <span className="font-semibold text-emerald-500">
+            Localisation GPS & Photos Vérifiées
+          </span>
         </div>
 
         {filteredListings.length === 0 ? (
           <div className="p-12 rounded-3xl border border-dashed border-border text-center space-y-3 bg-card/40">
             <Building2 className="size-12 mx-auto text-muted-foreground/40" />
-            <h3 className="text-base font-bold text-foreground">Aucun bien ne correspond à ces critères</h3>
+            <h3 className="text-base font-bold text-foreground">
+              Aucun bien ne correspond à ces critères
+            </h3>
             <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-              Essayez de sélectionner une autre catégorie ou réinitialisez vos filtres pour voir l'ensemble des logements.
+              Essayez de sélectionner une autre catégorie ou réinitialisez vos filtres pour voir
+              l'ensemble des logements.
             </p>
             <Button
               size="sm"
@@ -507,7 +547,8 @@ export function MarketplacePage() {
                       <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                         <MapPin className="size-3.5 text-emerald-500 shrink-0" />
                         <span className="truncate">
-                          {item.location.district ? `${item.location.district}, ` : ''}{item.location.city}
+                          {item.location.district ? `${item.location.district}, ` : ''}
+                          {item.location.city}
                         </span>
                       </div>
 
@@ -537,7 +578,11 @@ export function MarketplacePage() {
                     <span className="text-[11px] font-semibold text-muted-foreground truncate max-w-[170px]">
                       {item.contact?.name || item.agentProfileId?.agencyName || 'Bailleur Vérifié'}
                     </span>
-                    <Button size="sm" variant="outline" className="h-7 text-xs font-bold rounded-lg border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs font-bold rounded-lg border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                    >
                       Voir détails
                     </Button>
                   </div>
@@ -552,7 +597,6 @@ export function MarketplacePage() {
       {selectedListing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm overflow-y-auto animate-in fade-in">
           <div className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-card border border-border p-6 sm:p-8 shadow-2xl text-foreground">
-            
             <button
               onClick={() => setSelectedListing(null)}
               className="absolute right-4 top-4 rounded-xl p-2 text-muted-foreground hover:bg-muted"
@@ -578,12 +622,16 @@ export function MarketplacePage() {
                 )}
               </div>
 
-              <h2 className="text-xl sm:text-2xl font-black text-foreground">{selectedListing.title}</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-foreground">
+                {selectedListing.title}
+              </h2>
 
               <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                 <MapPin className="size-4 text-emerald-500 shrink-0" />
                 <span>
-                  {selectedListing.location.district ? `${selectedListing.location.district}, ` : ''}
+                  {selectedListing.location.district
+                    ? `${selectedListing.location.district}, `
+                    : ''}
                   {selectedListing.location.city}
                   {selectedListing.location.address ? ` — ${selectedListing.location.address}` : ''}
                 </span>
@@ -592,7 +640,11 @@ export function MarketplacePage() {
               <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
                 {selectedListing.priceMinor.toLocaleString('fr-FR')} {selectedListing.currency}
                 <span className="text-sm font-normal text-muted-foreground">
-                  {selectedListing.billingFrequency === 'DAILY' ? ' / nuitée' : selectedListing.transactionType === 'RENT' ? ' / mois' : ''}
+                  {selectedListing.billingFrequency === 'DAILY'
+                    ? ' / nuitée'
+                    : selectedListing.transactionType === 'RENT'
+                      ? ' / mois'
+                      : ''}
                 </span>
               </p>
             </div>
@@ -617,7 +669,9 @@ export function MarketplacePage() {
                 type="button"
                 onClick={() => setActiveTab('info')}
                 className={`px-4 py-2.5 border-b-2 transition-colors ${
-                  activeTab === 'info' ? 'border-emerald-500 text-emerald-500 font-bold' : 'border-transparent text-muted-foreground'
+                  activeTab === 'info'
+                    ? 'border-emerald-500 text-emerald-500 font-bold'
+                    : 'border-transparent text-muted-foreground'
                 }`}
               >
                 Caractéristiques & Description
@@ -626,7 +680,9 @@ export function MarketplacePage() {
                 type="button"
                 onClick={() => setActiveTab('map')}
                 className={`px-4 py-2.5 border-b-2 transition-colors ${
-                  activeTab === 'map' ? 'border-emerald-500 text-emerald-500 font-bold' : 'border-transparent text-muted-foreground'
+                  activeTab === 'map'
+                    ? 'border-emerald-500 text-emerald-500 font-bold'
+                    : 'border-transparent text-muted-foreground'
                 }`}
               >
                 Carte & Localisation GPS
@@ -635,7 +691,9 @@ export function MarketplacePage() {
                 type="button"
                 onClick={handleProtectedContact}
                 className={`px-4 py-2.5 border-b-2 transition-colors ${
-                  activeTab === 'contact' ? 'border-emerald-500 text-emerald-500 font-bold' : 'border-transparent text-muted-foreground'
+                  activeTab === 'contact'
+                    ? 'border-emerald-500 text-emerald-500 font-bold'
+                    : 'border-transparent text-muted-foreground'
                 }`}
               >
                 Contacter le Bailleur / Agent
@@ -648,7 +706,9 @@ export function MarketplacePage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-muted/40 p-4 rounded-2xl border border-border">
                   <div>
                     <span className="text-muted-foreground block text-[11px]">Superficie</span>
-                    <strong className="text-foreground">{selectedListing.surfaceM2 ? `${selectedListing.surfaceM2} m²` : '—'}</strong>
+                    <strong className="text-foreground">
+                      {selectedListing.surfaceM2 ? `${selectedListing.surfaceM2} m²` : '—'}
+                    </strong>
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-[11px]">Chambres</span>
@@ -684,7 +744,8 @@ export function MarketplacePage() {
                     Position GPS certifiée du bien
                   </span>
                   <span className="text-muted-foreground font-mono">
-                    Lat: {selectedListing.location.latitude ?? 5.3599}, Long: {selectedListing.location.longitude ?? -4.0082}
+                    Lat: {selectedListing.location.latitude ?? 5.3599}, Long:{' '}
+                    {selectedListing.location.longitude ?? -4.0082}
                   </span>
                 </div>
 
@@ -715,9 +776,13 @@ export function MarketplacePage() {
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-foreground">
-                          {selectedListing.contact?.name || selectedListing.agentProfileId?.agencyName || 'Propriétaire Direct'}
+                          {selectedListing.contact?.name ||
+                            selectedListing.agentProfileId?.agencyName ||
+                            'Propriétaire Direct'}
                         </h4>
-                        <p className="text-xs text-muted-foreground">Annonceur certifié KatdEstate</p>
+                        <p className="text-xs text-muted-foreground">
+                          Annonceur certifié KatdEstate
+                        </p>
                       </div>
                     </div>
 
@@ -727,7 +792,12 @@ export function MarketplacePage() {
                         className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border text-foreground font-bold text-xs hover:border-emerald-500 transition-colors shadow-sm"
                       >
                         <Phone className="size-4 text-emerald-500" />
-                        <span>Appeler : {selectedListing.contact?.phone || selectedListing.agentProfileId?.phone || '+225 07 00 00 00 00'}</span>
+                        <span>
+                          Appeler :{' '}
+                          {selectedListing.contact?.phone ||
+                            selectedListing.agentProfileId?.phone ||
+                            '+225 07 00 00 00 00'}
+                        </span>
                       </a>
 
                       <a
@@ -754,9 +824,13 @@ export function MarketplacePage() {
                 ) : (
                   <div className="p-6 rounded-2xl bg-purple-950/40 border border-purple-500/30 text-center space-y-3">
                     <Lock className="size-8 text-[#00e676] mx-auto" />
-                    <h4 className="text-sm font-bold text-white">Coordonnées Réservées aux Membres</h4>
+                    <h4 className="text-sm font-bold text-white">
+                      Coordonnées Réservées aux Membres
+                    </h4>
                     <p className="text-xs text-purple-200 max-w-md mx-auto">
-                      Pour accéder au contact téléphonique, échanger par WhatsApp ou débuter une conversation sur la messagerie de la plateforme, vous devez posséder un compte KatdEstate.
+                      Pour accéder au contact téléphonique, échanger par WhatsApp ou débuter une
+                      conversation sur la messagerie de la plateforme, vous devez posséder un compte
+                      KatdEstate.
                     </p>
                     <div className="flex justify-center gap-3 pt-2">
                       <Link
@@ -808,7 +882,6 @@ export function MarketplacePage() {
                 </Button>
               </div>
             </div>
-
           </div>
         </div>
       )}
@@ -817,7 +890,6 @@ export function MarketplacePage() {
       {authPromptOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="bg-[#15042c] border border-purple-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-5 shadow-2xl text-white text-center">
-            
             <div className="size-12 rounded-2xl bg-emerald-500/20 text-[#00e676] border border-emerald-500/30 flex items-center justify-center mx-auto">
               <Lock className="size-6" />
             </div>
@@ -825,7 +897,8 @@ export function MarketplacePage() {
             <div className="space-y-2">
               <h3 className="text-lg font-black">Accès Direct au Bailleur</h3>
               <p className="text-xs text-purple-200">
-                Créez votre compte en 30 secondes pour échanger en direct avec le propriétaire/agent, planifier une visite ou faire une offre.
+                Créez votre compte en 30 secondes pour échanger en direct avec le
+                propriétaire/agent, planifier une visite ou faire une offre.
               </p>
             </div>
 
@@ -865,7 +938,6 @@ export function MarketplacePage() {
           toast({ title: 'Nouvelle annonce ajoutée à la marketplace !', variant: 'success' });
         }}
       />
-
     </div>
   );
 }

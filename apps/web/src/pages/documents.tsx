@@ -92,10 +92,7 @@ export function DocumentsPage() {
     queryUrl,
   );
 
-  const expiringQuery = useOrgQuery<DocumentItem[]>(
-    ['documents-expiring'],
-    '/documents/expiring',
-  );
+  const expiringQuery = useOrgQuery<DocumentItem[]>(['documents-expiring'], '/documents/expiring');
 
   // Mutations
   const uploadMutation = useMutation({
@@ -116,8 +113,7 @@ export function DocumentsPage() {
   });
 
   const archiveMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiRequest(`${base}/documents/${id}/archive`, { method: 'POST' }),
+    mutationFn: (id: string) => apiRequest(`${base}/documents/${id}/archive`, { method: 'POST' }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['documents'] });
       toast({ title: 'Document archivé', variant: 'success' });
@@ -125,8 +121,7 @@ export function DocumentsPage() {
   });
 
   const restoreMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiRequest(`${base}/documents/${id}/restore`, { method: 'POST' }),
+    mutationFn: (id: string) => apiRequest(`${base}/documents/${id}/restore`, { method: 'POST' }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['documents'] });
       toast({ title: 'Document restauré', variant: 'success' });
@@ -134,8 +129,7 @@ export function DocumentsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiRequest(`${base}/documents/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => apiRequest(`${base}/documents/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['documents'] });
       void client.invalidateQueries({ queryKey: ['storage-usage'] });
@@ -172,7 +166,10 @@ export function DocumentsPage() {
         title="Gestion Documentaire"
         description="Bibliothèque centrale et sécurisée : baux, quittances, pièces d'identité et titres fonciers."
         actions={
-          <Button onClick={() => setUploadModalOpen(true)} className="inline-flex items-center gap-1.5">
+          <Button
+            onClick={() => setUploadModalOpen(true)}
+            className="inline-flex items-center gap-1.5"
+          >
             <Plus className="size-4" />
             Importer un document
           </Button>
@@ -191,7 +188,8 @@ export function DocumentsPage() {
                 <div>
                   <p className="text-sm font-semibold">Stockage SaaS · Formule {storage.tier}</p>
                   <p className="text-xs text-muted-foreground">
-                    {storage.usedMb} Mo utilisés sur {storage.quotaMb} Mo ({storage.documentCount} document{storage.documentCount > 1 ? 's' : ''})
+                    {storage.usedMb} Mo utilisés sur {storage.quotaMb} Mo ({storage.documentCount}{' '}
+                    document{storage.documentCount > 1 ? 's' : ''})
                   </p>
                 </div>
               </div>
@@ -223,9 +221,14 @@ export function DocumentsPage() {
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {expiringQuery.data.map((doc) => (
-              <div key={doc._id} className="flex items-center justify-between rounded-lg bg-background/80 p-2 text-xs">
+              <div
+                key={doc._id}
+                className="flex items-center justify-between rounded-lg bg-background/80 p-2 text-xs"
+              >
                 <span className="truncate font-medium">{doc.title}</span>
-                <Badge className="border border-border bg-muted text-muted-foreground">{doc.expiresAt?.slice(0, 10)}</Badge>
+                <Badge className="border border-border bg-muted text-muted-foreground">
+                  {doc.expiresAt?.slice(0, 10)}
+                </Badge>
               </div>
             ))}
           </div>
@@ -270,7 +273,9 @@ export function DocumentsPage() {
       {/* Liste des documents */}
       <div className="space-y-2">
         {isLoading && (
-          <p className="py-8 text-center text-xs text-muted-foreground">Chargement des documents…</p>
+          <p className="py-8 text-center text-xs text-muted-foreground">
+            Chargement des documents…
+          </p>
         )}
 
         {!isLoading && documents?.length === 0 && (
@@ -292,10 +297,16 @@ export function DocumentsPage() {
               <div>
                 <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                   {doc.title}
-                  {doc.isArchived && <Badge className="border border-border bg-muted text-muted-foreground">Archivé</Badge>}
+                  {doc.isArchived && (
+                    <Badge className="border border-border bg-muted text-muted-foreground">
+                      Archivé
+                    </Badge>
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Catégorie : {doc.category || doc.type} · Version {doc.version} · {formatBytes(doc.size)} · Déposé le {new Date(doc.createdAt).toLocaleDateString('fr-FR')}
+                  Catégorie : {doc.category || doc.type} · Version {doc.version} ·{' '}
+                  {formatBytes(doc.size)} · Déposé le{' '}
+                  {new Date(doc.createdAt).toLocaleDateString('fr-FR')}
                 </p>
               </div>
             </div>
@@ -356,11 +367,7 @@ export function DocumentsPage() {
       </div>
 
       {/* Modale d'import de document */}
-      <Modal
-        open={uploadModalOpen}
-        onOpenChange={setUploadModalOpen}
-        title="Importer un document"
-      >
+      <Modal open={uploadModalOpen} onOpenChange={setUploadModalOpen} title="Importer un document">
         <form onSubmit={handleUpload} className="space-y-4 text-sm">
           <div className="space-y-1">
             <label className="text-xs font-medium">Titre du document *</label>
@@ -370,7 +377,11 @@ export function DocumentsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <label className="text-xs font-medium">Catégorie *</label>
-              <select name="category" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+              <select
+                name="category"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                required
+              >
                 {CATEGORY_TABS.filter((t) => t.key !== 'ALL').map((t) => (
                   <option key={t.key} value={t.key}>
                     {t.label}

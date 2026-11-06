@@ -13,12 +13,33 @@ import { apiRequest } from '../lib/api-client';
 import { useOrgList, useOrgPath, useOrgQuery } from '../lib/query';
 import { AlertTriangle, Bell, Clock, Droplets, Wrench, Zap } from 'lucide-react';
 
-interface Ticket { _id: string; title: string; category: string; priority: string; status: string }
-interface MaintenanceStats { open: number; urgent: number; costMinor: number; averageResolutionDays: number }
+interface Ticket {
+  _id: string;
+  title: string;
+  category: string;
+  priority: string;
+  status: string;
+}
+interface MaintenanceStats {
+  open: number;
+  urgent: number;
+  costMinor: number;
+  averageResolutionDays: number;
+}
 
-const PRIORITY_LABELS: Record<string, string> = { LOW: 'Basse', MEDIUM: 'Moyenne', HIGH: 'Haute', URGENT: 'Urgente' };
+const PRIORITY_LABELS: Record<string, string> = {
+  LOW: 'Basse',
+  MEDIUM: 'Moyenne',
+  HIGH: 'Haute',
+  URGENT: 'Urgente',
+};
 const TICKET_STATUS: Record<string, string> = {
-  OPEN: 'Ouvert', ASSIGNED: 'Attribué', IN_PROGRESS: 'En cours', WAITING: 'En attente', RESOLVED: 'Résolu', CLOSED: 'Clos',
+  OPEN: 'Ouvert',
+  ASSIGNED: 'Attribué',
+  IN_PROGRESS: 'En cours',
+  WAITING: 'En attente',
+  RESOLVED: 'Résolu',
+  CLOSED: 'Clos',
 };
 
 export function MaintenancePage() {
@@ -31,20 +52,49 @@ export function MaintenancePage() {
 
   const create = useMutation({
     mutationFn: (body: unknown) => apiRequest(`${base}/maintenance`, { method: 'POST', body }),
-    onSuccess: () => { void client.invalidateQueries(); setOpen(false); toast({ title: 'Ticket ouvert', variant: 'success' }); },
-    onError: (error: Error) => toast({ title: 'Création impossible', description: error.message, variant: 'error' }),
+    onSuccess: () => {
+      void client.invalidateQueries();
+      setOpen(false);
+      toast({ title: 'Ticket ouvert', variant: 'success' });
+    },
+    onError: (error: Error) =>
+      toast({ title: 'Création impossible', description: error.message, variant: 'error' }),
   });
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Maintenance" description="Signalements, interventions et coûts." actions={<Button onClick={() => setOpen((value) => !value)}>Signaler un problème</Button>} />
+      <PageHeader
+        title="Maintenance"
+        description="Signalements, interventions et coûts."
+        actions={<Button onClick={() => setOpen((value) => !value)}>Signaler un problème</Button>}
+      />
 
       {stats.data ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Ouverts" value={String(stats.data.open)} hint="Tickets non clos" icon={Wrench} />
-          <StatCard label="Urgents" value={String(stats.data.urgent)} hint="Priorité urgente" icon={AlertTriangle} />
-          <StatCard label="Coût réel" value={stats.data.costMinor.toLocaleString('fr-FR')} hint="Interventions terminées" icon={Wrench} />
-          <StatCard label="Délai moyen" value={`${stats.data.averageResolutionDays} j`} hint="Jusqu’à résolution" icon={Clock} />
+          <StatCard
+            label="Ouverts"
+            value={String(stats.data.open)}
+            hint="Tickets non clos"
+            icon={Wrench}
+          />
+          <StatCard
+            label="Urgents"
+            value={String(stats.data.urgent)}
+            hint="Priorité urgente"
+            icon={AlertTriangle}
+          />
+          <StatCard
+            label="Coût réel"
+            value={stats.data.costMinor.toLocaleString('fr-FR')}
+            hint="Interventions terminées"
+            icon={Wrench}
+          />
+          <StatCard
+            label="Délai moyen"
+            value={`${stats.data.averageResolutionDays} j`}
+            hint="Jusqu’à résolution"
+            icon={Clock}
+          />
         </div>
       ) : null}
 
@@ -60,28 +110,54 @@ export function MaintenancePage() {
               description: form.get('description') || undefined,
               priority: form.get('priority'),
             });
-            if (!parsed.success) { toast({ title: 'Formulaire invalide', description: parsed.error.issues[0]?.message, variant: 'error' }); return; }
+            if (!parsed.success) {
+              toast({
+                title: 'Formulaire invalide',
+                description: parsed.error.issues[0]?.message,
+                variant: 'error',
+              });
+              return;
+            }
             create.mutate(parsed.data);
           }}
         >
           <Input name="title" placeholder="Titre" required />
           <div className="grid gap-3 sm:grid-cols-2">
             <Input name="category" placeholder="Catégorie (plomberie, électricité…)" required />
-            <select name="priority" className="h-10 rounded-lg border border-input bg-background px-3 text-sm">
-              {Object.entries(PRIORITY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            <select
+              name="priority"
+              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+            >
+              {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
-          <textarea name="description" rows={3} placeholder="Description" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-          <Button type="submit" disabled={create.isPending}>Créer le ticket</Button>
+          <textarea
+            name="description"
+            rows={3}
+            placeholder="Description"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+          />
+          <Button type="submit" disabled={create.isPending}>
+            Créer le ticket
+          </Button>
         </form>
       ) : null}
 
       <div className="space-y-2">
         {(data?.data ?? []).map((ticket) => (
-          <div key={ticket._id} className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+          <div
+            key={ticket._id}
+            className="flex items-center justify-between rounded-xl border border-border px-4 py-3"
+          >
             <div>
               <p className="font-medium">{ticket.title}</p>
-              <p className="text-xs text-muted-foreground">{ticket.category} · {PRIORITY_LABELS[ticket.priority] ?? ticket.priority}</p>
+              <p className="text-xs text-muted-foreground">
+                {ticket.category} · {PRIORITY_LABELS[ticket.priority] ?? ticket.priority}
+              </p>
             </div>
             <Badge>{TICKET_STATUS[ticket.status] ?? ticket.status}</Badge>
           </div>
@@ -137,7 +213,10 @@ export function ExpensesPage() {
   const now = new Date();
   const from = `${now.getFullYear()}-01-01`;
   const to = `${now.getFullYear()}-12-31`;
-  const report = useOrgQuery<Report>(['report', from, to], `/reports/finance?from=${from}&to=${to}`);
+  const report = useOrgQuery<Report>(
+    ['report', from, to],
+    `/reports/finance?from=${from}&to=${to}`,
+  );
 
   const queryParams = new URLSearchParams({ pageSize: '50' });
   if (statusFilter) queryParams.set('status', statusFilter);
@@ -162,11 +241,13 @@ export function ExpensesPage() {
       setOpenCreate(false);
       toast({ title: 'Dépense enregistrée', variant: 'success' });
     },
-    onError: (error: Error) => toast({ title: 'Enregistrement impossible', description: error.message, variant: 'error' }),
+    onError: (error: Error) =>
+      toast({ title: 'Enregistrement impossible', description: error.message, variant: 'error' }),
   });
 
   const approve = useMutation({
-    mutationFn: (id: string) => apiRequest(`${base}/transactions/${id}/approve`, { method: 'POST' }),
+    mutationFn: (id: string) =>
+      apiRequest(`${base}/transactions/${id}/approve`, { method: 'POST' }),
     onSuccess: () => {
       void client.invalidateQueries();
       toast({ title: 'Dépense approuvée', variant: 'success' });
@@ -200,13 +281,27 @@ export function ExpensesPage() {
       <PageHeader
         title="Gestion des dépenses & charges"
         description="Circuit de validation des dépenses, prestataires, et suivi budgétaire."
-        actions={<Button onClick={() => setOpenCreate((v) => !v)}>{openCreate ? 'Fermer le formulaire' : 'Nouvelle dépense'}</Button>}
+        actions={
+          <Button onClick={() => setOpenCreate((v) => !v)}>
+            {openCreate ? 'Fermer le formulaire' : 'Nouvelle dépense'}
+          </Button>
+        }
       />
 
       {report.data ? (
         <div className="grid gap-4 sm:grid-cols-3">
-          <StatCard label="Total Revenus" value={`${report.data.incomeMinor.toLocaleString('fr-FR')} FCFA`} hint="Encaissements de l'année" icon={Zap} />
-          <StatCard label="Total Dépenses" value={`${report.data.expenseMinor.toLocaleString('fr-FR')} FCFA`} hint="Dépenses engagées" icon={Wrench} />
+          <StatCard
+            label="Total Revenus"
+            value={`${report.data.incomeMinor.toLocaleString('fr-FR')} FCFA`}
+            hint="Encaissements de l'année"
+            icon={Zap}
+          />
+          <StatCard
+            label="Total Dépenses"
+            value={`${report.data.expenseMinor.toLocaleString('fr-FR')} FCFA`}
+            hint="Dépenses engagées"
+            icon={Wrench}
+          />
           <StatCard
             label="Bénéfice net"
             value={`${report.data.netMinor.toLocaleString('fr-FR')} FCFA`}
@@ -233,7 +328,11 @@ export function ExpensesPage() {
               status: form.get('direction') === 'EXPENSE' ? 'PENDING' : 'APPROVED',
             });
             if (!parsed.success) {
-              toast({ title: 'Formulaire invalide', description: parsed.error.issues[0]?.message, variant: 'error' });
+              toast({
+                title: 'Formulaire invalide',
+                description: parsed.error.issues[0]?.message,
+                variant: 'error',
+              });
               return;
             }
             create.mutate(parsed.data);
@@ -241,16 +340,24 @@ export function ExpensesPage() {
         >
           <div>
             <label className="text-xs font-medium text-muted-foreground">Type d'opération</label>
-            <select name="direction" className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm">
+            <select
+              name="direction"
+              className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+            >
               <option value="EXPENSE">Dépense / Décaissement</option>
               <option value="INCOME">Autre recette / Encaissement</option>
             </select>
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Catégorie</label>
-            <select name="category" className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm">
+            <select
+              name="category"
+              className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+            >
               {CATEGORIES.map(([cat, label]) => (
-                <option key={cat} value={cat}>{label}</option>
+                <option key={cat} value={cat}>
+                  {label}
+                </option>
               ))}
             </select>
           </div>
@@ -260,10 +367,17 @@ export function ExpensesPage() {
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Date de l'opération</label>
-            <Input name="date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+            <Input
+              name="date"
+              type="date"
+              defaultValue={new Date().toISOString().slice(0, 10)}
+              required
+            />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Bénéficiaire / Fournisseur</label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Bénéficiaire / Fournisseur
+            </label>
             <Input name="payee" placeholder="Ex: SONEB, Électricien Alpha..." />
           </div>
           <div>
@@ -272,11 +386,18 @@ export function ExpensesPage() {
           </div>
           <div className="sm:col-span-3">
             <label className="text-xs font-medium text-muted-foreground">Note / Justificatif</label>
-            <Input name="note" placeholder="Détails complémentaires, numéro de facture fournisseur..." />
+            <Input
+              name="note"
+              placeholder="Détails complémentaires, numéro de facture fournisseur..."
+            />
           </div>
           <div className="sm:col-span-3 flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setOpenCreate(false)}>Annuler</Button>
-            <Button type="submit" disabled={create.isPending}>Soumettre la dépense</Button>
+            <Button type="button" variant="ghost" onClick={() => setOpenCreate(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={create.isPending}>
+              Soumettre la dépense
+            </Button>
           </div>
         </form>
       ) : null}
@@ -289,7 +410,9 @@ export function ExpensesPage() {
         >
           <option value="">Toutes les catégories</option>
           {CATEGORIES.map(([cat, label]) => (
-            <option key={cat} value={cat}>{label}</option>
+            <option key={cat} value={cat}>
+              {label}
+            </option>
           ))}
         </select>
         <select
@@ -299,7 +422,9 @@ export function ExpensesPage() {
         >
           <option value="">Tous les statuts</option>
           {Object.entries(EXPENSE_STATUS_LABELS).map(([val, label]) => (
-            <option key={val} value={val}>{label}</option>
+            <option key={val} value={val}>
+              {label}
+            </option>
           ))}
         </select>
       </div>
@@ -331,11 +456,17 @@ export function ExpensesPage() {
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{transaction.payee || '—'}</td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {CATEGORIES.find(([c]) => c === transaction.category)?.[1] ?? transaction.category}
+                  {CATEGORIES.find(([c]) => c === transaction.category)?.[1] ??
+                    transaction.category}
                 </td>
                 <td className="px-4 py-3 font-semibold">
-                  <span className={transaction.direction === 'EXPENSE' ? 'text-rose-600' : 'text-emerald-600'}>
-                    {transaction.direction === 'EXPENSE' ? '−' : '+'}{transaction.amountMinor.toLocaleString('fr-FR')} FCFA
+                  <span
+                    className={
+                      transaction.direction === 'EXPENSE' ? 'text-rose-600' : 'text-emerald-600'
+                    }
+                  >
+                    {transaction.direction === 'EXPENSE' ? '−' : '+'}
+                    {transaction.amountMinor.toLocaleString('fr-FR')} FCFA
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -391,7 +522,9 @@ export function ExpensesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
           <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-2xl">
             <h3 className="text-base font-semibold">Rejeter la dépense</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Indiquez le motif de rejet pour la traçabilité d'audit.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Indiquez le motif de rejet pour la traçabilité d'audit.
+            </p>
             <div className="mt-4">
               <Input
                 placeholder="Ex: Justificatif manquant, montant non conforme..."
@@ -400,7 +533,9 @@ export function ExpensesPage() {
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setRejectId(null)}>Annuler</Button>
+              <Button variant="ghost" onClick={() => setRejectId(null)}>
+                Annuler
+              </Button>
               <Button
                 variant="secondary"
                 className="text-rose-600 hover:text-rose-700"
@@ -454,7 +589,10 @@ interface FinancialDashboardData {
 }
 
 export function AnalyticsPage() {
-  const dashboard = useOrgQuery<FinancialDashboardData>(['finance-dashboard'], '/finance/dashboard');
+  const dashboard = useOrgQuery<FinancialDashboardData>(
+    ['finance-dashboard'],
+    '/finance/dashboard',
+  );
 
   const totals = dashboard.data?.totals;
 
@@ -540,15 +678,22 @@ export function AnalyticsPage() {
           <CardContent>
             <div className="space-y-3">
               {(dashboard.data?.profitabilityByProperty ?? []).map((prop) => (
-                <div key={prop.propertyId} className="flex items-center justify-between rounded-xl border border-border p-3 text-sm">
+                <div
+                  key={prop.propertyId}
+                  className="flex items-center justify-between rounded-xl border border-border p-3 text-sm"
+                >
                   <div>
                     <p className="font-semibold">{prop.propertyName}</p>
                     <p className="text-xs text-muted-foreground">
-                      Recettes : {prop.incomeMinor.toLocaleString('fr-FR')} FCFA · Dépenses : {prop.expensesMinor.toLocaleString('fr-FR')} FCFA
+                      Recettes : {prop.incomeMinor.toLocaleString('fr-FR')} FCFA · Dépenses :{' '}
+                      {prop.expensesMinor.toLocaleString('fr-FR')} FCFA
                     </p>
                   </div>
-                  <span className={`font-bold ${prop.netProfitMinor >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {prop.netProfitMinor >= 0 ? '+' : ''}{prop.netProfitMinor.toLocaleString('fr-FR')} FCFA
+                  <span
+                    className={`font-bold ${prop.netProfitMinor >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                  >
+                    {prop.netProfitMinor >= 0 ? '+' : ''}
+                    {prop.netProfitMinor.toLocaleString('fr-FR')} FCFA
                   </span>
                 </div>
               ))}
@@ -566,7 +711,10 @@ export function AnalyticsPage() {
           <CardContent>
             <div className="space-y-3">
               {(dashboard.data?.debtors ?? []).map((debtor) => (
-                <div key={debtor.tenantId} className="flex items-center justify-between rounded-xl border border-border p-3 text-sm">
+                <div
+                  key={debtor.tenantId}
+                  className="flex items-center justify-between rounded-xl border border-border p-3 text-sm"
+                >
                   <div>
                     <p className="font-semibold">Locataire {debtor.tenantId.slice(-6)}</p>
                     <p className="text-xs text-rose-600">
@@ -589,8 +737,16 @@ export function AnalyticsPage() {
   );
 }
 
-interface Meter { _id: string; label: string; type: string; unitPriceMinor: number }
-interface ConsumptionPoint { month: string; consumption: number }
+interface Meter {
+  _id: string;
+  label: string;
+  type: string;
+  unitPriceMinor: number;
+}
+interface ConsumptionPoint {
+  month: string;
+  consumption: number;
+}
 
 export function UtilitiesPage() {
   const base = useOrgPath();
@@ -601,25 +757,45 @@ export function UtilitiesPage() {
 
   const create = useMutation({
     mutationFn: (body: unknown) => apiRequest(`${base}/meters`, { method: 'POST', body }),
-    onSuccess: () => { void client.invalidateQueries(); toast({ title: 'Compteur ajouté', variant: 'success' }); },
+    onSuccess: () => {
+      void client.invalidateQueries();
+      toast({ title: 'Compteur ajouté', variant: 'success' });
+    },
   });
   const read = useMutation({
-    mutationFn: (body: unknown) => apiRequest<{ abnormal: boolean }>(`${base}/meter-readings`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest<{ abnormal: boolean }>(`${base}/meter-readings`, { method: 'POST', body }),
     onSuccess: (result) => {
       void client.invalidateQueries();
-      toast(result.abnormal
-        ? { title: 'Consommation anormale', description: 'Ce relevé dépasse nettement la moyenne habituelle.', variant: 'warning' }
-        : { title: 'Relevé enregistré', description: 'La facture a été générée.', variant: 'success' });
+      toast(
+        result.abnormal
+          ? {
+              title: 'Consommation anormale',
+              description: 'Ce relevé dépasse nettement la moyenne habituelle.',
+              variant: 'warning',
+            }
+          : {
+              title: 'Relevé enregistré',
+              description: 'La facture a été générée.',
+              variant: 'success',
+            },
+      );
     },
-    onError: (error: Error) => toast({ title: 'Relevé refusé', description: error.message, variant: 'error' }),
+    onError: (error: Error) =>
+      toast({ title: 'Relevé refusé', description: error.message, variant: 'error' }),
   });
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Compteurs" description="Relevés manuels. La lecture automatique (OCR) n’est pas disponible." />
+      <PageHeader
+        title="Compteurs"
+        description="Relevés manuels. La lecture automatique (OCR) n’est pas disponible."
+      />
 
       <Card>
-        <CardHeader><CardTitle>Consommation mensuelle</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Consommation mensuelle</CardTitle>
+        </CardHeader>
         <CardContent className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={consumption.data ?? []}>
@@ -638,18 +814,32 @@ export function UtilitiesPage() {
         onSubmit={(event) => {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
-          create.mutate({ type: form.get('type'), label: form.get('label'), unitPriceMinor: Number(form.get('unitPriceMinor')) });
+          create.mutate({
+            type: form.get('type'),
+            label: form.get('label'),
+            unitPriceMinor: Number(form.get('unitPriceMinor')),
+          });
           event.currentTarget.reset();
         }}
       >
-        <select name="type" className="h-10 rounded-lg border border-input bg-background px-3 text-sm">
+        <select
+          name="type"
+          className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+        >
           <option value="ELECTRICITY">Électricité</option>
           <option value="WATER">Eau</option>
           <option value="GAS">Gaz</option>
           <option value="OTHER">Autre</option>
         </select>
         <Input name="label" placeholder="Libellé du compteur" required className="max-w-xs" />
-        <Input name="unitPriceMinor" type="number" min={0} placeholder="Prix unitaire" required className="w-36" />
+        <Input
+          name="unitPriceMinor"
+          type="number"
+          min={0}
+          placeholder="Prix unitaire"
+          required
+          className="w-36"
+        />
         <Button type="submit">Ajouter</Button>
       </form>
 
@@ -671,12 +861,32 @@ export function UtilitiesPage() {
           >
             <div className="min-w-40 flex-1">
               <p className="font-medium">{meter.label}</p>
-              <p className="text-xs text-muted-foreground">{meter.type} · {meter.unitPriceMinor.toLocaleString('fr-FR')} / unité</p>
+              <p className="text-xs text-muted-foreground">
+                {meter.type} · {meter.unitPriceMinor.toLocaleString('fr-FR')} / unité
+              </p>
             </div>
-            <Input name="previousIndex" type="number" min={0} step="0.01" placeholder="Ancien index" required className="w-32" />
-            <Input name="currentIndex" type="number" min={0} step="0.01" placeholder="Nouvel index" required className="w-32" />
+            <Input
+              name="previousIndex"
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="Ancien index"
+              required
+              className="w-32"
+            />
+            <Input
+              name="currentIndex"
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="Nouvel index"
+              required
+              className="w-32"
+            />
             <Input name="readAt" type="date" required className="w-40" />
-            <Button type="submit" variant="secondary">Relever</Button>
+            <Button type="submit" variant="secondary">
+              Relever
+            </Button>
           </form>
         ))}
       </div>
@@ -684,7 +894,15 @@ export function UtilitiesPage() {
   );
 }
 
-interface NotificationRecord { _id: string; subject: string; body: string; channel: string; status: string; createdAt: string; readAt?: string }
+interface NotificationRecord {
+  _id: string;
+  subject: string;
+  body: string;
+  channel: string;
+  status: string;
+  createdAt: string;
+  readAt?: string;
+}
 
 const CHANNEL_NOTES: Record<string, string> = {
   SENT: 'Envoyée',
@@ -703,19 +921,35 @@ export function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Notifications" description="Les canaux SMS et WhatsApp ne sont pas configurés : ils apparaissent explicitement comme non envoyés." />
+      <PageHeader
+        title="Notifications"
+        description="Les canaux SMS et WhatsApp ne sont pas configurés : ils apparaissent explicitement comme non envoyés."
+      />
       <div className="space-y-2">
         {(data?.data ?? []).map((notification) => (
-          <div key={notification._id} className="flex items-start justify-between gap-3 rounded-xl border border-border p-4">
+          <div
+            key={notification._id}
+            className="flex items-start justify-between gap-3 rounded-xl border border-border p-4"
+          >
             <div>
-              <p className="flex items-center gap-2 font-medium"><Bell className="size-4" /> {notification.subject}</p>
+              <p className="flex items-center gap-2 font-medium">
+                <Bell className="size-4" /> {notification.subject}
+              </p>
               <p className="text-sm text-muted-foreground">{notification.body}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{notification.channel} · {CHANNEL_NOTES[notification.status] ?? notification.status}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {notification.channel} · {CHANNEL_NOTES[notification.status] ?? notification.status}
+              </p>
             </div>
-            {!notification.readAt ? <Button variant="ghost" onClick={() => mark.mutate(notification._id)}>Marquer lu</Button> : null}
+            {!notification.readAt ? (
+              <Button variant="ghost" onClick={() => mark.mutate(notification._id)}>
+                Marquer lu
+              </Button>
+            ) : null}
           </div>
         ))}
-        {(data?.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">Aucune notification.</p> : null}
+        {(data?.data ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">Aucune notification.</p>
+        ) : null}
       </div>
     </div>
   );

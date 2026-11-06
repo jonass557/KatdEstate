@@ -90,7 +90,10 @@ const envSchema = z
     // --- Email delivery ---------------------------------------------------
     MAIL_HOST: optionalStringSchema,
     MAIL_PORT: z.coerce.number().int().min(1).max(65_535).default(587),
-    MAIL_SECURE: z.string().optional().transform((value) => value === 'true'),
+    MAIL_SECURE: z
+      .string()
+      .optional()
+      .transform((value) => value === 'true'),
     MAIL_USER: optionalStringSchema,
     MAIL_PASSWORD: optionalStringSchema,
     MAIL_FROM: z.string().email().default('no-reply@example.com'),

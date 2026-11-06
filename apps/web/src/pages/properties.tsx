@@ -30,7 +30,10 @@ import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
 import { API_BASE_URL, apiRequest, getAccessToken } from '../lib/api-client';
 import { useOrgList, useOrgPath, useOrgQuery } from '../lib/query';
-import { PropertyDelegationModal, type DelegationData } from '../components/properties/property-delegation-modal';
+import {
+  PropertyDelegationModal,
+  type DelegationData,
+} from '../components/properties/property-delegation-modal';
 import { AddUnitModal } from '../components/properties/add-unit-modal';
 
 export const STORAGE_PROPERTIES_KEY = 'katdestate_custom_properties';
@@ -164,7 +167,7 @@ export function PropertiesPage() {
 
   const { data, isLoading } = useOrgList<Property>(
     ['properties', search, status, page],
-    `/properties?${query.toString()}`
+    `/properties?${query.toString()}`,
   );
 
   // Fusionner les propriétés de l'API avec celles stockées localement
@@ -188,7 +191,7 @@ export function PropertiesPage() {
           p.name.toLowerCase().includes(q) ||
           p.address?.toLowerCase().includes(q) ||
           p.city?.toLowerCase().includes(q) ||
-          p.zone?.toLowerCase().includes(q)
+          p.zone?.toLowerCase().includes(q),
       );
     }
 
@@ -299,7 +302,8 @@ export function PropertiesPage() {
         variant: 'success',
       });
     },
-    onError: (err: Error) => toast({ title: 'Suppression impossible', description: err.message, variant: 'error' }),
+    onError: (err: Error) =>
+      toast({ title: 'Suppression impossible', description: err.message, variant: 'error' }),
   });
 
   return (
@@ -338,7 +342,9 @@ export function PropertiesPage() {
         />
         <StatCard
           label="Studios & Appartements"
-          value={String(stats.totalStudiosSimples + stats.totalStudiosModernes + stats.totalAppartements)}
+          value={String(
+            stats.totalStudiosSimples + stats.totalStudiosModernes + stats.totalAppartements,
+          )}
           hint={`${stats.totalStudiosSimples + stats.totalStudiosModernes} studios · ${stats.totalAppartements} appts`}
           icon={Layers}
         />
@@ -363,7 +369,9 @@ export function PropertiesPage() {
               <div className="p-2.5 rounded-xl bg-background border border-border flex items-center justify-between">
                 <div>
                   <p className="text-muted-foreground text-[11px]">Chambres simples</p>
-                  <p className="text-base font-black text-foreground">{stats.totalChambresSimples}</p>
+                  <p className="text-base font-black text-foreground">
+                    {stats.totalChambresSimples}
+                  </p>
                 </div>
                 <DoorOpen className="size-5 text-blue-500/60" />
               </div>
@@ -371,7 +379,9 @@ export function PropertiesPage() {
               <div className="p-2.5 rounded-xl bg-background border border-border flex items-center justify-between">
                 <div>
                   <p className="text-muted-foreground text-[11px]">Chambres modernes</p>
-                  <p className="text-base font-black text-emerald-500">{stats.totalChambresModernes}</p>
+                  <p className="text-base font-black text-emerald-500">
+                    {stats.totalChambresModernes}
+                  </p>
                 </div>
                 <DoorOpen className="size-5 text-emerald-500/60" />
               </div>
@@ -379,7 +389,9 @@ export function PropertiesPage() {
               <div className="p-2.5 rounded-xl bg-background border border-border flex items-center justify-between">
                 <div>
                   <p className="text-muted-foreground text-[11px]">Studios simples</p>
-                  <p className="text-base font-black text-foreground">{stats.totalStudiosSimples}</p>
+                  <p className="text-base font-black text-foreground">
+                    {stats.totalStudiosSimples}
+                  </p>
                 </div>
                 <Home className="size-5 text-cyan-500/60" />
               </div>
@@ -508,7 +520,9 @@ export function PropertiesPage() {
         </div>
       </div>
 
-      {isLoading && allProperties.length === 0 ? <p className="text-sm text-muted-foreground">Chargement…</p> : null}
+      {isLoading && allProperties.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Chargement…</p>
+      ) : null}
 
       {!isLoading && allProperties.length === 0 ? (
         <EmptyState
@@ -528,11 +542,16 @@ export function PropertiesPage() {
           const totalUnits = chSimple + chModerne + stSimple + stModerne + appt + autr;
 
           return (
-            <Card key={property._id} className="border-border hover:shadow-md transition-all flex flex-col justify-between">
+            <Card
+              key={property._id}
+              className="border-border hover:shadow-md transition-all flex flex-col justify-between"
+            >
               <CardContent className="space-y-3 p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-bold text-base text-foreground leading-tight">{property.name}</h3>
+                    <h3 className="font-bold text-base text-foreground leading-tight">
+                      {property.name}
+                    </h3>
                     <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                       <MapPin className="size-3 text-primary shrink-0" />
                       <span>{property.zone || property.city || 'Abidjan'}</span>
@@ -650,7 +669,9 @@ export function PropertiesPage() {
           initial={delegatingProperty.delegation}
           isSubmitting={delegationMutation.isPending}
           onClose={() => setDelegatingProperty(null)}
-          onSave={(delegation) => delegationMutation.mutate({ id: delegatingProperty._id, delegation })}
+          onSave={(delegation) =>
+            delegationMutation.mutate({ id: delegatingProperty._id, delegation })
+          }
         />
       )}
 
@@ -660,7 +681,8 @@ export function PropertiesPage() {
           <div className="bg-card text-foreground border border-border rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
             <h3 className="font-bold text-base text-red-600">Supprimer cette propriété ?</h3>
             <p className="text-xs text-muted-foreground">
-              Cette action retirera <strong>{deletingProperty.name}</strong> de votre patrimoine immobilier.
+              Cette action retirera <strong>{deletingProperty.name}</strong> de votre patrimoine
+              immobilier.
             </p>
             <div className="flex items-center justify-end gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={() => setDeletingProperty(null)}>
@@ -697,7 +719,11 @@ export function PropertyFormPage({ mode }: { mode: 'create' | 'edit' }) {
     return undefined;
   });
 
-  const existing = useOrgQuery<Property>(['property', id], `/properties/${id}`, mode === 'edit' && Boolean(id));
+  const existing = useOrgQuery<Property>(
+    ['property', id],
+    `/properties/${id}`,
+    mode === 'edit' && Boolean(id),
+  );
 
   const effectiveInitial = existing.data || localInitial;
 
@@ -710,7 +736,7 @@ export function PropertyFormPage({ mode }: { mode: 'create' | 'edit' }) {
           {
             method: mode === 'create' ? 'POST' : 'PATCH',
             body: input,
-          }
+          },
         );
         createdProp = res;
       } catch (networkError) {
@@ -910,7 +936,10 @@ function PropertyForm({
     const rawName = String(formData.get('name') || '').trim();
     const rawAddress = String(formData.get('address') || '').trim();
     const rawCity = String(formData.get('city') || 'Abidjan').trim();
-    const rawCountry = String(formData.get('country') || 'CI').trim().toUpperCase().slice(0, 2);
+    const rawCountry = String(formData.get('country') || 'CI')
+      .trim()
+      .toUpperCase()
+      .slice(0, 2);
     const rawZone = String(formData.get('zone') || '').trim();
     const rawDesc = String(formData.get('description') || '').trim();
     const rawStatus = (formData.get('status') as 'ACTIVE' | 'DRAFT' | 'ARCHIVED') || 'ACTIVE';
@@ -1081,7 +1110,9 @@ function PropertyForm({
               placeholder="0"
               className="text-sm font-semibold"
             />
-            <span className="text-[10px] text-muted-foreground">Chambre standard / sanitaires partagés</span>
+            <span className="text-[10px] text-muted-foreground">
+              Chambre standard / sanitaires partagés
+            </span>
           </div>
 
           {/* Chambre moderne */}
@@ -1095,7 +1126,9 @@ function PropertyForm({
               placeholder="0"
               className="text-sm font-semibold"
             />
-            <span className="text-[10px] text-muted-foreground">Chambre avec salle d’eau autonome</span>
+            <span className="text-[10px] text-muted-foreground">
+              Chambre avec salle d’eau autonome
+            </span>
           </div>
 
           {/* Studio simple */}
@@ -1109,7 +1142,9 @@ function PropertyForm({
               placeholder="0"
               className="text-sm font-semibold"
             />
-            <span className="text-[10px] text-muted-foreground">Pièce unique avec coin cuisine</span>
+            <span className="text-[10px] text-muted-foreground">
+              Pièce unique avec coin cuisine
+            </span>
           </div>
 
           {/* Studio moderne */}
@@ -1123,12 +1158,16 @@ function PropertyForm({
               placeholder="0"
               className="text-sm font-semibold"
             />
-            <span className="text-[10px] text-muted-foreground">Studio haut standing avec balcon</span>
+            <span className="text-[10px] text-muted-foreground">
+              Studio haut standing avec balcon
+            </span>
           </div>
 
           {/* Appartement */}
           <div className="p-3 rounded-2xl bg-card border border-border space-y-1.5">
-            <span className="text-xs font-bold text-foreground block">Appartement (2, 3, 4+ pièces)</span>
+            <span className="text-xs font-bold text-foreground block">
+              Appartement (2, 3, 4+ pièces)
+            </span>
             <Input
               type="number"
               min="0"
@@ -1301,7 +1340,8 @@ export function PropertyDetailPage() {
     onError: (err: Error) => toast({ title: 'Erreur', description: err.message, variant: 'error' }),
   });
 
-  if (propertyQuery.isLoading && !p) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (propertyQuery.isLoading && !p)
+    return <p className="text-sm text-muted-foreground">Chargement…</p>;
   if (!p) {
     return (
       <EmptyState
@@ -1348,7 +1388,9 @@ export function PropertyDetailPage() {
       {/* Bandeau d'information & Délégation */}
       <div className="grid sm:grid-cols-3 gap-4">
         <div className="p-4 rounded-2xl bg-card border border-border space-y-1">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase">Zone & Localisation</span>
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase">
+            Zone & Localisation
+          </span>
           <p className="font-bold text-sm text-foreground">{p.zone || p.city}</p>
           <p className="text-xs text-muted-foreground">
             {p.address}, {p.city} ({p.country})
@@ -1356,17 +1398,22 @@ export function PropertyDetailPage() {
         </div>
 
         <div className="p-4 rounded-2xl bg-card border border-border space-y-1">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase">Composition déclarée</span>
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase">
+            Composition déclarée
+          </span>
           <p className="font-bold text-sm text-foreground">{totalDeclared} logement(s) déclarés</p>
           <p className="text-xs text-muted-foreground">
-            {p.chambreSimpleCount ?? p.roomsCount ?? 0} ch. simples · {p.chambreModerneCount ?? 0} ch. mod. ·{' '}
-            {p.studioSimpleCount ?? p.studiosCount ?? 0} st. simples · {p.studioModerneCount ?? 0} st. mod. ·{' '}
-            {p.appartementCount ?? p.apartmentsCount ?? 0} appts
+            {p.chambreSimpleCount ?? p.roomsCount ?? 0} ch. simples · {p.chambreModerneCount ?? 0}{' '}
+            ch. mod. · {p.studioSimpleCount ?? p.studiosCount ?? 0} st. simples ·{' '}
+            {p.studioModerneCount ?? 0} st. mod. · {p.appartementCount ?? p.apartmentsCount ?? 0}{' '}
+            appts
           </p>
         </div>
 
         <div className="p-4 rounded-2xl bg-card border border-border space-y-1">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase">Gestionnaire / Mandat</span>
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase">
+            Gestionnaire / Mandat
+          </span>
           {p.delegation?.managerName ? (
             <div>
               <p className="font-bold text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
@@ -1409,7 +1456,9 @@ export function PropertyDetailPage() {
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p className="flex items-center justify-between">
                     <span>Type :</span>
-                    <strong className="text-foreground">{UNIT_TYPE_LABELS[unit.type] ?? unit.type}</strong>
+                    <strong className="text-foreground">
+                      {UNIT_TYPE_LABELS[unit.type] ?? unit.type}
+                    </strong>
                   </p>
                   <p className="flex items-center justify-between">
                     <span>N° Porte / Chambre :</span>
@@ -1495,7 +1544,10 @@ export function UnitsPage() {
   if (type) query.set('type', type);
   if (status) query.set('status', status);
 
-  const { data, isLoading } = useOrgList<Unit>(['units', type, status, page], `/units?${query.toString()}`);
+  const { data, isLoading } = useOrgList<Unit>(
+    ['units', type, status, page],
+    `/units?${query.toString()}`,
+  );
   const localUnits = getLocalUnits();
 
   const allUnits = useMemo(() => {
@@ -1540,7 +1592,9 @@ export function UnitsPage() {
         </select>
       </div>
 
-      {isLoading && allUnits.length === 0 ? <p className="text-sm text-muted-foreground">Chargement…</p> : null}
+      {isLoading && allUnits.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Chargement…</p>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {allUnits.map((unit) => (

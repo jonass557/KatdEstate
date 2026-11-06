@@ -92,8 +92,7 @@ export function CommandPalette({
     const term = query.trim().toLowerCase();
     const filteredNav = term
       ? localCommands.filter(
-          (c) =>
-            c.label.toLowerCase().includes(term) || c.hint.toLowerCase().includes(term),
+          (c) => c.label.toLowerCase().includes(term) || c.hint.toLowerCase().includes(term),
         )
       : [...localCommands];
 
@@ -196,7 +195,9 @@ export function CommandPalette({
                   <div className="min-w-0">
                     <p className="font-medium truncate">{command.label}</p>
                     {command.subtitle && (
-                      <p className="text-[11px] text-muted-foreground truncate">{command.subtitle}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {command.subtitle}
+                      </p>
                     )}
                   </div>
                   <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">

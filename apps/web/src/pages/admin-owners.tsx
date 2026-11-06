@@ -87,7 +87,8 @@ export function AdminOwnersPage() {
       void client.invalidateQueries({ queryKey: ['admin-owners'] });
       toast({ title: 'Compte propriétaire désactivé', variant: 'success' });
     },
-    onError: (err: Error) => toast({ title: 'Action impossible', description: err.message, variant: 'error' }),
+    onError: (err: Error) =>
+      toast({ title: 'Action impossible', description: err.message, variant: 'error' }),
   });
 
   const reactivateMutation = useMutation({
@@ -96,7 +97,8 @@ export function AdminOwnersPage() {
       void client.invalidateQueries({ queryKey: ['admin-owners'] });
       toast({ title: 'Compte propriétaire réactivé avec succès', variant: 'success' });
     },
-    onError: (err: Error) => toast({ title: 'Action impossible', description: err.message, variant: 'error' }),
+    onError: (err: Error) =>
+      toast({ title: 'Action impossible', description: err.message, variant: 'error' }),
   });
 
   const deleteMutation = useMutation({
@@ -106,7 +108,8 @@ export function AdminOwnersPage() {
       setDeletingOwner(null);
       toast({ title: 'Propriétaire supprimé', variant: 'success' });
     },
-    onError: (err: Error) => toast({ title: 'Suppression impossible', description: err.message, variant: 'error' }),
+    onError: (err: Error) =>
+      toast({ title: 'Suppression impossible', description: err.message, variant: 'error' }),
   });
 
   const updateSubMutation = useMutation({
@@ -120,7 +123,8 @@ export function AdminOwnersPage() {
       setEditingSubscriptionOwner(null);
       toast({ title: 'Abonnement mis à jour avec succès', variant: 'success' });
     },
-    onError: (err: Error) => toast({ title: 'Mise à jour impossible', description: err.message, variant: 'error' }),
+    onError: (err: Error) =>
+      toast({ title: 'Mise à jour impossible', description: err.message, variant: 'error' }),
   });
 
   const owners = data?.items ?? [];
@@ -154,7 +158,9 @@ export function AdminOwnersPage() {
       return;
     }
     const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const text = encodeURIComponent(`Bonjour ${name || 'Propriétaire'},\nMessage de la Direction Super Administrateur KatdEstate concernant votre compte bailleur.`);
+    const text = encodeURIComponent(
+      `Bonjour ${name || 'Propriétaire'},\nMessage de la Direction Super Administrateur KatdEstate concernant votre compte bailleur.`,
+    );
     window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
@@ -239,8 +245,12 @@ export function AdminOwnersPage() {
         </div>
       </div>
 
-      {isLoading ? <p className="text-sm text-muted-foreground">Chargement des propriétaires…</p> : null}
-      {error ? <p className="text-sm text-red-500">Erreur lors du chargement des données.</p> : null}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Chargement des propriétaires…</p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-red-500">Erreur lors du chargement des données.</p>
+      ) : null}
 
       {!isLoading && filteredOwners.length === 0 ? (
         <EmptyState
@@ -252,7 +262,10 @@ export function AdminOwnersPage() {
       {/* Liste des propriétaires */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {filteredOwners.map((owner) => (
-          <Card key={owner._id} className="border-border hover:shadow-md transition-all flex flex-col justify-between">
+          <Card
+            key={owner._id}
+            className="border-border hover:shadow-md transition-all flex flex-col justify-between"
+          >
             <CardContent className="space-y-4 p-5">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3">
@@ -281,7 +294,9 @@ export function AdminOwnersPage() {
               {/* Statut Abonnement & Finances */}
               <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/80 space-y-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-muted-foreground text-[11px] uppercase">Abonnement Propriétaire</span>
+                  <span className="font-semibold text-muted-foreground text-[11px] uppercase">
+                    Abonnement Propriétaire
+                  </span>
                   {owner.subscription.isPaid ? (
                     <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md text-[11px] border border-emerald-500/20">
                       <CheckCircle2 className="size-3" /> Payé
@@ -301,7 +316,8 @@ export function AdminOwnersPage() {
                   <p className="flex items-center justify-between">
                     <span className="text-muted-foreground">Tarif :</span>
                     <strong className="text-foreground">
-                      {owner.subscription.priceMinor.toLocaleString('fr-FR')} {owner.subscription.currency} / mois
+                      {owner.subscription.priceMinor.toLocaleString('fr-FR')}{' '}
+                      {owner.subscription.currency} / mois
                     </strong>
                   </p>
                   <p className="flex items-center justify-between">
@@ -316,23 +332,38 @@ export function AdminOwnersPage() {
               {/* Portefeuille géré */}
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
                 <div className="p-2 rounded-xl bg-background border border-border">
-                  <span className="text-[10px] text-muted-foreground uppercase block font-semibold">Propriétés</span>
-                  <strong className="text-foreground text-sm font-black">{owner.propertiesCount}</strong>
+                  <span className="text-[10px] text-muted-foreground uppercase block font-semibold">
+                    Propriétés
+                  </span>
+                  <strong className="text-foreground text-sm font-black">
+                    {owner.propertiesCount}
+                  </strong>
                 </div>
                 <div className="p-2 rounded-xl bg-background border border-border">
-                  <span className="text-[10px] text-muted-foreground uppercase block font-semibold">Logements</span>
+                  <span className="text-[10px] text-muted-foreground uppercase block font-semibold">
+                    Logements
+                  </span>
                   <strong className="text-foreground text-sm font-black">{owner.unitsCount}</strong>
                 </div>
                 <div className="p-2 rounded-xl bg-background border border-border">
-                  <span className="text-[10px] text-muted-foreground uppercase block font-semibold">Baux Actifs</span>
-                  <strong className="text-emerald-600 dark:text-emerald-400 text-sm font-black">{owner.leasesCount}</strong>
+                  <span className="text-[10px] text-muted-foreground uppercase block font-semibold">
+                    Baux Actifs
+                  </span>
+                  <strong className="text-emerald-600 dark:text-emerald-400 text-sm font-black">
+                    {owner.leasesCount}
+                  </strong>
                 </div>
               </div>
 
               {/* Coordonnées */}
               <div className="space-y-1 text-xs text-muted-foreground px-1">
-                <p className="truncate">Email : <strong className="text-foreground">{owner.email}</strong></p>
-                <p>Téléphone : <strong className="text-foreground">{owner.phone || 'Non renseigné'}</strong></p>
+                <p className="truncate">
+                  Email : <strong className="text-foreground">{owner.email}</strong>
+                </p>
+                <p>
+                  Téléphone :{' '}
+                  <strong className="text-foreground">{owner.phone || 'Non renseigné'}</strong>
+                </p>
               </div>
 
               {/* Actions Super Administrateur */}
@@ -416,8 +447,9 @@ export function AdminOwnersPage() {
           <div className="bg-card text-foreground border border-border rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
             <h3 className="font-bold text-base text-red-600">Supprimer ce propriétaire ?</h3>
             <p className="text-xs text-muted-foreground">
-              Êtes-vous certain de vouloir supprimer le compte de <strong>{deletingOwner.displayName}</strong> ({deletingOwner.email}) ?
-              Cette action retirera ses accès à la plateforme KatdEstate.
+              Êtes-vous certain de vouloir supprimer le compte de{' '}
+              <strong>{deletingOwner.displayName}</strong> ({deletingOwner.email}) ? Cette action
+              retirera ses accès à la plateforme KatdEstate.
             </p>
             <div className="flex items-center justify-end gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={() => setDeletingOwner(null)}>
@@ -466,7 +498,10 @@ function EditOwnerSubscriptionModal({
               <p className="text-xs text-muted-foreground">{owner.displayName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted"
+          >
             <X className="size-4" />
           </button>
         </div>
@@ -480,13 +515,17 @@ function EditOwnerSubscriptionModal({
               className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs"
             >
               <option value="STARTER">Pack Starter (1 à 3 logements) — 15 000 FCFA/mois</option>
-              <option value="PRO">Pack Pro Bailleur (Jusqu'à 15 logements) — 35 000 FCFA/mois</option>
+              <option value="PRO">
+                Pack Pro Bailleur (Jusqu'à 15 logements) — 35 000 FCFA/mois
+              </option>
               <option value="BUSINESS">Pack Patrimoine SCI (Illimité) — 95 000 FCFA/mois</option>
             </select>
           </div>
 
           <div className="space-y-2 p-3.5 rounded-2xl bg-muted/30 border border-border">
-            <span className="font-bold text-foreground block">Statut du paiement de l'abonnement</span>
+            <span className="font-bold text-foreground block">
+              Statut du paiement de l'abonnement
+            </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -514,7 +553,8 @@ function EditOwnerSubscriptionModal({
           </div>
 
           <div className="p-3 rounded-xl bg-muted/40 border border-border text-[11px] text-muted-foreground">
-            Le paiement peut être effectué directement par le propriétaire via la passerelle iKeepay Mobile Money (Wave, Orange, MTN, Moov).
+            Le paiement peut être effectué directement par le propriétaire via la passerelle iKeepay
+            Mobile Money (Wave, Orange, MTN, Moov).
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">

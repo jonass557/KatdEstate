@@ -82,7 +82,10 @@ const maintenanceEventSchema = new Schema(
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );
-maintenanceEventSchema.index({ ticketId: 1, createdAt: 1 }, { name: 'maintenance_events_ticket_date' });
+maintenanceEventSchema.index(
+  { ticketId: 1, createdAt: 1 },
+  { name: 'maintenance_events_ticket_date' },
+);
 
 const transactionSchema = new Schema(
   {
@@ -145,7 +148,10 @@ const utilityReadingSchema = new Schema(
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );
-utilityReadingSchema.index({ organizationId: 1, meterId: 1, readAt: -1 }, { name: 'readings_org_meter_date' });
+utilityReadingSchema.index(
+  { organizationId: 1, meterId: 1, readAt: -1 },
+  { name: 'readings_org_meter_date' },
+);
 
 const utilityBillSchema = new Schema(
   {
@@ -161,7 +167,10 @@ const utilityBillSchema = new Schema(
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );
-utilityBillSchema.index({ organizationId: 1, number: 1 }, { unique: true, name: 'utility_bills_org_number_unique' });
+utilityBillSchema.index(
+  { organizationId: 1, number: 1 },
+  { unique: true, name: 'utility_bills_org_number_unique' },
+);
 
 const notificationSchema = new Schema(
   {
@@ -182,7 +191,10 @@ notificationSchema.index(
   { organizationId: 1, idempotencyKey: 1, channel: 1 },
   { unique: true, name: 'notifications_idempotency_unique' },
 );
-notificationSchema.index({ recipientUserId: 1, createdAt: -1 }, { name: 'notifications_recipient_date' });
+notificationSchema.index(
+  { recipientUserId: 1, createdAt: -1 },
+  { name: 'notifications_recipient_date' },
+);
 
 const notificationTemplateSchema = new Schema(
   {
@@ -261,10 +273,12 @@ const internalMessageSchema = new Schema(
 );
 internalMessageSchema.index({ organizationId: 1, createdAt: -1 }, { name: 'messages_org_created' });
 
-export const Vendor = (models.Vendor as Model<InferSchemaType<typeof vendorSchema>>) ?? model('Vendor', vendorSchema);
+export const Vendor =
+  (models.Vendor as Model<InferSchemaType<typeof vendorSchema>>) ?? model('Vendor', vendorSchema);
 export const MaintenanceTicket =
-  (models.MaintenanceTicket as Model<InferSchemaType<typeof maintenanceTicketSchema> & { _id: Types.ObjectId }>) ??
-  model('MaintenanceTicket', maintenanceTicketSchema);
+  (models.MaintenanceTicket as Model<
+    InferSchemaType<typeof maintenanceTicketSchema> & { _id: Types.ObjectId }
+  >) ?? model('MaintenanceTicket', maintenanceTicketSchema);
 export const MaintenanceTask =
   (models.MaintenanceTask as Model<InferSchemaType<typeof maintenanceTaskSchema>>) ??
   model('MaintenanceTask', maintenanceTaskSchema);
@@ -272,11 +286,13 @@ export const MaintenanceEvent =
   (models.MaintenanceEvent as Model<InferSchemaType<typeof maintenanceEventSchema>>) ??
   model('MaintenanceEvent', maintenanceEventSchema);
 export const Transaction =
-  (models.Transaction as Model<InferSchemaType<typeof transactionSchema> & { _id: Types.ObjectId }>) ??
-  model('Transaction', transactionSchema);
+  (models.Transaction as Model<
+    InferSchemaType<typeof transactionSchema> & { _id: Types.ObjectId }
+  >) ?? model('Transaction', transactionSchema);
 export const UtilityMeter =
-  (models.UtilityMeter as Model<InferSchemaType<typeof utilityMeterSchema> & { _id: Types.ObjectId }>) ??
-  model('UtilityMeter', utilityMeterSchema);
+  (models.UtilityMeter as Model<
+    InferSchemaType<typeof utilityMeterSchema> & { _id: Types.ObjectId }
+  >) ?? model('UtilityMeter', utilityMeterSchema);
 export const UtilityReading =
   (models.UtilityReading as Model<InferSchemaType<typeof utilityReadingSchema>>) ??
   model('UtilityReading', utilityReadingSchema);
@@ -292,7 +308,10 @@ export const NotificationTemplate =
 export const NotificationPreference =
   (models.NotificationPreference as Model<InferSchemaType<typeof notificationPreferenceSchema>>) ??
   model('NotificationPreference', notificationPreferenceSchema);
-export const Job = (models.Job as Model<InferSchemaType<typeof jobSchema> & { _id: Types.ObjectId }>) ?? model('Job', jobSchema);
+export const Job =
+  (models.Job as Model<InferSchemaType<typeof jobSchema> & { _id: Types.ObjectId }>) ??
+  model('Job', jobSchema);
 export const InternalMessage =
-  (models.InternalMessage as Model<InferSchemaType<typeof internalMessageSchema> & { _id: Types.ObjectId }>) ??
-  model('InternalMessage', internalMessageSchema);
+  (models.InternalMessage as Model<
+    InferSchemaType<typeof internalMessageSchema> & { _id: Types.ObjectId }
+  >) ?? model('InternalMessage', internalMessageSchema);

@@ -1,24 +1,24 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Building2, 
-  Home, 
-  KeyRound, 
-  Receipt, 
-  TrendingDown, 
-  Wrench, 
-  CreditCard, 
-  Crown, 
-  ShieldCheck, 
-  Users, 
-  Briefcase, 
-  FileText, 
-  Settings, 
-  Sparkles, 
-  QrCode, 
-  MapPin, 
-  Bell, 
-  AlertTriangle, 
+import {
+  Building2,
+  Home,
+  KeyRound,
+  Receipt,
+  TrendingDown,
+  Wrench,
+  CreditCard,
+  Crown,
+  ShieldCheck,
+  Users,
+  Briefcase,
+  FileText,
+  Settings,
+  Sparkles,
+  QrCode,
+  MapPin,
+  Bell,
+  AlertTriangle,
   Wallet,
   Globe,
   Plus,
@@ -31,7 +31,7 @@ import {
   Shield,
   LogOut,
   Gauge,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
 import { useOrganization } from '../app/organization';
 import { useSession } from '../app/session';
@@ -99,7 +99,8 @@ export function DashboardPage() {
         return [
           {
             title: 'GOUVERNANCE TERRITORIALE & AUDIT',
-            subtitle: 'Supervision des chefferies coutumières, découpage des secteurs et audit plateforme',
+            subtitle:
+              'Supervision des chefferies coutumières, découpage des secteurs et audit plateforme',
             buttons: [
               {
                 title: 'Chefferie &\nFoncier',
@@ -1065,7 +1066,8 @@ export function DashboardPage() {
         return [
           {
             title: 'RECHERCHE & IMMOBILIER EN LIGNE',
-            subtitle: 'Explorez la marketplace, trouvez des meublés, studios et appartements vérifiés',
+            subtitle:
+              'Explorez la marketplace, trouvez des meublés, studios et appartements vérifiés',
             buttons: [
               {
                 title: 'Marketplace\nPublique',
@@ -1181,7 +1183,8 @@ export function DashboardPage() {
         return [
           {
             title: 'PATRIMOINE & GESTION LOCATIVE',
-            subtitle: 'Création, modification et suppression de propriétés, attribution des chambres/studios aux locataires et baux',
+            subtitle:
+              'Création, modification et suppression de propriétés, attribution des chambres/studios aux locataires et baux',
             buttons: [
               {
                 title: 'Gestion des\nPropriétés',
@@ -1353,23 +1356,62 @@ export function DashboardPage() {
   const sections = getSectionsForRole(userRole);
 
   const ROLE_NAMES: Record<string, { label: string; icon: any; color: string }> = {
-    SUPER_ADMIN: { label: 'Direction Super Admin', icon: Crown, color: 'text-amber-400 bg-amber-400/10 border-amber-400/30' },
-    NEIGHBORHOOD_LEADER: { label: 'Chef de Quartier (Coutumier & Foncier)', icon: Crown, color: 'text-purple-400 bg-purple-400/10 border-purple-400/30' },
-    BLOCK_LEADER: { label: 'Chef de Bloc (Recensement de Proximité)', icon: ShieldCheck, color: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/30' },
-    OWNER: { label: 'Propriétaire & Bailleur Foncier', icon: Building2, color: 'text-blue-400 bg-blue-400/10 border-blue-400/30' },
-    TENANT: { label: 'Locataire Résident', icon: Home, color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30' },
-    AGENT: { label: 'Agent Immobilier Agréé', icon: Briefcase, color: 'text-orange-400 bg-orange-400/10 border-orange-400/30' },
-    RESIDENT: { label: 'Résident & Citoyen', icon: Users, color: 'text-rose-400 bg-rose-400/10 border-rose-400/30' },
-    USER: { label: 'Client / Chercheur de Biens', icon: Users, color: 'text-teal-400 bg-teal-400/10 border-teal-400/30' },
-    CLIENT: { label: 'Client / Chercheur de Biens', icon: Users, color: 'text-teal-400 bg-teal-400/10 border-teal-400/30' },
+    SUPER_ADMIN: {
+      label: 'Direction Super Admin',
+      icon: Crown,
+      color: 'text-amber-400 bg-amber-400/10 border-amber-400/30',
+    },
+    NEIGHBORHOOD_LEADER: {
+      label: 'Chef de Quartier (Coutumier & Foncier)',
+      icon: Crown,
+      color: 'text-purple-400 bg-purple-400/10 border-purple-400/30',
+    },
+    BLOCK_LEADER: {
+      label: 'Chef de Bloc (Recensement de Proximité)',
+      icon: ShieldCheck,
+      color: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/30',
+    },
+    OWNER: {
+      label: 'Propriétaire & Bailleur Foncier',
+      icon: Building2,
+      color: 'text-blue-400 bg-blue-400/10 border-blue-400/30',
+    },
+    TENANT: {
+      label: 'Locataire Résident',
+      icon: Home,
+      color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30',
+    },
+    AGENT: {
+      label: 'Agent Immobilier Agréé',
+      icon: Briefcase,
+      color: 'text-orange-400 bg-orange-400/10 border-orange-400/30',
+    },
+    RESIDENT: {
+      label: 'Résident & Citoyen',
+      icon: Users,
+      color: 'text-rose-400 bg-rose-400/10 border-rose-400/30',
+    },
+    USER: {
+      label: 'Client / Chercheur de Biens',
+      icon: Users,
+      color: 'text-teal-400 bg-teal-400/10 border-teal-400/30',
+    },
+    CLIENT: {
+      label: 'Client / Chercheur de Biens',
+      icon: Users,
+      color: 'text-teal-400 bg-teal-400/10 border-teal-400/30',
+    },
   };
 
-  const currentRoleInfo = ROLE_NAMES[userRole] || { label: userRole, icon: ShieldCheck, color: 'text-primary bg-primary/10 border-primary/30' };
+  const currentRoleInfo = ROLE_NAMES[userRole] || {
+    label: userRole,
+    icon: ShieldCheck,
+    color: 'text-primary bg-primary/10 border-primary/30',
+  };
   const RoleIcon = currentRoleInfo.icon;
 
   return (
     <div className="space-y-6 pb-16">
-      
       {/* 1. Top Bar with Universal Back Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/70 pb-4">
         <div className="space-y-1">
@@ -1383,7 +1425,9 @@ export function DashboardPage() {
             Tableau de Bord des Fonctionnalités
           </h1>
           <p className="text-xs text-muted-foreground">
-            Connecté en tant que <strong className="text-foreground">{user?.displayName || 'Utilisateur'}</strong> ({activeOrganization?.name || 'KatdEstate'})
+            Connecté en tant que{' '}
+            <strong className="text-foreground">{user?.displayName || 'Utilisateur'}</strong> (
+            {activeOrganization?.name || 'KatdEstate'})
           </p>
         </div>
 
@@ -1431,8 +1475,12 @@ export function DashboardPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Espace Réservé & Certifié</span>
-              <span className={`text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full border ${currentRoleInfo.color}`}>
+              <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                Espace Réservé & Certifié
+              </span>
+              <span
+                className={`text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full border ${currentRoleInfo.color}`}
+              >
                 {currentRoleInfo.label}
               </span>
             </div>
@@ -1465,7 +1513,9 @@ export function DashboardPage() {
             <div className="p-3.5 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[11px] text-muted-foreground font-medium">Revenus validés</p>
-                <p className="text-base sm:text-lg font-black text-foreground">{overview.incomeMinor.toLocaleString('fr-FR')} FCFA</p>
+                <p className="text-base sm:text-lg font-black text-foreground">
+                  {overview.incomeMinor.toLocaleString('fr-FR')} FCFA
+                </p>
               </div>
               <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
                 <Receipt className="size-4" />
@@ -1475,7 +1525,9 @@ export function DashboardPage() {
             <div className="p-3.5 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[11px] text-muted-foreground font-medium">Impayés du mois</p>
-                <p className="text-base sm:text-lg font-black text-rose-500">{overview.arrearsMinor.toLocaleString('fr-FR')} FCFA</p>
+                <p className="text-base sm:text-lg font-black text-rose-500">
+                  {overview.arrearsMinor.toLocaleString('fr-FR')} FCFA
+                </p>
               </div>
               <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500">
                 <TrendingDown className="size-4" />
@@ -1485,7 +1537,9 @@ export function DashboardPage() {
             <div className="p-3.5 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[11px] text-muted-foreground font-medium">Taux d'occupation</p>
-                <p className="text-base sm:text-lg font-black text-foreground">{overview.occupancyRate} %</p>
+                <p className="text-base sm:text-lg font-black text-foreground">
+                  {overview.occupancyRate} %
+                </p>
               </div>
               <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
                 <KeyRound className="size-4" />
@@ -1495,7 +1549,9 @@ export function DashboardPage() {
             <div className="p-3.5 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[11px] text-muted-foreground font-medium">Maintenance active</p>
-                <p className="text-base sm:text-lg font-black text-foreground">{overview.openMaintenance} tickets</p>
+                <p className="text-base sm:text-lg font-black text-foreground">
+                  {overview.openMaintenance} tickets
+                </p>
               </div>
               <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
                 <Wrench className="size-4" />
@@ -1509,7 +1565,6 @@ export function DashboardPage() {
       <div className="space-y-6">
         {sections.map((section, sIdx) => (
           <div key={sIdx} className="space-y-3">
-            
             {/* Section Header */}
             <div className="px-1 flex items-baseline justify-between">
               <div>
@@ -1533,14 +1588,14 @@ export function DashboardPage() {
 
                   const buttonContent = (
                     <div className="flex flex-col items-center text-center group cursor-pointer focus:outline-none">
-                      
                       {/* Circular Button Container with Floating Badge */}
                       <div className="relative mb-2.5">
-                        
                         {/* Floating Badge (e.g., NOUVEAU, OFFICIEL, PROMO) */}
                         {btn.badge && (
                           <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap">
-                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm tracking-tight ${btn.badgeBg || 'bg-amber-400 text-black'}`}>
+                            <span
+                              className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm tracking-tight ${btn.badgeBg || 'bg-amber-400 text-black'}`}
+                            >
                               {btn.badge}
                             </span>
                           </div>
@@ -1557,7 +1612,9 @@ export function DashboardPage() {
                       {/* Label under button */}
                       <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors leading-tight max-w-[95px] line-clamp-2">
                         {btn.title.split('\n').map((line, lIdx) => (
-                          <span key={lIdx} className="block">{line}</span>
+                          <span key={lIdx} className="block">
+                            {line}
+                          </span>
                         ))}
                       </span>
                     </div>
@@ -1588,7 +1645,6 @@ export function DashboardPage() {
                 })}
               </div>
             </div>
-
           </div>
         ))}
       </div>
@@ -1627,7 +1683,6 @@ export function DashboardPage() {
         isOpen={ikeepaySettingsOpen}
         onClose={() => setIkeepaySettingsOpen(false)}
       />
-
     </div>
   );
 }

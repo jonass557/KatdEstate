@@ -102,7 +102,10 @@ const unitSchema = new Schema(
   },
   { timestamps },
 );
-unitSchema.index({ organizationId: 1, propertyId: 1, status: 1 }, { name: 'units_org_property_status' });
+unitSchema.index(
+  { organizationId: 1, propertyId: 1, status: 1 },
+  { name: 'units_org_property_status' },
+);
 unitSchema.index({ organizationId: 1, type: 1 }, { name: 'units_org_type' });
 
 export type PropertyDocument = InferSchemaType<typeof propertySchema> & { _id: Types.ObjectId };
@@ -110,7 +113,9 @@ export type BuildingDocument = InferSchemaType<typeof buildingSchema> & { _id: T
 export type UnitDocument = InferSchemaType<typeof unitSchema> & { _id: Types.ObjectId };
 
 export const Property =
-  (models.Property as Model<PropertyDocument>) ?? model<PropertyDocument>('Property', propertySchema);
+  (models.Property as Model<PropertyDocument>) ??
+  model<PropertyDocument>('Property', propertySchema);
 export const Building =
-  (models.Building as Model<BuildingDocument>) ?? model<BuildingDocument>('Building', buildingSchema);
+  (models.Building as Model<BuildingDocument>) ??
+  model<BuildingDocument>('Building', buildingSchema);
 export const Unit = (models.Unit as Model<UnitDocument>) ?? model<UnitDocument>('Unit', unitSchema);

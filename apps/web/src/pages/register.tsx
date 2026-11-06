@@ -4,22 +4,22 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { registerSchema } from '@rentflow/shared';
-import { 
-  Building2, 
-  Home, 
-  Briefcase, 
-  Crown, 
-  ShieldCheck, 
-  Users, 
-  ArrowLeft, 
-  CheckCircle2, 
+import {
+  Building2,
+  Home,
+  Briefcase,
+  Crown,
+  ShieldCheck,
+  Users,
+  ArrowLeft,
+  CheckCircle2,
   AlertCircle,
   Sparkles,
   Phone,
   Mail,
   User,
   Lock,
-  Search
+  Search,
 } from 'lucide-react';
 import { useSession } from '../app/session';
 import { Button } from '../components/ui/button';
@@ -45,8 +45,13 @@ const ROLES_LIST: RoleCard[] = [
     badge: 'Achat & Location',
     icon: Search,
     gradient: 'from-emerald-500 to-teal-700',
-    description: 'Trouvez un logement, meublé, studio ou parcelle et contactez directement les bailleurs et agents.',
-    features: ['Accès complet aux coordonnées', 'Messagerie instantanée directe', 'Demandes de visite & alertes'],
+    description:
+      'Trouvez un logement, meublé, studio ou parcelle et contactez directement les bailleurs et agents.',
+    features: [
+      'Accès complet aux coordonnées',
+      'Messagerie instantanée directe',
+      'Demandes de visite & alertes',
+    ],
   },
   {
     id: 'OWNER',
@@ -54,8 +59,13 @@ const ROLES_LIST: RoleCard[] = [
     badge: 'Patrimoine & Baux',
     icon: Building2,
     gradient: 'from-blue-600 to-indigo-600',
-    description: 'Pilotez votre parc immobilier, suivez vos encaissements et automatisez vos quittances.',
-    features: ['Gestion des biens & logements', 'Paiements Mobile Money', 'Quittances automatiques'],
+    description:
+      'Pilotez votre parc immobilier, suivez vos encaissements et automatisez vos quittances.',
+    features: [
+      'Gestion des biens & logements',
+      'Paiements Mobile Money',
+      'Quittances automatiques',
+    ],
   },
   {
     id: 'TENANT',
@@ -64,7 +74,11 @@ const ROLES_LIST: RoleCard[] = [
     icon: Home,
     gradient: 'from-emerald-600 to-teal-600',
     description: 'Payez votre loyer en toute sérénité et accédez à vos quittances certifiées.',
-    features: ['Paiement Ikeepay (Orange, MTN, Wave)', 'Reçus officiels instantanés', 'Signalement pannes & requêtes'],
+    features: [
+      'Paiement Ikeepay (Orange, MTN, Wave)',
+      'Reçus officiels instantanés',
+      'Signalement pannes & requêtes',
+    ],
   },
   {
     id: 'AGENT',
@@ -73,7 +87,11 @@ const ROLES_LIST: RoleCard[] = [
     icon: Briefcase,
     gradient: 'from-amber-600 to-orange-600',
     description: 'Diffusez vos mandats sur la marketplace nationale et gérez vos commissions.',
-    features: ['Diffusion Marketplace', 'Suivi des prospects & visites', 'Commissions & transactions'],
+    features: [
+      'Diffusion Marketplace',
+      'Suivi des prospects & visites',
+      'Commissions & transactions',
+    ],
   },
   {
     id: 'NEIGHBORHOOD_LEADER',
@@ -81,8 +99,13 @@ const ROLES_LIST: RoleCard[] = [
     badge: 'Autorité Territoriale',
     icon: Crown,
     gradient: 'from-purple-600 to-violet-700',
-    description: 'Supervisez le recensement, validez les transactions foncières et délivrez les certificats officiels.',
-    features: ['Certificats avec QR Code officiel', 'Enregistrement ventes & locations', 'Commissions coutumières'],
+    description:
+      'Supervisez le recensement, validez les transactions foncières et délivrez les certificats officiels.',
+    features: [
+      'Certificats avec QR Code officiel',
+      'Enregistrement ventes & locations',
+      'Commissions coutumières',
+    ],
   },
   {
     id: 'BLOCK_LEADER',
@@ -90,8 +113,13 @@ const ROLES_LIST: RoleCard[] = [
     badge: 'Sécurité de Proximité',
     icon: ShieldCheck,
     gradient: 'from-cyan-600 to-blue-700',
-    description: 'Enrôlez les résidences de votre bloc, générez le QR d’adhésion et sécurisez votre secteur.',
-    features: ['Recensement des foyers & maisons', 'Génération QR Code du bloc', 'Gestion des alertes de sécurité'],
+    description:
+      'Enrôlez les résidences de votre bloc, générez le QR d’adhésion et sécurisez votre secteur.',
+    features: [
+      'Recensement des foyers & maisons',
+      'Génération QR Code du bloc',
+      'Gestion des alertes de sécurité',
+    ],
   },
   {
     id: 'RESIDENT',
@@ -100,7 +128,11 @@ const ROLES_LIST: RoleCard[] = [
     icon: Users,
     gradient: 'from-rose-600 to-pink-600',
     description: 'Rattachez votre foyer à votre quartier, recevez les alertes et restez informé.',
-    features: ['Attestation de résidence', 'Alertes de quartier en direct', 'Participation citoyenne'],
+    features: [
+      'Attestation de résidence',
+      'Alertes de quartier en direct',
+      'Participation citoyenne',
+    ],
   },
 ];
 
@@ -108,7 +140,7 @@ export function RegisterPage() {
   const [searchParams] = useSearchParams();
   const initialRole = (searchParams.get('role') as any) || 'OWNER';
   const [selectedRole, setSelectedRole] = useState<RoleCard['id']>(
-    ROLES_LIST.some((r) => r.id === initialRole) ? initialRole : 'OWNER'
+    ROLES_LIST.some((r) => r.id === initialRole) ? initialRole : 'OWNER',
   );
   const [formError, setFormError] = useState<string | null>(null);
   const { registerUser } = useSession();
@@ -141,7 +173,11 @@ export function RegisterPage() {
         navigate('/portal', { replace: true });
       } else if (selectedRole === 'AGENT') {
         navigate('/agent', { replace: true });
-      } else if (selectedRole === 'NEIGHBORHOOD_LEADER' || selectedRole === 'BLOCK_LEADER' || selectedRole === 'RESIDENT') {
+      } else if (
+        selectedRole === 'NEIGHBORHOOD_LEADER' ||
+        selectedRole === 'BLOCK_LEADER' ||
+        selectedRole === 'RESIDENT'
+      ) {
         navigate('/dashboard', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });
@@ -149,14 +185,20 @@ export function RegisterPage() {
     } catch (error) {
       if (error instanceof ApiError) {
         for (const detail of error.details ?? []) {
-          if (detail.path === 'email' || detail.path === 'password' || detail.path === 'displayName') {
+          if (
+            detail.path === 'email' ||
+            detail.path === 'password' ||
+            detail.path === 'displayName'
+          ) {
             setError(detail.path as any, { message: detail.message });
           }
         }
         setFormError(error.message);
         return;
       }
-      setFormError('Une erreur est survenue lors de la création de votre compte. Veuillez réessayer.');
+      setFormError(
+        'Une erreur est survenue lors de la création de votre compte. Veuillez réessayer.',
+      );
     }
   });
 
@@ -166,7 +208,6 @@ export function RegisterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-8">
-        
         {/* Navigation & Header */}
         <div className="flex items-center justify-between">
           <Link
@@ -177,7 +218,9 @@ export function RegisterPage() {
             Retour à l'accueil
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-400 hidden sm:inline">Vous avez déjà un compte ?</span>
+            <span className="text-sm text-slate-400 hidden sm:inline">
+              Vous avez déjà un compte ?
+            </span>
             <Link
               to="/sign-in"
               className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-4 py-2 rounded-xl transition-all"
@@ -197,7 +240,8 @@ export function RegisterPage() {
             Rejoignez l'écosystème immobilier de référence
           </h1>
           <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
-            Choisissez votre statut pour activer votre interface sur-mesure : gestion locative, chefferie, sécurité de bloc ou marketplace.
+            Choisissez votre statut pour activer votre interface sur-mesure : gestion locative,
+            chefferie, sécurité de bloc ou marketplace.
           </p>
         </div>
 
@@ -205,10 +249,14 @@ export function RegisterPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-black text-xs font-bold">1</span>
+              <span className="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-black text-xs font-bold">
+                1
+              </span>
               Sélectionnez votre profil
             </h2>
-            <span className="text-xs text-slate-400">Profil actif : <strong className="text-emerald-400">{currentRoleCard.title}</strong></span>
+            <span className="text-xs text-slate-400">
+              Profil actif : <strong className="text-emerald-400">{currentRoleCard.title}</strong>
+            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -227,7 +275,9 @@ export function RegisterPage() {
                   }`}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div className={`p-3 rounded-xl bg-gradient-to-br ${role.gradient} text-white shadow-md`}>
+                    <div
+                      className={`p-3 rounded-xl bg-gradient-to-br ${role.gradient} text-white shadow-md`}
+                    >
                       <CardIcon className="size-5" />
                     </div>
                     {isSelected ? (
@@ -266,10 +316,15 @@ export function RegisterPage() {
         <div className="mt-8 pt-6 border-t border-slate-800">
           <div className="max-w-xl mx-auto space-y-6">
             <div className="flex items-center gap-3">
-              <span className="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-black text-xs font-bold">2</span>
+              <span className="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-black text-xs font-bold">
+                2
+              </span>
               <div>
                 <h2 className="text-lg font-semibold text-white">Vos informations d'inscription</h2>
-                <p className="text-xs text-slate-400">Création de votre compte <span className="text-emerald-400 font-medium">{currentRoleCard.title}</span></p>
+                <p className="text-xs text-slate-400">
+                  Création de votre compte{' '}
+                  <span className="text-emerald-400 font-medium">{currentRoleCard.title}</span>
+                </p>
               </div>
             </div>
 
@@ -287,7 +342,9 @@ export function RegisterPage() {
 
               {/* Rôle Badge Display */}
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-950/60 border border-slate-800 text-xs">
-                <div className={`p-2 rounded-lg bg-gradient-to-br ${currentRoleCard.gradient} text-white`}>
+                <div
+                  className={`p-2 rounded-lg bg-gradient-to-br ${currentRoleCard.gradient} text-white`}
+                >
                   <IconComp className="size-4" />
                 </div>
                 <div>
@@ -308,7 +365,9 @@ export function RegisterPage() {
                   {...register('displayName')}
                 />
                 {formState.errors.displayName?.message && (
-                  <p className="text-[11px] text-rose-400">{formState.errors.displayName.message}</p>
+                  <p className="text-[11px] text-rose-400">
+                    {formState.errors.displayName.message}
+                  </p>
                 )}
               </div>
 
@@ -341,7 +400,9 @@ export function RegisterPage() {
                   className="bg-slate-950/60 border-slate-800 text-white placeholder:text-slate-600 focus:border-emerald-500 rounded-xl"
                   {...register('phone')}
                 />
-                <p className="text-[10px] text-slate-500">Permet les réceptions et virements instantanés Orange Money, MTN MoMo, Wave, Moov.</p>
+                <p className="text-[10px] text-slate-500">
+                  Permet les réceptions et virements instantanés Orange Money, MTN MoMo, Wave, Moov.
+                </p>
               </div>
 
               {/* Mot de passe */}
@@ -367,16 +428,18 @@ export function RegisterPage() {
                 disabled={formState.isSubmitting}
                 className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold py-3.5 rounded-2xl shadow-xl shadow-emerald-500/20 text-sm transition-all transform active:scale-[0.99]"
               >
-                {formState.isSubmitting ? 'Création de votre espace en cours...' : `Créer mon compte ${currentRoleCard.title}`}
+                {formState.isSubmitting
+                  ? 'Création de votre espace en cours...'
+                  : `Créer mon compte ${currentRoleCard.title}`}
               </Button>
 
               <p className="text-center text-[11px] text-slate-500">
-                En créant un compte, vous acceptez les conditions d'utilisation de la plateforme KatdEstate et la charte de confidentialité foncière.
+                En créant un compte, vous acceptez les conditions d'utilisation de la plateforme
+                KatdEstate et la charte de confidentialité foncière.
               </p>
             </form>
           </div>
         </div>
-
       </div>
     </div>
   );

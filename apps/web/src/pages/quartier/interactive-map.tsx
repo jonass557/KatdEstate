@@ -34,7 +34,9 @@ export function InteractiveQuartierMap() {
         </div>
         <h1 className="text-2xl font-black text-foreground">Carte Interactive du Recensement</h1>
         <p className="text-xs text-muted-foreground max-w-2xl">
-          Visualisez l'état d'avancement du recensement par secteur. Conformément à la réglementation sur la protection de la vie privée, aucun nom, numéro de téléphone ni donnée familiale n'est affiché publiquement.
+          Visualisez l'état d'avancement du recensement par secteur. Conformément à la
+          réglementation sur la protection de la vie privée, aucun nom, numéro de téléphone ni
+          donnée familiale n'est affiché publiquement.
         </p>
 
         {/* Filters */}
@@ -87,10 +89,12 @@ export function InteractiveQuartierMap() {
             Résidences localisées : <strong>{residences?.length || 0}</strong>
           </div>
           <div className="rounded-lg bg-emerald-500/20 backdrop-blur-md px-3 py-1.5 border border-emerald-500/40 text-emerald-300">
-            ● Validées : <strong>{residences?.filter((r) => r.censusStatus === 'VALIDATED').length || 0}</strong>
+            ● Validées :{' '}
+            <strong>{residences?.filter((r) => r.censusStatus === 'VALIDATED').length || 0}</strong>
           </div>
           <div className="rounded-lg bg-amber-500/20 backdrop-blur-md px-3 py-1.5 border border-amber-500/40 text-amber-300">
-            ● En attente : <strong>{residences?.filter((r) => r.censusStatus === 'PENDING').length || 0}</strong>
+            ● En attente :{' '}
+            <strong>{residences?.filter((r) => r.censusStatus === 'PENDING').length || 0}</strong>
           </div>
         </div>
 
@@ -102,7 +106,9 @@ export function InteractiveQuartierMap() {
               className="rounded-xl border border-white/15 bg-black/50 backdrop-blur-sm p-3 text-xs space-y-1 transition-transform hover:scale-105"
             >
               <div className="flex items-center justify-between">
-                <span className="font-mono font-bold text-primary text-[10px]">{r.residenceDomoraId}</span>
+                <span className="font-mono font-bold text-primary text-[10px]">
+                  {r.residenceDomoraId}
+                </span>
                 <span
                   className={`h-2 w-2 rounded-full ${
                     r.censusStatus === 'VALIDATED' ? 'bg-emerald-400' : 'bg-amber-400'

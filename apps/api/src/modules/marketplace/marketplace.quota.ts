@@ -70,11 +70,7 @@ export const DEFAULT_AGENT_PLANS = [
 
 export async function ensureDefaultAgentPlans(): Promise<void> {
   for (const plan of DEFAULT_AGENT_PLANS) {
-    await AgentPlan.updateOne(
-      { code: plan.code },
-      { $setOnInsert: plan },
-      { upsert: true }
-    );
+    await AgentPlan.updateOne({ code: plan.code }, { $setOnInsert: plan }, { upsert: true });
   }
 }
 
@@ -98,15 +94,26 @@ export async function getAgentPlanWithUsage(userId: string) {
   }
 
   const planCode = profile.activeSubscriptionPlan || 'AGENT_FREE';
-  const plan = (await AgentPlan.findOne({ code: planCode })) ?? (await AgentPlan.findOne({ code: 'AGENT_FREE' }));
+  const plan =
+    (await AgentPlan.findOne({ code: planCode })) ??
+    (await AgentPlan.findOne({ code: 'AGENT_FREE' }));
 
   if (!plan) {
     throw new HttpError(500, 'Grille tarifaire agent introuvable.');
   }
 
   const [activeListingsCount, featuredListingsCount] = await Promise.all([
-    Listing.countDocuments({ publisherId: userId, status: { $in: ['PUBLISHED', 'PENDING_REVIEW'] }, deletedAt: null }),
-    Listing.countDocuments({ publisherId: userId, isFeatured: true, status: 'PUBLISHED', deletedAt: null }),
+    Listing.countDocuments({
+      publisherId: userId,
+      status: { $in: ['PUBLISHED', 'PENDING_REVIEW'] },
+      deletedAt: null,
+    }),
+    Listing.countDocuments({
+      publisherId: userId,
+      isFeatured: true,
+      status: 'PUBLISHED',
+      deletedAt: null,
+    }),
   ]);
 
   return {
@@ -132,35 +139,35 @@ export async function checkAgentListingQuota(
   photosCount: number,
   videosCount: number,
   isFeatured = false,
-  isUpdate = false
+  isUpdate = false,
 ): Promise<void> {
   const { plan, usage } = await getAgentPlanWithUsage(userId);
 
   if (!isUpdate && usage.activeListingsCount >= plan.maxActiveListings) {
     throw new HttpError(
       403,
-      `Quota d'annonces atteint (${usage.activeListingsCount}/${plan.maxActiveListings}). Passez à une formule supérieure pour publier davantage d'annonces.`
+      `Quota d'annonces atteint (${usage.activeListingsCount}/${plan.maxActiveListings}). Passez à une formule supérieure pour publier davantage d'annonces.`,
     );
   }
 
   if (photosCount > plan.maxPhotosPerListing) {
     throw new HttpError(
       403,
-      `Votre abonnement autorise un maximum de ${plan.maxPhotosPerListing} photos par annonce (fourni: ${photosCount}).`
+      `Votre abonnement autorise un maximum de ${plan.maxPhotosPerListing} photos par annonce (fourni: ${photosCount}).`,
     );
   }
 
   if (videosCount > plan.maxVideosPerListing) {
     throw new HttpError(
       403,
-      `Votre formule autorise ${plan.maxVideosPerListing} vidéo(s) par annonce (fourni: ${videosCount}).`
+      `Votre formule autorise ${plan.maxVideosPerListing} vidéo(s) par annonce (fourni: ${videosCount}).`,
     );
   }
 
   if (isFeatured && usage.featuredListingsCount >= plan.featuredListingsQuota) {
     throw new HttpError(
       403,
-      `Quota d'annonces mises en avant atteint (${usage.featuredListingsCount}/${plan.featuredListingsQuota}).`
+      `Quota d'annonces mises en avant atteint (${usage.featuredListingsCount}/${plan.featuredListingsQuota}).`,
     );
   }
 }

@@ -1,27 +1,27 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Building2, 
-  Home, 
-  Briefcase, 
-  Crown, 
-  ShieldCheck, 
-  Users, 
-  ArrowRight, 
-  CheckCircle2, 
-  Sparkles, 
-  Search, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  CreditCard, 
-  FileText, 
-  BadgeCheck, 
-  Send, 
-  Menu, 
+import {
+  Building2,
+  Home,
+  Briefcase,
+  Crown,
+  ShieldCheck,
+  Users,
+  ArrowRight,
+  CheckCircle2,
+  Sparkles,
+  Search,
+  MapPin,
+  Phone,
+  Mail,
+  CreditCard,
+  FileText,
+  BadgeCheck,
+  Send,
+  Menu,
   X,
   ExternalLink,
-  DollarSign
+  DollarSign,
 } from 'lucide-react';
 import { useSession } from '../app/session';
 import { apiRequest } from '../lib/api-client';
@@ -53,7 +53,8 @@ const SEED_MARKETPLACE_ITEMS: PublicListing[] = [
     city: 'Abidjan',
     surface: '450 m²',
     badge: 'Titre Foncier (ACD)',
-    image: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80',
+    image:
+      'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80',
     certified: true,
   },
   {
@@ -66,7 +67,8 @@ const SEED_MARKETPLACE_ITEMS: PublicListing[] = [
     city: 'Abidjan',
     surface: '110 m²',
     badge: 'Location Vérifiée',
-    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
+    image:
+      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
     certified: true,
   },
   {
@@ -79,7 +81,8 @@ const SEED_MARKETPLACE_ITEMS: PublicListing[] = [
     city: 'Abidjan',
     surface: '600 m²',
     badge: 'Certifié Chefferie',
-    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
+    image:
+      'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
     certified: true,
   },
   {
@@ -92,7 +95,8 @@ const SEED_MARKETPLACE_ITEMS: PublicListing[] = [
     city: 'Abidjan',
     surface: '850 m²',
     badge: 'Rendement 11.4%',
-    image: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=800&q=80',
+    image:
+      'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=800&q=80',
     certified: true,
   },
 ];
@@ -101,14 +105,16 @@ export function LandingPage() {
   const { isAuthenticated } = useSession();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<'ALL' | 'SALE' | 'RENTAL' | 'LAND'>('ALL');
-  
+  const [selectedCategory, setSelectedCategory] = useState<'ALL' | 'SALE' | 'RENTAL' | 'LAND'>(
+    'ALL',
+  );
+
   // Marketing ticker banner state
   const [tickerMessages, setTickerMessages] = useState<string[]>([
     '🏛️ Chefferie de Quartier : Enregistrement obligatoire des transactions foncières et locatives du lundi au samedi.',
     '💳 Paiements Mobile Money : Encaissez et réglez vos loyers en 1 clic via Orange Money, MTN MoMo, Wave et Moov avec la passerelle Ikeepay.',
-    '📜 Certificats Officiels KatdEstate : Documents sécurisés avec QR Code infalsifiable validé par l\'autorité coutumière.',
-    '🛡️ Recensement Communautaire : Rapprochez-vous de votre Chef de Bloc pour l\'enrôlement gratuit de votre foyer.',
+    "📜 Certificats Officiels KatdEstate : Documents sécurisés avec QR Code infalsifiable validé par l'autorité coutumière.",
+    "🛡️ Recensement Communautaire : Rapprochez-vous de votre Chef de Bloc pour l'enrôlement gratuit de votre foyer.",
   ]);
 
   // Contact form state
@@ -168,7 +174,6 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#110222] text-slate-100 selection:bg-[#00e676] selection:text-slate-950">
-      
       {/* 1. Ticker Banner (Bannière Défilante Administrateur) */}
       <div className="bg-gradient-to-r from-purple-950 via-[#1e053a] to-emerald-950 border-b border-purple-800/40 py-2.5 px-4 overflow-hidden relative">
         <div className="max-w-7xl mx-auto flex items-center gap-4">
@@ -195,7 +200,6 @@ export function LandingPage() {
       {/* 2. Top Navigation Bar (Style KatdEstate PRO) */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#16042d]/90 border-b border-purple-900/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          
           {/* Logo & Brand matching screenshot */}
           <Link to="/" className="flex items-center gap-3 group">
             <div className="size-11 rounded-2xl bg-gradient-to-tr from-[#00e676] via-teal-500 to-purple-600 p-0.5 shadow-lg shadow-[#00e676]/20 group-hover:shadow-[#00e676]/40 transition-all">
@@ -212,17 +216,29 @@ export function LandingPage() {
                   PRO
                 </span>
               </div>
-              <p className="text-[10px] text-purple-300/80 tracking-wider font-medium">Plateforme Immobilière & Sécurité Urbaine</p>
+              <p className="text-[10px] text-purple-300/80 tracking-wider font-medium">
+                Plateforme Immobilière & Sécurité Urbaine
+              </p>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-purple-200">
-            <a href="#marketplace" className="hover:text-[#00e676] transition-colors">Marketplace</a>
-            <a href="#roles" className="hover:text-[#00e676] transition-colors">Profils & Rôles</a>
-            <a href="#features" className="hover:text-[#00e676] transition-colors">Fonctionnalités</a>
-            <a href="#chefferie" className="hover:text-[#00e676] transition-colors">Chefferie & Foncier</a>
-            <a href="#contact" className="hover:text-[#00e676] transition-colors">Contact</a>
+            <a href="#marketplace" className="hover:text-[#00e676] transition-colors">
+              Marketplace
+            </a>
+            <a href="#roles" className="hover:text-[#00e676] transition-colors">
+              Profils & Rôles
+            </a>
+            <a href="#features" className="hover:text-[#00e676] transition-colors">
+              Fonctionnalités
+            </a>
+            <a href="#chefferie" className="hover:text-[#00e676] transition-colors">
+              Chefferie & Foncier
+            </a>
+            <a href="#contact" className="hover:text-[#00e676] transition-colors">
+              Contact
+            </a>
           </nav>
 
           {/* Action CTAs */}
@@ -267,11 +283,41 @@ export function LandingPage() {
         {mobileMenuOpen && (
           <div className="md:hidden border-b border-purple-900/50 bg-[#16042d] px-4 py-5 space-y-4">
             <div className="flex flex-col gap-3 font-medium text-purple-200">
-              <a href="#marketplace" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-[#00e676]">Marketplace</a>
-              <a href="#roles" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-[#00e676]">Profils & Rôles</a>
-              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-[#00e676]">Fonctionnalités</a>
-              <a href="#chefferie" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-[#00e676]">Chefferie & Foncier</a>
-              <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-[#00e676]">Contact</a>
+              <a
+                href="#marketplace"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2 hover:text-[#00e676]"
+              >
+                Marketplace
+              </a>
+              <a
+                href="#roles"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2 hover:text-[#00e676]"
+              >
+                Profils & Rôles
+              </a>
+              <a
+                href="#features"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2 hover:text-[#00e676]"
+              >
+                Fonctionnalités
+              </a>
+              <a
+                href="#chefferie"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2 hover:text-[#00e676]"
+              >
+                Chefferie & Foncier
+              </a>
+              <a
+                href="#contact"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2 hover:text-[#00e676]"
+              >
+                Contact
+              </a>
             </div>
             <div className="pt-4 border-t border-purple-900/60 flex flex-col gap-2.5">
               {isAuthenticated ? (
@@ -309,7 +355,6 @@ export function LandingPage() {
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[500px] h-[250px] bg-[#00e676]/15 blur-[120px] rounded-full pointer-events-none -z-10" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
-          
           {/* Slogan Pill */}
           <div className="inline-block">
             <span className="bg-[#00e676] text-[#053724] font-black px-6 sm:px-8 py-2 sm:py-2.5 rounded-2xl text-xl sm:text-3xl shadow-2xl shadow-[#00e676]/35 tracking-tight transform hover:scale-105 transition-transform inline-block">
@@ -322,7 +367,9 @@ export function LandingPage() {
 
           {/* Curved wave tagline */}
           <p className="text-base sm:text-xl text-purple-100 max-w-2xl mx-auto leading-relaxed font-medium">
-            Gérez vos parcelles, <strong className="text-[#00e676] font-black">sécurisez</strong> vos ventes et construisons ensemble <strong className="text-[#00e676] font-black">une communauté organisée</strong>.
+            Gérez vos parcelles, <strong className="text-[#00e676] font-black">sécurisez</strong>{' '}
+            vos ventes et construisons ensemble{' '}
+            <strong className="text-[#00e676] font-black">une communauté organisée</strong>.
           </p>
 
           {/* Pill CTA Button (Commencer ->) */}
@@ -351,29 +398,35 @@ export function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-10 max-w-5xl mx-auto">
             <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-900/60 backdrop-blur-md text-center space-y-1">
               <p className="text-3xl sm:text-4xl font-black text-[#00e676]">99.4%</p>
-              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">Recouvrement des Loyers</p>
+              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">
+                Recouvrement des Loyers
+              </p>
             </div>
             <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-900/60 backdrop-blur-md text-center space-y-1">
               <p className="text-3xl sm:text-4xl font-black text-teal-300">100%</p>
-              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">Certificats Infalsifiables</p>
+              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">
+                Certificats Infalsifiables
+              </p>
             </div>
             <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-900/60 backdrop-blur-md text-center space-y-1">
               <p className="text-3xl sm:text-4xl font-black text-cyan-300">15 000+</p>
-              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">Résidences Recensées</p>
+              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">
+                Résidences Recensées
+              </p>
             </div>
             <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-900/60 backdrop-blur-md text-center space-y-1">
               <p className="text-3xl sm:text-4xl font-black text-amber-300">4 Opérateurs</p>
-              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">Ikeepay Mobile Money</p>
+              <p className="text-xs text-purple-300 uppercase font-bold tracking-wider">
+                Ikeepay Mobile Money
+              </p>
             </div>
           </div>
-
         </div>
       </section>
 
       {/* 4. Role Selection & Direct Registration Grid */}
       <section id="roles" className="py-20 bg-slate-900/40 border-y border-slate-800/80 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          
           <div className="text-center space-y-3">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
               <Users className="size-3.5" />
@@ -383,12 +436,12 @@ export function LandingPage() {
               Une Plateforme Dédiée à Chaque Acteur
             </h2>
             <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
-              Sélectionnez votre activité pour créer votre espace personnalisé avec les outils adaptés à vos missions quotidiennes.
+              Sélectionnez votre activité pour créer votre espace personnalisé avec les outils
+              adaptés à vos missions quotidiennes.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
             {/* Card 1: Propriétaire */}
             <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-blue-500/50 transition-all group flex flex-col justify-between">
               <div className="space-y-4">
@@ -404,12 +457,22 @@ export function LandingPage() {
                   Propriétaire / Bailleur
                 </h3>
                 <p className="text-sm text-slate-400 leading-relaxed">
-                  Automatisez la gestion de vos appartements, immeubles et villas : encaissements en ligne, émission automatique des quittances et suivi de trésorerie.
+                  Automatisez la gestion de vos appartements, immeubles et villas : encaissements en
+                  ligne, émission automatique des quittances et suivi de trésorerie.
                 </p>
                 <ul className="space-y-2 text-xs text-slate-300 pt-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-blue-400" /> Baux numériques et états des lieux</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-blue-400" /> Encaissements Mobile Money Ikeepay</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-blue-400" /> Rapports financiers et impayés en direct</li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-blue-400" /> Baux numériques et états des
+                    lieux
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-blue-400" /> Encaissements Mobile Money
+                    Ikeepay
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-blue-400" /> Rapports financiers et impayés
+                    en direct
+                  </li>
                 </ul>
               </div>
               <div className="pt-6 mt-6 border-t border-slate-800">
@@ -438,12 +501,22 @@ export function LandingPage() {
                   Locataire Résident
                 </h3>
                 <p className="text-sm text-slate-400 leading-relaxed">
-                  Réglez votre loyer mensuel en 1 clic par Orange Money, MTN MoMo, Wave ou Moov et recevez instantanément votre quittance certifiée conforme.
+                  Réglez votre loyer mensuel en 1 clic par Orange Money, MTN MoMo, Wave ou Moov et
+                  recevez instantanément votre quittance certifiée conforme.
                 </p>
                 <ul className="space-y-2 text-xs text-slate-300 pt-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-emerald-400" /> Paiement sans déplacement par Mobile Money</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-emerald-400" /> Quittances numériques horodatées</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-emerald-400" /> Signalement de pannes & suivi travaux</li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-400" /> Paiement sans déplacement
+                    par Mobile Money
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-400" /> Quittances numériques
+                    horodatées
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-400" /> Signalement de pannes &
+                    suivi travaux
+                  </li>
                 </ul>
               </div>
               <div className="pt-6 mt-6 border-t border-slate-800">
@@ -472,12 +545,22 @@ export function LandingPage() {
                   Agent Immobilier / Agence
                 </h3>
                 <p className="text-sm text-slate-400 leading-relaxed">
-                  Diffusez vos mandats exclusifs sur la marketplace nationale, suivez vos prospects et sécurisez le versement de vos commissions d'apporteur.
+                  Diffusez vos mandats exclusifs sur la marketplace nationale, suivez vos prospects
+                  et sécurisez le versement de vos commissions d'apporteur.
                 </p>
                 <ul className="space-y-2 text-xs text-slate-300 pt-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-amber-400" /> Diffusion immédiate sur la marketplace</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-amber-400" /> Gestion des visites et contacts acquéreurs</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-amber-400" /> Calcul et encaissement des commissions</li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-amber-400" /> Diffusion immédiate sur la
+                    marketplace
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-amber-400" /> Gestion des visites et
+                    contacts acquéreurs
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-amber-400" /> Calcul et encaissement des
+                    commissions
+                  </li>
                 </ul>
               </div>
               <div className="pt-6 mt-6 border-t border-slate-800">
@@ -506,12 +589,23 @@ export function LandingPage() {
                   Chef de Quartier / Chefferie
                 </h3>
                 <p className="text-sm text-slate-400 leading-relaxed">
-                  Enregistrez les ventes de maisons, locations et ventes de terrains de votre secteur. Générez les certificats officiels infalsifiables et percevez vos redevances.
+                  Enregistrez les ventes de maisons, locations et ventes de terrains de votre
+                  secteur. Générez les certificats officiels infalsifiables et percevez vos
+                  redevances.
                 </p>
                 <ul className="space-y-2 text-xs text-slate-300 pt-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-purple-400" /> Enregistrement ventes de terrains & maisons</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-purple-400" /> Génération certificats officiels avec QR Code</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-purple-400" /> Calcul automatique des commissions chefferie</li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-purple-400" /> Enregistrement ventes de
+                    terrains & maisons
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-purple-400" /> Génération certificats
+                    officiels avec QR Code
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-purple-400" /> Calcul automatique des
+                    commissions chefferie
+                  </li>
                 </ul>
               </div>
               <div className="pt-6 mt-6 border-t border-slate-800">
@@ -540,12 +634,22 @@ export function LandingPage() {
                   Chef de Bloc
                 </h3>
                 <p className="text-sm text-slate-400 leading-relaxed">
-                  Recensez chaque maison de votre secteur, générez un lien et un QR Code uniques pour inviter les résidents, et gérez les alertes de sécurité communautaire.
+                  Recensez chaque maison de votre secteur, générez un lien et un QR Code uniques
+                  pour inviter les résidents, et gérez les alertes de sécurité communautaire.
                 </p>
                 <ul className="space-y-2 text-xs text-slate-300 pt-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-cyan-400" /> Recensement des habitations & maisons</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-cyan-400" /> QR Code d'adhésion pour les résidents</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-cyan-400" /> Gestion des signalements et incidents</li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-cyan-400" /> Recensement des habitations &
+                    maisons
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-cyan-400" /> QR Code d'adhésion pour les
+                    résidents
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-cyan-400" /> Gestion des signalements et
+                    incidents
+                  </li>
                 </ul>
               </div>
               <div className="pt-6 mt-6 border-t border-slate-800">
@@ -574,12 +678,22 @@ export function LandingPage() {
                   Résident / Foyer
                 </h3>
                 <p className="text-sm text-slate-400 leading-relaxed">
-                  Enrôlez votre foyer auprès de votre chefferie de quartier, obtenez votre attestation de résidence officielle et recevez les alertes locales de sécurité.
+                  Enrôlez votre foyer auprès de votre chefferie de quartier, obtenez votre
+                  attestation de résidence officielle et recevez les alertes locales de sécurité.
                 </p>
                 <ul className="space-y-2 text-xs text-slate-300 pt-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-rose-400" /> Attestation de résidence avec QR Code</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-rose-400" /> Réception des alertes de sécurité en direct</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-rose-400" /> Communication directe avec la chefferie</li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-rose-400" /> Attestation de résidence avec
+                    QR Code
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-rose-400" /> Réception des alertes de
+                    sécurité en direct
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-rose-400" /> Communication directe avec la
+                    chefferie
+                  </li>
                 </ul>
               </div>
               <div className="pt-6 mt-6 border-t border-slate-800">
@@ -592,15 +706,12 @@ export function LandingPage() {
                 </Link>
               </div>
             </div>
-
           </div>
-
         </div>
       </section>
 
       {/* 5. Live Marketplace Preview Section (Seed Data) */}
       <section id="marketplace" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
@@ -674,12 +785,16 @@ export function LandingPage() {
                   </h3>
                   <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2">
                     <MapPin className="size-3.5 text-emerald-400 shrink-0" />
-                    <span className="truncate">{prop.location}, {prop.city}</span>
+                    <span className="truncate">
+                      {prop.location}, {prop.city}
+                    </span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                  <span className="text-slate-400 font-medium">Superficie : <strong className="text-white">{prop.surface}</strong></span>
+                  <span className="text-slate-400 font-medium">
+                    Superficie : <strong className="text-white">{prop.surface}</strong>
+                  </span>
                   <Link
                     to="/marketplace"
                     className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-semibold"
@@ -702,13 +817,14 @@ export function LandingPage() {
             <ExternalLink className="size-4" />
           </Link>
         </div>
-
       </section>
 
       {/* 6. Chefferie, Foncier & Ikeepay Payment Highlight */}
-      <section id="chefferie" className="py-20 bg-gradient-to-b from-slate-900/60 to-slate-950 border-t border-slate-800/80">
+      <section
+        id="chefferie"
+        className="py-20 bg-gradient-to-b from-slate-900/60 to-slate-950 border-t border-slate-800/80"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
-          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-semibold">
@@ -719,7 +835,9 @@ export function LandingPage() {
                 Sécurisation Totale des Ventes de Terrains et Maisons
               </h2>
               <p className="text-slate-300 text-base sm:text-lg leading-relaxed">
-                KatdEstate formalise la gouvernance foncière traditionnelle en numérisant l'ensemble des opérations sous l'autorité du Chef de Quartier. Fini les doubles ventes de terrains ou les faux intermédiaires.
+                KatdEstate formalise la gouvernance foncière traditionnelle en numérisant l'ensemble
+                des opérations sous l'autorité du Chef de Quartier. Fini les doubles ventes de
+                terrains ou les faux intermédiaires.
               </p>
 
               <div className="space-y-4 pt-2">
@@ -728,8 +846,13 @@ export function LandingPage() {
                     <FileText className="size-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-base">Générateur Automatique de Certificats Officiels</h4>
-                    <p className="text-xs text-slate-400 mt-1">Numéro unique de certification, identités vérifiées de l'ancien et nouvel acquéreur, signature électronique et QR Code d'authenticité.</p>
+                    <h4 className="font-bold text-white text-base">
+                      Générateur Automatique de Certificats Officiels
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Numéro unique de certification, identités vérifiées de l'ancien et nouvel
+                      acquéreur, signature électronique et QR Code d'authenticité.
+                    </p>
                   </div>
                 </div>
 
@@ -738,8 +861,13 @@ export function LandingPage() {
                     <DollarSign className="size-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-base">Calcul Automatisé des Droits de Chefferie</h4>
-                    <p className="text-xs text-slate-400 mt-1">Application transparente des pourcentages coutumiers sur chaque vente ou bail avec encaissement et quittance d'honoraires.</p>
+                    <h4 className="font-bold text-white text-base">
+                      Calcul Automatisé des Droits de Chefferie
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Application transparente des pourcentages coutumiers sur chaque vente ou bail
+                      avec encaissement et quittance d'honoraires.
+                    </p>
                   </div>
                 </div>
 
@@ -748,8 +876,13 @@ export function LandingPage() {
                     <CreditCard className="size-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-base">Passerelle de Paiement Ikeepay H2H Directe</h4>
-                    <p className="text-xs text-slate-400 mt-1">Paiements et retraits en temps réel via Orange Money, MTN MoMo, Wave et Moov. L'administrateur gère ses clés en toute autonomie.</p>
+                    <h4 className="font-bold text-white text-base">
+                      Passerelle de Paiement Ikeepay H2H Directe
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Paiements et retraits en temps réel via Orange Money, MTN MoMo, Wave et Moov.
+                      L'administrateur gère ses clés en toute autonomie.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -763,8 +896,12 @@ export function LandingPage() {
                   <div className="flex items-center gap-2.5">
                     <Crown className="size-6 text-purple-400" />
                     <div>
-                      <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">RÉPUBLIQUE DE CÔTE D'IVOIRE</p>
-                      <p className="text-xs font-bold text-white">Chefferie Traditionnelle de Cocody</p>
+                      <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">
+                        RÉPUBLIQUE DE CÔTE D'IVOIRE
+                      </p>
+                      <p className="text-xs font-bold text-white">
+                        Chefferie Traditionnelle de Cocody
+                      </p>
                     </div>
                   </div>
                   <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded">
@@ -773,12 +910,31 @@ export function LandingPage() {
                 </div>
 
                 <div className="space-y-2 text-xs">
-                  <p className="text-slate-400">Nature de l'acte : <strong className="text-white">CERTIFICAT OFFICIEL DE VENTE DE TERRAIN</strong></p>
-                  <p className="text-slate-400">Vendeur initial : <strong className="text-white">Kouamé N'Guessan</strong></p>
-                  <p className="text-slate-400">Nouvel Acquéreur : <strong className="text-white">Société Civile Immobilière Ivoire</strong></p>
-                  <p className="text-slate-400">Localisation : <strong className="text-white">Riviera Palmeraie, Lot 45 Ilot 12 (600 m²)</strong></p>
-                  <p className="text-slate-400">Montant de la transaction : <strong className="text-emerald-400 font-mono">45 000 000 FCFA</strong></p>
-                  <p className="text-slate-400">Droits de chefferie (5%) : <strong className="text-purple-300 font-mono">2 250 000 FCFA</strong></p>
+                  <p className="text-slate-400">
+                    Nature de l'acte :{' '}
+                    <strong className="text-white">CERTIFICAT OFFICIEL DE VENTE DE TERRAIN</strong>
+                  </p>
+                  <p className="text-slate-400">
+                    Vendeur initial : <strong className="text-white">Kouamé N'Guessan</strong>
+                  </p>
+                  <p className="text-slate-400">
+                    Nouvel Acquéreur :{' '}
+                    <strong className="text-white">Société Civile Immobilière Ivoire</strong>
+                  </p>
+                  <p className="text-slate-400">
+                    Localisation :{' '}
+                    <strong className="text-white">
+                      Riviera Palmeraie, Lot 45 Ilot 12 (600 m²)
+                    </strong>
+                  </p>
+                  <p className="text-slate-400">
+                    Montant de la transaction :{' '}
+                    <strong className="text-emerald-400 font-mono">45 000 000 FCFA</strong>
+                  </p>
+                  <p className="text-slate-400">
+                    Droits de chefferie (5%) :{' '}
+                    <strong className="text-purple-300 font-mono">2 250 000 FCFA</strong>
+                  </p>
                 </div>
 
                 <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
@@ -788,7 +944,9 @@ export function LandingPage() {
                         QR
                       </div>
                     </div>
-                    <span className="text-[10px] text-slate-400">Authenticité vérifiable instantanément</span>
+                    <span className="text-[10px] text-slate-400">
+                      Authenticité vérifiable instantanément
+                    </span>
                   </div>
                   <span className="text-xs font-serif italic text-purple-400 border border-purple-500/30 px-3 py-1 rounded-full">
                     Sceau & Signature du Chef
@@ -796,9 +954,7 @@ export function LandingPage() {
                 </div>
               </div>
             </div>
-
           </div>
-
         </div>
       </section>
 
@@ -813,17 +969,18 @@ export function LandingPage() {
             Contactez l'Équipe KatdEstate
           </h2>
           <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
-            Une question sur le déploiement dans votre quartier ou sur un abonnement ? Notre équipe vous répond sous 24h.
+            Une question sur le déploiement dans votre quartier ou sur un abonnement ? Notre équipe
+            vous répond sous 24h.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
           {/* Admin Info Card */}
           <div className="lg:col-span-5 p-8 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-6">
             <h3 className="text-xl font-bold text-white">Coordonnées Officielles</h3>
             <p className="text-sm text-slate-400 leading-relaxed">
-              KatdEstate opère en partenariat avec les chefferies communales, les syndics et les ministères en charge de la gouvernance urbaine.
+              KatdEstate opère en partenariat avec les chefferies communales, les syndics et les
+              ministères en charge de la gouvernance urbaine.
             </p>
 
             <div className="space-y-4 text-sm text-slate-300">
@@ -849,7 +1006,9 @@ export function LandingPage() {
 
             <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 space-y-1">
               <p className="font-bold">Permanence d'assistance Chefferie :</p>
-              <p className="text-slate-400">Du Lundi au Vendredi : 08h00 - 18h00 | Samedi : 09h00 - 14h00</p>
+              <p className="text-slate-400">
+                Du Lundi au Vendredi : 08h00 - 18h00 | Samedi : 09h00 - 14h00
+              </p>
             </div>
           </div>
 
@@ -862,7 +1021,8 @@ export function LandingPage() {
                 </div>
                 <h4 className="text-2xl font-bold text-white">Message envoyé avec succès !</h4>
                 <p className="text-sm text-slate-400 max-w-md mx-auto">
-                  Votre demande a bien été transmise à notre équipe administrative. Un conseiller prendra contact avec vous dans les plus brefs délais.
+                  Votre demande a bien été transmise à notre équipe administrative. Un conseiller
+                  prendra contact avec vous dans les plus brefs délais.
                 </p>
                 <Button
                   onClick={() => setContactSubmitted(false)}
@@ -875,7 +1035,9 @@ export function LandingPage() {
               <form onSubmit={handleContactSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Votre Nom Complet</label>
+                    <label className="text-xs font-semibold text-slate-300">
+                      Votre Nom Complet
+                    </label>
                     <input
                       required
                       value={contactName}
@@ -899,7 +1061,9 @@ export function LandingPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Téléphone (WhatsApp / Appel)</label>
+                    <label className="text-xs font-semibold text-slate-300">
+                      Téléphone (WhatsApp / Appel)
+                    </label>
                     <input
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
@@ -908,16 +1072,24 @@ export function LandingPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Objet de votre demande</label>
+                    <label className="text-xs font-semibold text-slate-300">
+                      Objet de votre demande
+                    </label>
                     <select
                       value={contactSubject}
                       onChange={(e) => setContactSubject(e.target.value)}
                       className="w-full bg-slate-950/70 border border-slate-800 focus:border-emerald-500 rounded-xl px-4 py-2.5 text-sm text-white outline-none"
                     >
                       <option value="Renseignement général">Renseignement général</option>
-                      <option value="Déploiement Chefferie / Quartier">Déploiement Chefferie / Quartier</option>
-                      <option value="Passerelle de Paiement Ikeepay">Passerelle de Paiement Ikeepay</option>
-                      <option value="Partenariat Agence Immobilière">Partenariat Agence Immobilière</option>
+                      <option value="Déploiement Chefferie / Quartier">
+                        Déploiement Chefferie / Quartier
+                      </option>
+                      <option value="Passerelle de Paiement Ikeepay">
+                        Passerelle de Paiement Ikeepay
+                      </option>
+                      <option value="Partenariat Agence Immobilière">
+                        Partenariat Agence Immobilière
+                      </option>
                       <option value="Support Technique">Support Technique</option>
                     </select>
                   </div>
@@ -946,70 +1118,119 @@ export function LandingPage() {
               </form>
             )}
           </div>
-
         </div>
       </section>
 
       {/* 8. Modern Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950 pt-16 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-4 md:col-span-1">
               <div className="flex items-center gap-2.5">
                 <div className="size-9 rounded-xl bg-emerald-500 flex items-center justify-center text-slate-950">
                   <Building2 className="size-5" />
                 </div>
-                <span className="text-xl font-black text-white font-mono">Kadt<span className="text-emerald-400">Estate</span></span>
+                <span className="text-xl font-black text-white font-mono">
+                  Kadt<span className="text-emerald-400">Estate</span>
+                </span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Plateforme souveraine de recensement immobilier, sécurisation foncière avec la chefferie et paiements Mobile Money.
+                Plateforme souveraine de recensement immobilier, sécurisation foncière avec la
+                chefferie et paiements Mobile Money.
               </p>
             </div>
 
             <div>
               <p className="font-bold text-white text-sm mb-3">Plateforme</p>
               <ul className="space-y-2 text-xs text-slate-400">
-                <li><a href="#marketplace" className="hover:text-emerald-400">Marketplace de Biens</a></li>
-                <li><a href="#roles" className="hover:text-emerald-400">Portails par Rôle</a></li>
-                <li><Link to="/sign-in" className="hover:text-emerald-400">Espace Connexion</Link></li>
-                <li><Link to="/register" className="hover:text-emerald-400">Inscription Directe</Link></li>
+                <li>
+                  <a href="#marketplace" className="hover:text-emerald-400">
+                    Marketplace de Biens
+                  </a>
+                </li>
+                <li>
+                  <a href="#roles" className="hover:text-emerald-400">
+                    Portails par Rôle
+                  </a>
+                </li>
+                <li>
+                  <Link to="/sign-in" className="hover:text-emerald-400">
+                    Espace Connexion
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/register" className="hover:text-emerald-400">
+                    Inscription Directe
+                  </Link>
+                </li>
               </ul>
             </div>
 
             <div>
               <p className="font-bold text-white text-sm mb-3">Chefferie & Sécurité</p>
               <ul className="space-y-2 text-xs text-slate-400">
-                <li><a href="#chefferie" className="hover:text-purple-400">Ventes de Terrains & Maisons</a></li>
-                <li><a href="#chefferie" className="hover:text-purple-400">Certificats Officiels QR</a></li>
-                <li><a href="#roles" className="hover:text-purple-400">Recensement par Bloc</a></li>
-                <li><a href="#chefferie" className="hover:text-purple-400">Commissions Coutumières</a></li>
+                <li>
+                  <a href="#chefferie" className="hover:text-purple-400">
+                    Ventes de Terrains & Maisons
+                  </a>
+                </li>
+                <li>
+                  <a href="#chefferie" className="hover:text-purple-400">
+                    Certificats Officiels QR
+                  </a>
+                </li>
+                <li>
+                  <a href="#roles" className="hover:text-purple-400">
+                    Recensement par Bloc
+                  </a>
+                </li>
+                <li>
+                  <a href="#chefferie" className="hover:text-purple-400">
+                    Commissions Coutumières
+                  </a>
+                </li>
               </ul>
             </div>
 
             <div>
               <p className="font-bold text-white text-sm mb-3">Paiements & Légal</p>
               <ul className="space-y-2 text-xs text-slate-400">
-                <li><span className="text-slate-300">Orange Money • MTN • Wave • Moov</span></li>
-                <li><span className="text-slate-300">Intégration H2H Ikeepay</span></li>
-                <li><a href="#contact" className="hover:text-emerald-400">Support 24/7</a></li>
-                <li><span className="text-slate-500">© 2026 KatdEstate Inc. Tous droits réservés.</span></li>
+                <li>
+                  <span className="text-slate-300">Orange Money • MTN • Wave • Moov</span>
+                </li>
+                <li>
+                  <span className="text-slate-300">Intégration H2H Ikeepay</span>
+                </li>
+                <li>
+                  <a href="#contact" className="hover:text-emerald-400">
+                    Support 24/7
+                  </a>
+                </li>
+                <li>
+                  <span className="text-slate-500">
+                    © 2026 KatdEstate Inc. Tous droits réservés.
+                  </span>
+                </li>
               </ul>
             </div>
           </div>
 
           <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-            <p>KatdEstate — Déployé pour la modernisation du patrimoine et de la gouvernance locale.</p>
+            <p>
+              KatdEstate — Déployé pour la modernisation du patrimoine et de la gouvernance locale.
+            </p>
             <div className="flex items-center gap-4">
-              <a href="#contact" className="hover:text-slate-400">Confidentialité</a>
+              <a href="#contact" className="hover:text-slate-400">
+                Confidentialité
+              </a>
               <span>•</span>
-              <a href="#contact" className="hover:text-slate-400">Conditions Générales</a>
+              <a href="#contact" className="hover:text-slate-400">
+                Conditions Générales
+              </a>
             </div>
           </div>
-
         </div>
       </footer>
-
     </div>
   );
 }

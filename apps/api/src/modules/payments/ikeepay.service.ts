@@ -2,7 +2,11 @@ import crypto from 'node:crypto';
 import { AppError } from '../../common/errors.js';
 import { IkeepayConfig, IkeepayTransaction } from '../../models/payment-gateway.js';
 import { RentSchedule } from '../../models/lease.js';
-import { HouseSaleTransaction, HouseRentalRecord, LandSaleTransaction } from '../../models/chefferie.js';
+import {
+  HouseSaleTransaction,
+  HouseRentalRecord,
+  LandSaleTransaction,
+} from '../../models/chefferie.js';
 import type { IkeepayPayinInput, IkeepayPayoutInput, IkeepayConfigInput } from '@rentflow/shared';
 
 const IKEEPAY_BASE_URL = 'https://api.ikeepay.com';
@@ -47,7 +51,11 @@ export class IkeepayService {
   static async initiatePayin(organizationId: string, input: IkeepayPayinInput) {
     const config = await this.getConfig(organizationId);
     if (!config || !config.isActive) {
-      throw new AppError('PAYMENT_GATEWAY_DISABLED', "La passerelle de paiement Ikeepay n'est pas encore configurée ou active.", 400);
+      throw new AppError(
+        'PAYMENT_GATEWAY_DISABLED',
+        "La passerelle de paiement Ikeepay n'est pas encore configurée ou active.",
+        400,
+      );
     }
 
     const externalRef = `REF_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -108,7 +116,10 @@ export class IkeepayService {
       await IkeepayTransaction.findByIdAndUpdate(localTx._id, {
         provider_reference: data?.data?.provider_reference || data?.provider_reference,
         paymentLink: data?.payment_link || data?.data?.payment_link,
-        status: data?.status === 'completed' || data?.data?.status === 'completed' ? 'completed' : 'pending',
+        status:
+          data?.status === 'completed' || data?.data?.status === 'completed'
+            ? 'completed'
+            : 'pending',
         rawWebhookPayload: data,
       });
 
@@ -122,7 +133,11 @@ export class IkeepayService {
       };
     } catch (error: any) {
       if (error instanceof AppError) throw error;
-      throw new AppError('IKEEPAY_NETWORK_ERROR', `Impossible de joindre Ikeepay : ${error.message}`, 502);
+      throw new AppError(
+        'IKEEPAY_NETWORK_ERROR',
+        `Impossible de joindre Ikeepay : ${error.message}`,
+        502,
+      );
     }
   }
 
@@ -132,7 +147,11 @@ export class IkeepayService {
   static async initiatePayout(organizationId: string, input: IkeepayPayoutInput) {
     const config = await this.getConfig(organizationId);
     if (!config || !config.isActive) {
-      throw new AppError('PAYMENT_GATEWAY_DISABLED', "La passerelle Ikeepay n'est pas active.", 400);
+      throw new AppError(
+        'PAYMENT_GATEWAY_DISABLED',
+        "La passerelle Ikeepay n'est pas active.",
+        400,
+      );
     }
 
     const externalRef = `PAYOUT_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -176,7 +195,12 @@ export class IkeepayService {
         status: 'failed',
         rawWebhookPayload: data,
       });
-      throw new AppError('IKEEPAY_PAYOUT_ERROR', data?.message || "Échec du retrait Ikeepay.", response.status, data);
+      throw new AppError(
+        'IKEEPAY_PAYOUT_ERROR',
+        data?.message || 'Échec du retrait Ikeepay.',
+        response.status,
+        data,
+      );
     }
 
     await IkeepayTransaction.findByIdAndUpdate(localTx._id, {
@@ -207,7 +231,11 @@ export class IkeepayService {
 
     const resJson = (await response.json()) as Record<string, any>;
     if (!response.ok) {
-      throw new AppError('VERIFY_FAILED', resJson?.message || 'Échec de vérification Ikeepay.', response.status);
+      throw new AppError(
+        'VERIFY_FAILED',
+        resJson?.message || 'Échec de vérification Ikeepay.',
+        response.status,
+      );
     }
 
     const txData = resJson.data || resJson;
@@ -259,7 +287,10 @@ export class IkeepayService {
     const sigBuffer = Buffer.from(signature);
     const expectedBuffer = Buffer.from(expectedSignature);
 
-    if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+    if (
+      sigBuffer.length !== expectedBuffer.length ||
+      !crypto.timingSafeEqual(sigBuffer, expectedBuffer)
+    ) {
       throw new AppError('INVALID_SIGNATURE', 'Signature HMAC Ikeepay non valide.', 401);
     }
 

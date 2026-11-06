@@ -46,7 +46,9 @@ export function IkeepayPayoutModal({
       return;
     }
     if (amount > availableBalance) {
-      setError(`Le montant demandé dépasse le solde disponible (${availableBalance.toLocaleString('fr-FR')} ${currency}).`);
+      setError(
+        `Le montant demandé dépasse le solde disponible (${availableBalance.toLocaleString('fr-FR')} ${currency}).`,
+      );
       return;
     }
     if (!phoneNumber.trim()) {
@@ -109,7 +111,9 @@ export function IkeepayPayoutModal({
 
         {/* Solde disponible */}
         <div className="p-3.5 rounded-2xl bg-muted/40 border border-border flex items-center justify-between text-xs">
-          <span className="text-muted-foreground font-semibold">Solde disponible à encaisser :</span>
+          <span className="text-muted-foreground font-semibold">
+            Solde disponible à encaisser :
+          </span>
           <span className="font-black text-emerald-500 text-sm">
             {availableBalance.toLocaleString('fr-FR')} {currency}
           </span>
@@ -130,8 +134,11 @@ export function IkeepayPayoutModal({
             <div>
               <h4 className="font-bold text-base text-foreground">Retrait validé avec succès !</h4>
               <p className="text-xs text-muted-foreground mt-1">
-                Le montant de <strong>{amount.toLocaleString('fr-FR')} {currency}</strong> a été transféré sur votre numéro{' '}
-                <strong>{phoneNumber}</strong> ({operator}).
+                Le montant de{' '}
+                <strong>
+                  {amount.toLocaleString('fr-FR')} {currency}
+                </strong>{' '}
+                a été transféré sur votre numéro <strong>{phoneNumber}</strong> ({operator}).
               </p>
             </div>
             <Button
@@ -148,7 +155,9 @@ export function IkeepayPayoutModal({
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
             {/* Opérateur */}
             <div>
-              <Label className="block font-semibold mb-1.5">Opérateur Mobile Money bénéficiaire</Label>
+              <Label className="block font-semibold mb-1.5">
+                Opérateur Mobile Money bénéficiaire
+              </Label>
               <div className="grid grid-cols-2 gap-2">
                 {OPERATORS.map((op) => (
                   <button

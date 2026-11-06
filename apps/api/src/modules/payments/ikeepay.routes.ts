@@ -14,56 +14,47 @@ export function createIkeepayRouter(): Router {
   const router = Router();
 
   // 1. Webhook public (avec capture du body brut pour calcul HMAC SHA-256)
-  router.post(
-    '/webhook',
-    raw({ type: 'application/json' }),
-    async (req, res, next) => {
-      try {
-        const signature = (req.headers['x-ikeepay-signature'] as string) || '';
-        const rawBody = req.body;
-        const result = await IkeepayService.processWebhook(rawBody, signature);
-        res.status(200).json(result);
-      } catch (error) {
-        next(error);
-      }
-    },
-  );
+  router.post('/webhook', raw({ type: 'application/json' }), async (req, res, next) => {
+    try {
+      const signature = (req.headers['x-ikeepay-signature'] as string) || '';
+      const rawBody = req.body;
+      const result = await IkeepayService.processWebhook(rawBody, signature);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   // Routes protégées par authentification et organisation
   router.use(authenticate, requireOrganization);
 
   // 2. Initialiser un paiement (Payin Mobile Money)
-  router.post(
-    '/payin',
-    validateRequest(ikeepayPayinInputSchema),
-    async (req, res, next) => {
-      try {
-        const result = await IkeepayService.initiatePayin(req.organizationId, req.body);
-        sendSuccess(res, result, 201);
-      } catch (error) {
-        next(error);
-      }
-    },
-  );
+  router.post('/payin', validateRequest(ikeepayPayinInputSchema), async (req, res, next) => {
+    try {
+      const result = await IkeepayService.initiatePayin(req.organizationId, req.body);
+      sendSuccess(res, result, 201);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   // 3. Initialiser un retrait (Payout)
-  router.post(
-    '/payout',
-    validateRequest(ikeepayPayoutInputSchema),
-    async (req, res, next) => {
-      try {
-        const result = await IkeepayService.initiatePayout(req.organizationId, req.body);
-        sendSuccess(res, result, 201);
-      } catch (error) {
-        next(error);
-      }
-    },
-  );
+  router.post('/payout', validateRequest(ikeepayPayoutInputSchema), async (req, res, next) => {
+    try {
+      const result = await IkeepayService.initiatePayout(req.organizationId, req.body);
+      sendSuccess(res, result, 201);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   // 4. Vérifier une transaction
   router.get('/verify/:reference', async (req, res, next) => {
     try {
-      const result = await IkeepayService.verifyTransaction(req.organizationId, req.params.reference as string);
+      const result = await IkeepayService.verifyTransaction(
+        req.organizationId,
+        req.params.reference as string,
+      );
       sendSuccess(res, result);
     } catch (error) {
       next(error);

@@ -1,7 +1,23 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Bell, FileText, Home, MessageSquare, Receipt, Send, Wallet, Smartphone, ShieldCheck, Download, CheckCircle2, AlertCircle, Phone, Mail, MapPin } from 'lucide-react';
+import {
+  Bell,
+  FileText,
+  Home,
+  MessageSquare,
+  Receipt,
+  Send,
+  Wallet,
+  Smartphone,
+  ShieldCheck,
+  Download,
+  CheckCircle2,
+  AlertCircle,
+  Phone,
+  Mail,
+  MapPin,
+} from 'lucide-react';
 import { maintenanceTicketInputSchema } from '@rentflow/shared';
 import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
@@ -15,14 +31,31 @@ import { API_BASE_URL, apiRequest, getAccessToken } from '../lib/api-client';
 import { useOrgPath, useOrgQuery } from '../lib/query';
 import { useSession } from '../app/session';
 import { IkeepayModal } from '../components/payments/ikeepay-modal';
-import { LeaseContractModal, type LeaseContractData } from '../components/leases/lease-contract-modal';
+import {
+  LeaseContractModal,
+  type LeaseContractData,
+} from '../components/leases/lease-contract-modal';
 import { getStoredQuittances, markQuittanceAsPaid, type QuittanceItem } from '../lib/quittances';
 
 interface PortalHome {
   tenant: { fullName: string };
   unit: { name: string; type: string; status: string } | null;
-  lease: { id: string; number: string; status: string; startDate: string; endDate: string; rentAmountMinor: number; currency: string } | null;
-  nextRent: { dueDate: string; amountDueMinor: number; amountPaidMinor: number; status: string; currency: string } | null;
+  lease: {
+    id: string;
+    number: string;
+    status: string;
+    startDate: string;
+    endDate: string;
+    rentAmountMinor: number;
+    currency: string;
+  } | null;
+  nextRent: {
+    dueDate: string;
+    amountDueMinor: number;
+    amountPaidMinor: number;
+    status: string;
+    currency: string;
+  } | null;
   documents: number;
   openTickets: number;
 }
@@ -88,11 +121,15 @@ async function openPdf(path: string): Promise<void> {
 
 function List({ rows, render }: { rows: Row[] | undefined; render: (row: Row) => string }) {
   if (!rows) return null;
-  if (rows.length === 0) return <EmptyState title="Rien à afficher" description="Aucune information pour le moment." />;
+  if (rows.length === 0)
+    return <EmptyState title="Rien à afficher" description="Aucune information pour le moment." />;
   return (
     <div className="space-y-2">
       {rows.map((row) => (
-        <div key={row._id} className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+        <div
+          key={row._id}
+          className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3"
+        >
           <p className="text-sm">{render(row)}</p>
           {row.status ? <Badge>{RENT_STATUS[row.status] ?? row.status}</Badge> : null}
         </div>
@@ -109,14 +146,34 @@ export function PortalHomePage() {
 
   const homeData: PortalHome = data ?? {
     tenant: { fullName: user?.displayName || 'Locataire Résident' },
-    unit: { name: 'Chambre Moderne Porte 3B - Résidence Katd Cocody', type: 'Chambre moderne', status: 'OCCUPIED' },
-    lease: { id: 'lease-01', number: 'BAIL-2026-0042', status: 'ACTIF', startDate: '2026-01-01', endDate: '2026-12-31', rentAmountMinor: 150000, currency: 'XOF' },
-    nextRent: { dueDate: '2026-12-05', amountDueMinor: 150000, amountPaidMinor: 0, status: 'PENDING', currency: 'XOF' },
+    unit: {
+      name: 'Chambre Moderne Porte 3B - Résidence Katd Cocody',
+      type: 'Chambre moderne',
+      status: 'OCCUPIED',
+    },
+    lease: {
+      id: 'lease-01',
+      number: 'BAIL-2026-0042',
+      status: 'ACTIF',
+      startDate: '2026-01-01',
+      endDate: '2026-12-31',
+      rentAmountMinor: 150000,
+      currency: 'XOF',
+    },
+    nextRent: {
+      dueDate: '2026-12-05',
+      amountDueMinor: 150000,
+      amountPaidMinor: 0,
+      status: 'PENDING',
+      currency: 'XOF',
+    },
     documents: 4,
     openTickets: 0,
   };
 
-  const amountToPay = homeData.nextRent ? Math.max(0, homeData.nextRent.amountDueMinor - homeData.nextRent.amountPaidMinor) : 150000;
+  const amountToPay = homeData.nextRent
+    ? Math.max(0, homeData.nextRent.amountDueMinor - homeData.nextRent.amountPaidMinor)
+    : 150000;
 
   const contractDetails: LeaseContractData = {
     leaseNumber: homeData.lease?.number || 'BAIL-2026-0042',
@@ -184,8 +241,8 @@ export function PortalHomePage() {
               </div>
               <h2 className="text-lg font-black">{homeData.unit?.name || 'Votre Logement'}</h2>
               <p className="text-xs text-muted-foreground">
-                Réf contrat : <strong>{homeData.lease?.number || 'BAIL-2026-0042'}</strong> · Valide jusqu'au{' '}
-                <strong>{date(homeData.lease?.endDate)}</strong>
+                Réf contrat : <strong>{homeData.lease?.number || 'BAIL-2026-0042'}</strong> · Valide
+                jusqu'au <strong>{date(homeData.lease?.endDate)}</strong>
               </p>
             </div>
           </div>
@@ -214,29 +271,78 @@ export function PortalHomePage() {
         {/* Détails du logement & de l'échéance */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
           <div className="p-3 rounded-xl bg-background/80 border border-border">
-            <span className="text-[10px] uppercase font-bold text-muted-foreground block">Logement assigné</span>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              Logement assigné
+            </span>
             <strong className="text-foreground text-sm">{homeData.unit?.type || 'Chambre'}</strong>
           </div>
           <div className="p-3 rounded-xl bg-background/80 border border-border">
-            <span className="text-[10px] uppercase font-bold text-muted-foreground block">N° Porte / Chambre</span>
-            <strong className="text-emerald-600 dark:text-emerald-400 text-sm font-black">Porte 3B</strong>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              N° Porte / Chambre
+            </span>
+            <strong className="text-emerald-600 dark:text-emerald-400 text-sm font-black">
+              Porte 3B
+            </strong>
           </div>
           <div className="p-3 rounded-xl bg-background/80 border border-border">
-            <span className="text-[10px] uppercase font-bold text-muted-foreground block">Loyer mensuel</span>
-            <strong className="text-foreground text-sm">{money(homeData.lease?.rentAmountMinor, homeData.lease?.currency)}</strong>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              Loyer mensuel
+            </span>
+            <strong className="text-foreground text-sm">
+              {money(homeData.lease?.rentAmountMinor, homeData.lease?.currency)}
+            </strong>
           </div>
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-            <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 block">Date d'échéance</span>
-            <strong className="text-amber-700 dark:text-amber-300 text-sm font-black">Le 5 de chaque mois</strong>
+            <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 block">
+              Date d'échéance
+            </span>
+            <strong className="text-amber-700 dark:text-amber-300 text-sm font-black">
+              Le 5 de chaque mois
+            </strong>
           </div>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <StatCard label="Logement" value={homeData.unit?.name ?? 'Aucun'} hint={homeData.unit ? homeData.unit.type : 'Pas de contrat actif'} icon={Home} />
-        <StatCard label="Prochain loyer" value={homeData.nextRent ? money(homeData.nextRent.amountDueMinor - homeData.nextRent.amountPaidMinor, homeData.nextRent.currency) : 'À jour'} hint={homeData.nextRent ? `${date(homeData.nextRent.dueDate)} · ${RENT_STATUS[homeData.nextRent.status] ?? homeData.nextRent.status}` : 'Aucune échéance ouverte'} icon={Wallet} />
-        <StatCard label="Contrat" value={homeData.lease?.number ?? 'Aucun'} hint={homeData.lease ? `${homeData.lease.status} · jusqu’au ${date(homeData.lease.endDate)}` : 'Pas de contrat actif'} icon={FileText} />
-        <StatCard label="Suivi" value={`${homeData.documents} document(s)`} hint={`${homeData.openTickets} ticket(s) de maintenance ouvert(s)`} icon={Bell} />
+        <StatCard
+          label="Logement"
+          value={homeData.unit?.name ?? 'Aucun'}
+          hint={homeData.unit ? homeData.unit.type : 'Pas de contrat actif'}
+          icon={Home}
+        />
+        <StatCard
+          label="Prochain loyer"
+          value={
+            homeData.nextRent
+              ? money(
+                  homeData.nextRent.amountDueMinor - homeData.nextRent.amountPaidMinor,
+                  homeData.nextRent.currency,
+                )
+              : 'À jour'
+          }
+          hint={
+            homeData.nextRent
+              ? `${date(homeData.nextRent.dueDate)} · ${RENT_STATUS[homeData.nextRent.status] ?? homeData.nextRent.status}`
+              : 'Aucune échéance ouverte'
+          }
+          icon={Wallet}
+        />
+        <StatCard
+          label="Contrat"
+          value={homeData.lease?.number ?? 'Aucun'}
+          hint={
+            homeData.lease
+              ? `${homeData.lease.status} · jusqu’au ${date(homeData.lease.endDate)}`
+              : 'Pas de contrat actif'
+          }
+          icon={FileText}
+        />
+        <StatCard
+          label="Suivi"
+          value={`${homeData.documents} document(s)`}
+          hint={`${homeData.openTickets} ticket(s) de maintenance ouvert(s)`}
+          icon={Bell}
+        />
       </div>
 
       {/* Modal Visualisation Contrat de Bail Certifié */}
@@ -270,7 +376,12 @@ export function PortalRentPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Mes loyers" description="Historique de vos échéances." />
-      <List rows={data} render={(row) => `${date(row.dueDate)} · ${money(row.amountDueMinor, row.currency)} · payé ${money(row.amountPaidMinor, row.currency)}`} />
+      <List
+        rows={data}
+        render={(row) =>
+          `${date(row.dueDate)} · ${money(row.amountDueMinor, row.currency)} · payé ${money(row.amountPaidMinor, row.currency)}`
+        }
+      />
     </div>
   );
 }
@@ -280,7 +391,12 @@ export function PortalPaymentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Mes paiements" description="Paiements enregistrés sur votre dossier." />
-      <List rows={data} render={(row) => `${date(row.paidAt)} · ${money(row.amountMinor, row.currency)} · ${row.method ?? ''}`} />
+      <List
+        rows={data}
+        render={(row) =>
+          `${date(row.paidAt)} · ${money(row.amountMinor, row.currency)} · ${row.method ?? ''}`
+        }
+      />
     </div>
   );
 }
@@ -293,7 +409,9 @@ export function PortalReceiptsPage() {
 
   const [quittances, setQuittances] = useState<QuittanceItem[]>(() => getStoredQuittances());
   const [selectedQuittanceToPay, setSelectedQuittanceToPay] = useState<QuittanceItem | null>(null);
-  const [activeQuittanceForPrint, setActiveQuittanceForPrint] = useState<QuittanceItem | null>(null);
+  const [activeQuittanceForPrint, setActiveQuittanceForPrint] = useState<QuittanceItem | null>(
+    null,
+  );
 
   const reload = () => {
     setQuittances(getStoredQuittances());
@@ -351,10 +469,10 @@ export function PortalReceiptsPage() {
                 q.type === 'WATER'
                   ? '💧'
                   : q.type === 'ELECTRICITY'
-                  ? '⚡'
-                  : q.type === 'RENT'
-                  ? '🏠'
-                  : '📋';
+                    ? '⚡'
+                    : q.type === 'RENT'
+                      ? '🏠'
+                      : '📋';
 
               return (
                 <div
@@ -512,7 +630,9 @@ export function PortalReceiptsPage() {
                 <span className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider">
                   Reçu de Paiement Certifié KatdEstate
                 </span>
-                <h3 className="font-black text-lg text-foreground">{activeQuittanceForPrint.typeLabel}</h3>
+                <h3 className="font-black text-lg text-foreground">
+                  {activeQuittanceForPrint.typeLabel}
+                </h3>
               </div>
               <Badge className="bg-emerald-500 text-white font-bold">RÉGLÉE</Badge>
             </div>
@@ -622,9 +742,12 @@ export function PortalLeasePage() {
                   VALIDE & ACTIF
                 </Badge>
               </div>
-              <h2 className="text-xl font-black text-foreground">Contrat N° {certifiedContract.leaseNumber}</h2>
+              <h2 className="text-xl font-black text-foreground">
+                Contrat N° {certifiedContract.leaseNumber}
+              </h2>
               <p className="text-xs text-muted-foreground">
-                Bien loué : <strong>{certifiedContract.propertyName}</strong> · {certifiedContract.unitName}
+                Bien loué : <strong>{certifiedContract.propertyName}</strong> ·{' '}
+                {certifiedContract.unitName}
               </p>
             </div>
           </div>
@@ -661,7 +784,9 @@ export function PortalLeasePage() {
             <p className="text-muted-foreground flex items-center gap-1.5 pt-1">
               <MapPin className="size-3 text-rose-500" /> {certifiedContract.propertyAddress}
             </p>
-            <p className="text-muted-foreground">{certifiedContract.propertyZone}, {certifiedContract.propertyCity}</p>
+            <p className="text-muted-foreground">
+              {certifiedContract.propertyZone}, {certifiedContract.propertyCity}
+            </p>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-background/80 border border-border space-y-1">
@@ -671,8 +796,12 @@ export function PortalLeasePage() {
             <p className="font-black text-base text-emerald-500">
               {certifiedContract.rentAmountMinor.toLocaleString('fr-FR')} FCFA / mois
             </p>
-            <p className="text-muted-foreground pt-1">Échéance : Le {certifiedContract.dueDay} de chaque mois</p>
-            <p className="text-muted-foreground">Caution versée : {certifiedContract.depositAmountMinor.toLocaleString('fr-FR')} FCFA</p>
+            <p className="text-muted-foreground pt-1">
+              Échéance : Le {certifiedContract.dueDay} de chaque mois
+            </p>
+            <p className="text-muted-foreground">
+              Caution versée : {certifiedContract.depositAmountMinor.toLocaleString('fr-FR')} FCFA
+            </p>
           </div>
         </div>
       </div>
@@ -693,7 +822,10 @@ export function PortalDocumentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Mes documents" description="Documents déposés sur votre dossier." />
-      <List rows={data} render={(row) => `${row.originalName ?? 'Document'} · ${date(row.createdAt)}`} />
+      <List
+        rows={data}
+        render={(row) => `${row.originalName ?? 'Document'} · ${date(row.createdAt)}`}
+      />
     </div>
   );
 }
@@ -712,7 +844,8 @@ export function PortalMaintenancePage() {
       setOpen(false);
       toast({ title: 'Problème signalé', variant: 'success' });
     },
-    onError: (error: Error) => toast({ title: 'Envoi impossible', description: error.message, variant: 'error' }),
+    onError: (error: Error) =>
+      toast({ title: 'Envoi impossible', description: error.message, variant: 'error' }),
   });
 
   return (
@@ -747,7 +880,10 @@ export function PortalMaintenancePage() {
           <Input name="title" placeholder="Que se passe-t-il ?" required />
           <div className="grid gap-2 sm:grid-cols-2">
             <Input name="category" placeholder="Plomberie, électricité…" required />
-            <select name="priority" className="h-10 rounded-lg border border-input bg-background px-3 text-sm">
+            <select
+              name="priority"
+              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+            >
               <option value="LOW">Priorité basse</option>
               <option value="MEDIUM">Priorité normale</option>
               <option value="HIGH">Priorité haute</option>
@@ -755,8 +891,15 @@ export function PortalMaintenancePage() {
             </select>
           </div>
           <Input name="photoUrl" placeholder="Lien photo ou constat (facultatif)" />
-          <textarea name="description" rows={3} placeholder="Précisions utiles pour l'intervention..." className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-          <Button type="submit" disabled={create.isPending}>Envoyer</Button>
+          <textarea
+            name="description"
+            rows={3}
+            placeholder="Précisions utiles pour l'intervention..."
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+          />
+          <Button type="submit" disabled={create.isPending}>
+            Envoyer
+          </Button>
         </form>
       ) : null}
       <List rows={data} render={(row) => `${row.title ?? ''} · ${row.category ?? ''}`} />
@@ -775,15 +918,23 @@ export function PortalNotificationsPage() {
   const { data } = useOrgQuery<Notice[]>(['portal-notices'], '/notifications?pageSize=50');
   return (
     <div className="space-y-6">
-      <PageHeader title="Mes notifications" description="Rappels et informations qui vous concernent." />
+      <PageHeader
+        title="Mes notifications"
+        description="Rappels et informations qui vous concernent."
+      />
       <div className="space-y-2">
         {(data ?? []).map((notice) => (
-          <div key={notice._id} className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+          <div
+            key={notice._id}
+            className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3"
+          >
             <p className="text-sm">{notice.event}</p>
             <Badge>{notice.status}</Badge>
           </div>
         ))}
-        {data && data.length === 0 ? <EmptyState title="Aucune notification" description="Vous n’avez rien en attente." /> : null}
+        {data && data.length === 0 ? (
+          <EmptyState title="Aucune notification" description="Vous n’avez rien en attente." />
+        ) : null}
       </div>
     </div>
   );
@@ -801,14 +952,18 @@ export function PortalProfilePage() {
       void client.invalidateQueries();
       toast({ title: 'Profil mis à jour', variant: 'success' });
     },
-    onError: (error: Error) => toast({ title: 'Mise à jour impossible', description: error.message, variant: 'error' }),
+    onError: (error: Error) =>
+      toast({ title: 'Mise à jour impossible', description: error.message, variant: 'error' }),
   });
 
   if (!data) return null;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mon profil" description="Vous pouvez modifier vos coordonnées. Le loyer et le contrat ne se changent pas ici." />
+      <PageHeader
+        title="Mon profil"
+        description="Vous pouvez modifier vos coordonnées. Le loyer et le contrat ne se changent pas ici."
+      />
       <form
         className="max-w-md space-y-3"
         onSubmit={(event) => {
@@ -827,9 +982,19 @@ export function PortalProfilePage() {
         <Input name="phone" defaultValue={data.phone ?? ''} placeholder="Téléphone" />
         <Input name="email" type="email" defaultValue={data.email ?? ''} placeholder="Email" />
         <Input name="address" defaultValue={data.address ?? ''} placeholder="Adresse" />
-        <Input name="emergencyContactName" defaultValue={data.emergencyContactName ?? ''} placeholder="Contact d’urgence" />
-        <Input name="emergencyContactPhone" defaultValue={data.emergencyContactPhone ?? ''} placeholder="Téléphone du contact" />
-        <Button type="submit" disabled={save.isPending}>Enregistrer</Button>
+        <Input
+          name="emergencyContactName"
+          defaultValue={data.emergencyContactName ?? ''}
+          placeholder="Contact d’urgence"
+        />
+        <Input
+          name="emergencyContactPhone"
+          defaultValue={data.emergencyContactPhone ?? ''}
+          placeholder="Téléphone du contact"
+        />
+        <Button type="submit" disabled={save.isPending}>
+          Enregistrer
+        </Button>
       </form>
     </div>
   );
@@ -868,15 +1033,20 @@ export function PortalInvoicesPage() {
             className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3"
           >
             <div>
-              <p className="text-sm font-semibold text-foreground">
-                Facture {inv.number}
-              </p>
+              <p className="text-sm font-semibold text-foreground">Facture {inv.number}</p>
               <p className="text-xs text-muted-foreground">
-                Échéance : {date(inv.dueDate)} · Total : {money(inv.amountTotalMinor, inv.currency)} (Payé : {money(inv.amountPaidMinor, inv.currency)})
+                Échéance : {date(inv.dueDate)} · Total : {money(inv.amountTotalMinor, inv.currency)}{' '}
+                (Payé : {money(inv.amountPaidMinor, inv.currency)})
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge className={inv.status === 'PAID' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground border border-border'}>
+              <Badge
+                className={
+                  inv.status === 'PAID'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground border border-border'
+                }
+              >
                 {RENT_STATUS[inv.status] ?? inv.status}
               </Badge>
               <Button
@@ -884,7 +1054,11 @@ export function PortalInvoicesPage() {
                 className="h-8 px-2.5 text-xs"
                 onClick={() => {
                   openPdf(`${base}/portal/invoices/${inv._id}/pdf`).catch((err: Error) =>
-                    toast({ title: 'Téléchargement impossible', description: err.message, variant: 'error' }),
+                    toast({
+                      title: 'Téléchargement impossible',
+                      description: err.message,
+                      variant: 'error',
+                    }),
                   );
                 }}
               >
@@ -952,8 +1126,7 @@ export function PortalMessagesPage() {
       setReplyText('');
       toast({ title: 'Réponse envoyée', variant: 'success' });
     },
-    onError: (err: Error) =>
-      toast({ title: 'Erreur', description: err.message, variant: 'error' }),
+    onError: (err: Error) => toast({ title: 'Erreur', description: err.message, variant: 'error' }),
   });
 
   return (
@@ -1021,7 +1194,8 @@ export function PortalMessagesPage() {
               <div>
                 <p className="font-semibold text-sm">{msg.subject}</p>
                 <p className="text-xs text-muted-foreground">
-                  Catégorie : {msg.category} · Envoyé le {new Date(msg.createdAt).toLocaleDateString('fr-FR')}
+                  Catégorie : {msg.category} · Envoyé le{' '}
+                  {new Date(msg.createdAt).toLocaleDateString('fr-FR')}
                 </p>
               </div>
               <Button

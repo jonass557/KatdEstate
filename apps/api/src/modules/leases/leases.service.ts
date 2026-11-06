@@ -18,7 +18,12 @@ function org(req: Request): string {
 }
 const active = (organizationId: string) => ({ organizationId, deletedAt: null });
 
-async function audit(req: Request, action: string, resourceType: string, resourceId: string): Promise<void> {
+async function audit(
+  req: Request,
+  action: string,
+  resourceType: string,
+  resourceId: string,
+): Promise<void> {
   await recordAudit({
     organizationId: org(req),
     ...(req.user?.id ? { actorId: req.user.id } : {}),
@@ -45,7 +50,8 @@ export function createTenantHandlers(config: AppConfig) {
   return {
     async create(req: Request, res: Response): Promise<void> {
       const { identityDocumentNumber, email, firstName, lastName, ...rest } = req.body;
-      const fullName = rest.fullName || [firstName, lastName].filter(Boolean).join(' ') || 'Locataire';
+      const fullName =
+        rest.fullName || [firstName, lastName].filter(Boolean).join(' ') || 'Locataire';
       const tenant = await Tenant.create({
         ...rest,
         fullName,
@@ -63,12 +69,25 @@ export function createTenantHandlers(config: AppConfig) {
     },
 
     async list(req: Request, res: Response): Promise<void> {
-      const query = req.query as unknown as { search?: string; status?: string; page: number; pageSize: number; order: 'asc' | 'desc'; sort?: string };
+      const query = req.query as unknown as {
+        search?: string;
+        status?: string;
+        page: number;
+        pageSize: number;
+        order: 'asc' | 'desc';
+        sort?: string;
+      };
       const filter: Record<string, unknown> = { ...active(org(req)) };
       if (query.status) filter.status = query.status;
       if (query.search) {
         const regex = { $regex: escapeRegex(query.search), $options: 'i' };
-        filter.$or = [{ fullName: regex }, { firstName: regex }, { lastName: regex }, { email: regex }, { phone: regex }];
+        filter.$or = [
+          { fullName: regex },
+          { firstName: regex },
+          { lastName: regex },
+          { email: regex },
+          { phone: regex },
+        ];
       }
       const page = await paginate(Tenant, filter, query, 'tenant');
       res.locals.data = page.items;
@@ -79,14 +98,21 @@ export function createTenantHandlers(config: AppConfig) {
       const tenant = await Tenant.findOne({ _id: req.params.id, ...active(org(req)) });
       if (!tenant) throw notFound('Locataire');
 
-      const leases = await Lease.find({ tenantId: tenant._id, organizationId: tenant.organizationId });
+      const leases = await Lease.find({
+        tenantId: tenant._id,
+        organizationId: tenant.organizationId,
+      });
       const leaseIds = leases.map((l) => l._id);
       const unitIds = leases.map((l) => l.unitId);
 
-      const schedules = await RentSchedule.find({ leaseId: { $in: leaseIds } }).sort({ dueDate: 1 });
+      const schedules = await RentSchedule.find({ leaseId: { $in: leaseIds } }).sort({
+        dueDate: 1,
+      });
       const scheduleIds = schedules.map((s) => s._id);
 
-      const payments = await Payment.find({ rentScheduleId: { $in: scheduleIds } }).sort({ paidAt: 1 });
+      const payments = await Payment.find({ rentScheduleId: { $in: scheduleIds } }).sort({
+        paidAt: 1,
+      });
 
       const tickets = await MaintenanceTicket.find({
         organizationId: tenant.organizationId,
@@ -99,35 +125,67 @@ export function createTenantHandlers(config: AppConfig) {
       }).sort({ createdAt: 1 });
 
       const events: Array<{ date: Date | string; label: string; kind: string }> = [
-        { date: tenant.createdAt, label: 'Arrivée / Création de la fiche locataire', kind: 'ARRIVAL' },
+        {
+          date: tenant.createdAt,
+          label: 'Arrivée / Création de la fiche locataire',
+          kind: 'ARRIVAL',
+        },
       ];
 
       for (const lease of leases) {
-        events.push({ date: lease.createdAt, label: `Contrat ${lease.number} créé`, kind: 'LEASE' });
+        events.push({
+          date: lease.createdAt,
+          label: `Contrat ${lease.number} créé`,
+          kind: 'LEASE',
+        });
         if (lease.startDate) {
-          events.push({ date: lease.startDate, label: `Début du contrat ${lease.number}`, kind: 'LEASE' });
+          events.push({
+            date: lease.startDate,
+            label: `Début du contrat ${lease.number}`,
+            kind: 'LEASE',
+          });
         }
         if (lease.status === 'TERMINATED' && lease.terminationDate) {
-          events.push({ date: lease.terminationDate, label: `Fin du contrat ${lease.number} (Résilié)`, kind: 'LEASE' });
+          events.push({
+            date: lease.terminationDate,
+            label: `Fin du contrat ${lease.number} (Résilié)`,
+            kind: 'LEASE',
+          });
         }
       }
 
       for (const schedule of schedules) {
         if (schedule.status === 'OVERDUE') {
-          events.push({ date: schedule.dueDate, label: `Retard : échéance du ${schedule.dueDate.toISOString().slice(0, 10)} non réglée`, kind: 'DELAY' });
+          events.push({
+            date: schedule.dueDate,
+            label: `Retard : échéance du ${schedule.dueDate.toISOString().slice(0, 10)} non réglée`,
+            kind: 'DELAY',
+          });
         }
       }
 
       for (const payment of payments) {
-        events.push({ date: payment.paidAt, label: `Paiement : ${payment.amountMinor} (Réf: ${payment.reference ?? '—'})`, kind: 'PAYMENT' });
+        events.push({
+          date: payment.paidAt,
+          label: `Paiement : ${payment.amountMinor} (Réf: ${payment.reference ?? '—'})`,
+          kind: 'PAYMENT',
+        });
       }
 
       for (const ticket of tickets) {
-        events.push({ date: ticket.createdAt, label: `Maintenance : ${ticket.title} (${ticket.status})`, kind: 'MAINTENANCE' });
+        events.push({
+          date: ticket.createdAt,
+          label: `Maintenance : ${ticket.title} (${ticket.status})`,
+          kind: 'MAINTENANCE',
+        });
       }
 
       for (const notif of notifications) {
-        events.push({ date: notif.createdAt, label: `Communication : ${notif.title ?? notif.event}`, kind: 'COMMUNICATION' });
+        events.push({
+          date: notif.createdAt,
+          label: `Communication : ${notif.title ?? notif.event}`,
+          kind: 'COMMUNICATION',
+        });
       }
 
       events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -135,7 +193,9 @@ export function createTenantHandlers(config: AppConfig) {
     },
 
     async get(req: Request, res: Response): Promise<void> {
-      const tenant = await Tenant.findOne({ _id: req.params.id, ...active(org(req)) }).select('+identityDocumentNumberEnc');
+      const tenant = await Tenant.findOne({ _id: req.params.id, ...active(org(req)) }).select(
+        '+identityDocumentNumberEnc',
+      );
       if (!tenant) throw notFound('Locataire');
       const reveal = req.organizationContext!.permissions.includes('tenants.viewSensitive');
       res.locals.data = presentTenant(tenant.toObject(), reveal, secret);
@@ -198,7 +258,12 @@ export async function createLease(req: Request, res: Response): Promise<void> {
 }
 
 export async function listLeases(req: Request, res: Response): Promise<void> {
-  const query = req.query as unknown as Record<string, string | undefined> & { page: number; pageSize: number; order: 'asc' | 'desc'; sort?: string };
+  const query = req.query as unknown as Record<string, string | undefined> & {
+    page: number;
+    pageSize: number;
+    order: 'asc' | 'desc';
+    sort?: string;
+  };
   const filter: Record<string, unknown> = { ...active(org(req)) };
   for (const key of ['status', 'tenantId', 'unitId', 'propertyId'] as const) {
     if (query[key]) filter[key] = query[key];
@@ -229,7 +294,11 @@ export async function activateLease(req: Request, res: Response): Promise<void> 
 
   const periods = buildSchedule(lease.startDate, lease.endDate, lease.dueDay, lease.frequency);
   if (periods.length === 0) {
-    throw new AppError('VALIDATION_ERROR', 'Aucune échéance ne tombe dans la période du contrat.', 422);
+    throw new AppError(
+      'VALIDATION_ERROR',
+      'Aucune échéance ne tombe dans la période du contrat.',
+      422,
+    );
   }
 
   await RentSchedule.insertMany(
@@ -258,7 +327,11 @@ export async function activateLease(req: Request, res: Response): Promise<void> 
 
 /** Renouvellement : nouveau contrat enchaîné, l'ancien est clos. */
 export async function renewLease(req: Request, res: Response): Promise<void> {
-  const lease = await Lease.findOne({ _id: req.params.id, ...active(org(req)), status: { $in: ['ACTIVE', 'EXPIRING', 'EXPIRED'] } });
+  const lease = await Lease.findOne({
+    _id: req.params.id,
+    ...active(org(req)),
+    status: { $in: ['ACTIVE', 'EXPIRING', 'EXPIRED'] },
+  });
   if (!lease) throw notFound('Contrat');
 
   const renewed = await Lease.create({
@@ -299,7 +372,11 @@ export async function terminateLease(req: Request, res: Response): Promise<void>
   await lease.save();
 
   await RentSchedule.updateMany(
-    { leaseId: lease._id, status: { $in: ['PENDING', 'OVERDUE'] }, dueDate: { $gt: req.body.terminationDate } },
+    {
+      leaseId: lease._id,
+      status: { $in: ['PENDING', 'OVERDUE'] },
+      dueDate: { $gt: req.body.terminationDate },
+    },
     { status: 'CANCELLED', cancelledReason: 'Contrat résilié' },
   );
   const stillOccupied = await Lease.exists({
@@ -333,14 +410,30 @@ export async function leaseTimeline(req: Request, res: Response): Promise<void> 
   if (!lease) throw notFound('Contrat');
 
   const schedules = await RentSchedule.find({ leaseId: lease._id }).sort({ dueDate: 1 });
-  const payments = await Payment.find({ rentScheduleId: { $in: schedules.map((item) => item._id) } }).sort({ paidAt: 1 });
+  const payments = await Payment.find({
+    rentScheduleId: { $in: schedules.map((item) => item._id) },
+  }).sort({ paidAt: 1 });
 
   const events = [
     { date: lease.createdAt, label: 'Contrat créé', kind: 'LEASE' },
-    ...(lease.status !== 'DRAFT' ? [{ date: lease.startDate, label: 'Contrat en vigueur', kind: 'LEASE' }] : []),
-    ...schedules.map((schedule) => ({ date: schedule.dueDate, label: `Échéance ${schedule.status}`, kind: 'SCHEDULE' })),
-    ...payments.map((payment) => ({ date: payment.paidAt, label: `Paiement ${payment.amountMinor}`, kind: 'PAYMENT' })),
-    { date: lease.endDate, label: lease.status === 'TERMINATED' ? 'Contrat résilié' : 'Expiration prévue', kind: 'LEASE' },
+    ...(lease.status !== 'DRAFT'
+      ? [{ date: lease.startDate, label: 'Contrat en vigueur', kind: 'LEASE' }]
+      : []),
+    ...schedules.map((schedule) => ({
+      date: schedule.dueDate,
+      label: `Échéance ${schedule.status}`,
+      kind: 'SCHEDULE',
+    })),
+    ...payments.map((payment) => ({
+      date: payment.paidAt,
+      label: `Paiement ${payment.amountMinor}`,
+      kind: 'PAYMENT',
+    })),
+    {
+      date: lease.endDate,
+      label: lease.status === 'TERMINATED' ? 'Contrat résilié' : 'Expiration prévue',
+      kind: 'LEASE',
+    },
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   res.locals.data = events;

@@ -15,8 +15,14 @@ import { createPlatformRouter } from '../modules/platform/platform.routes.js';
 import { createPortalRouter } from '../modules/portal/portal.routes.js';
 import { createPropertyRouter } from '../modules/properties/properties.routes.js';
 import { createUtilityRouter } from '../modules/utilities/utilities.routes.js';
-import { createMarketplacePublicRouter, createMarketplaceRouter } from '../modules/marketplace/marketplace.routes.js';
-import { createQuartierPublicRouter, createQuartierRouter } from '../modules/quartier/quartier.routes.js';
+import {
+  createMarketplacePublicRouter,
+  createMarketplaceRouter,
+} from '../modules/marketplace/marketplace.routes.js';
+import {
+  createQuartierPublicRouter,
+  createQuartierRouter,
+} from '../modules/quartier/quartier.routes.js';
 import { createIkeepayRouter } from '../modules/payments/ikeepay.routes.js';
 import { createMarketingRouter } from '../modules/marketing/marketing.routes.js';
 

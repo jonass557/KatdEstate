@@ -42,7 +42,7 @@ export const geoBlockInputSchema = z.object({
       z.object({
         lat: z.number().min(-90).max(90),
         lng: z.number().min(-180).max(180),
-      })
+      }),
     )
     .optional(),
 });
@@ -116,7 +116,9 @@ export const householdRegistrationSchema = z.object({
   emergencyContactPhone: z.string().trim().max(32).optional(),
   // Consentement RGPD / APDP obligatoire
   consentAccepted: z.literal(true, {
-    errorMap: () => ({ message: 'Le consentement à la politique de confidentialité est obligatoire.' }),
+    errorMap: () => ({
+      message: 'Le consentement à la politique de confidentialité est obligatoire.',
+    }),
   }),
 });
 

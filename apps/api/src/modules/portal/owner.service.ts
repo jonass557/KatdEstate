@@ -19,7 +19,11 @@ export async function ownerOverview(req: Request, res: Response): Promise<void> 
   const propertyFilter: Record<string, unknown> = { organizationId, deletedAt: null };
   if (req.organizationContext!.role === 'OWNER') {
     // Si spécifié sur la propriété ou si propriétaire de l'organisation
-    const userProperties = await Property.find({ organizationId, owner: req.user?.id, deletedAt: null });
+    const userProperties = await Property.find({
+      organizationId,
+      owner: req.user?.id,
+      deletedAt: null,
+    });
     if (userProperties.length > 0) {
       propertyFilter.owner = req.user?.id;
     }
@@ -29,7 +33,11 @@ export async function ownerOverview(req: Request, res: Response): Promise<void> 
   const propertyIds = properties.map((p) => p._id);
 
   // Unités
-  const units = await Unit.find({ organizationId, propertyId: { $in: propertyIds }, deletedAt: null });
+  const units = await Unit.find({
+    organizationId,
+    propertyId: { $in: propertyIds },
+    deletedAt: null,
+  });
   const totalUnits = units.length;
   const occupiedUnits = units.filter((u) => u.status === 'OCCUPIED').length;
   const availableUnits = units.filter((u) => u.status === 'AVAILABLE').length;
@@ -57,19 +65,55 @@ export async function ownerOverview(req: Request, res: Response): Promise<void> 
 
   const [collectedAgg, expectedAgg, overdueAgg, expensesAgg] = await Promise.all([
     Payment.aggregate<{ total: number }>([
-      { $match: { organizationId: orgObjectId, paidAt: { $gte: startOfMonth }, status: { $ne: 'REFUNDED' } } },
+      {
+        $match: {
+          organizationId: orgObjectId,
+          paidAt: { $gte: startOfMonth },
+          status: { $ne: 'REFUNDED' },
+        },
+      },
       { $group: { _id: null, total: { $sum: '$amountMinor' } } },
     ]),
     RentSchedule.aggregate<{ total: number }>([
-      { $match: { organizationId: orgObjectId, propertyId: { $in: propertyIds }, dueDate: { $gte: startOfMonth }, status: { $ne: 'CANCELLED' } } },
+      {
+        $match: {
+          organizationId: orgObjectId,
+          propertyId: { $in: propertyIds },
+          dueDate: { $gte: startOfMonth },
+          status: { $ne: 'CANCELLED' },
+        },
+      },
       { $group: { _id: null, total: { $sum: '$amountDueMinor' } } },
     ]),
     RentSchedule.aggregate<{ total: number }>([
-      { $match: { organizationId: orgObjectId, propertyId: { $in: propertyIds }, status: 'OVERDUE' } },
-      { $group: { _id: null, total: { $sum: { $subtract: [{ $add: ['$amountDueMinor', '$penaltyMinor'] }, '$amountPaidMinor'] } } } },
+      {
+        $match: {
+          organizationId: orgObjectId,
+          propertyId: { $in: propertyIds },
+          status: 'OVERDUE',
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: {
+              $subtract: [{ $add: ['$amountDueMinor', '$penaltyMinor'] }, '$amountPaidMinor'],
+            },
+          },
+        },
+      },
     ]),
     Transaction.aggregate<{ total: number }>([
-      { $match: { organizationId: orgObjectId, propertyId: { $in: propertyIds }, direction: 'EXPENSE', deletedAt: null, date: { $gte: startOfMonth } } },
+      {
+        $match: {
+          organizationId: orgObjectId,
+          propertyId: { $in: propertyIds },
+          direction: 'EXPENSE',
+          deletedAt: null,
+          date: { $gte: startOfMonth },
+        },
+      },
       { $group: { _id: null, total: { $sum: '$amountMinor' } } },
     ]),
   ]);
@@ -79,7 +123,10 @@ export async function ownerOverview(req: Request, res: Response): Promise<void> 
   const monthlyExpensesMinor = expensesAgg[0]?.total ?? 0;
   const arrearsMinor = overdueAgg[0]?.total ?? 0;
   const netProfitMinor = monthlyCollectedMinor - monthlyExpensesMinor;
-  const recoveryRate = monthlyExpectedMinor === 0 ? 100 : Math.round((monthlyCollectedMinor / monthlyExpectedMinor) * 100);
+  const recoveryRate =
+    monthlyExpectedMinor === 0
+      ? 100
+      : Math.round((monthlyCollectedMinor / monthlyExpectedMinor) * 100);
 
   // Tickets de maintenance en cours
   const openMaintenance = await MaintenanceTicket.countDocuments({
@@ -92,7 +139,15 @@ export async function ownerOverview(req: Request, res: Response): Promise<void> 
   // Activités récentes des gestionnaires
   const recentActivities = await AuditLog.find({
     organizationId,
-    action: { $in: ['lease.activate', 'payment.create', 'maintenance.create', 'maintenance.update', 'transaction.create'] },
+    action: {
+      $in: [
+        'lease.activate',
+        'payment.create',
+        'maintenance.create',
+        'maintenance.update',
+        'transaction.create',
+      ],
+    },
   })
     .sort({ createdAt: -1 })
     .limit(10)
@@ -190,7 +245,8 @@ export async function ownerReportPdf(req: Request, res: Response): Promise<void>
       {
         heading: 'Propriétés gérées',
         lines: properties.map(
-          (p) => `• ${p.name} (${p.type}) — ${p.city}, ${p.address} — Lots : ${units.filter((u) => String(u.propertyId) === String(p._id)).length}`,
+          (p) =>
+            `• ${p.name} (${p.type}) — ${p.city}, ${p.address} — Lots : ${units.filter((u) => String(u.propertyId) === String(p._id)).length}`,
         ),
       },
     ],

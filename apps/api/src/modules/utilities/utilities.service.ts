@@ -35,7 +35,12 @@ export function createUtilityHandlers(config: AppConfig) {
     },
 
     async listMeters(req: Request, res: Response): Promise<void> {
-      const query = req.query as unknown as Record<string, unknown> & { page: number; pageSize: number; order: 'asc' | 'desc'; sort?: string };
+      const query = req.query as unknown as Record<string, unknown> & {
+        page: number;
+        pageSize: number;
+        order: 'asc' | 'desc';
+        sort?: string;
+      };
       const filter: Record<string, unknown> = { organizationId: org(req), deletedAt: null };
       if (query.type) filter.type = query.type;
       if (query.propertyId) filter.propertyId = query.propertyId;
@@ -56,12 +61,19 @@ export function createUtilityHandlers(config: AppConfig) {
     },
 
     async recordReading(req: Request, res: Response): Promise<void> {
-      const meter = await UtilityMeter.findOne({ _id: req.body.meterId, organizationId: org(req), deletedAt: null });
+      const meter = await UtilityMeter.findOne({
+        _id: req.body.meterId,
+        organizationId: org(req),
+        deletedAt: null,
+      });
       if (!meter) throw notFound('Compteur');
 
       const consumption = req.body.currentIndex - req.body.previousIndex;
       const history = await UtilityReading.find({ meterId: meter._id }).select('consumption');
-      const average = history.length === 0 ? 0 : history.reduce((sum, reading) => sum + reading.consumption, 0) / history.length;
+      const average =
+        history.length === 0
+          ? 0
+          : history.reduce((sum, reading) => sum + reading.consumption, 0) / history.length;
       const abnormal = history.length >= 3 && consumption > average * meter.anomalyMultiplier;
 
       const reading = await UtilityReading.create({
@@ -78,7 +90,14 @@ export function createUtilityHandlers(config: AppConfig) {
         await notify(config, {
           organizationId: org(req),
           event: 'DOCUMENT_EXPIRING',
-          variables: { tenantName: '', rentAmount: '', dueDate: '', propertyName: '', unitName: meter.label, paymentLink: '' },
+          variables: {
+            tenantName: '',
+            rentAmount: '',
+            dueDate: '',
+            propertyName: '',
+            unitName: meter.label,
+            paymentLink: '',
+          },
           idempotencyKey: `meter-anomaly:${String(reading._id)}`,
         });
       }
@@ -97,13 +116,24 @@ export function createUtilityHandlers(config: AppConfig) {
         dueDate: new Date(req.body.readAt.getTime() + 15 * 24 * 60 * 60 * 1000),
       });
 
-      await recordAudit({ organizationId: org(req), ...(req.user?.id ? { actorId: req.user.id } : {}), action: 'meter.read', resourceType: 'UtilityReading', resourceId: String(reading._id), requestId: req.requestId });
+      await recordAudit({
+        organizationId: org(req),
+        ...(req.user?.id ? { actorId: req.user.id } : {}),
+        action: 'meter.read',
+        resourceType: 'UtilityReading',
+        resourceId: String(reading._id),
+        requestId: req.requestId,
+      });
       res.status(201);
       res.locals.data = { reading, bill, abnormal };
     },
 
     async readings(req: Request, res: Response): Promise<void> {
-      const meter = await UtilityMeter.findOne({ _id: req.params.id, organizationId: org(req), deletedAt: null });
+      const meter = await UtilityMeter.findOne({
+        _id: req.params.id,
+        organizationId: org(req),
+        deletedAt: null,
+      });
       if (!meter) throw notFound('Compteur');
       res.locals.data = await UtilityReading.find({ meterId: meter._id }).sort({ readAt: 1 });
     },
@@ -111,10 +141,16 @@ export function createUtilityHandlers(config: AppConfig) {
     /** Consommation mensuelle, pour le graphique. */
     async consumption(req: Request, res: Response): Promise<void> {
       const match: Record<string, unknown> = { organizationId: new Types.ObjectId(org(req)) };
-      if (typeof req.query.meterId === 'string') match.meterId = new Types.ObjectId(req.query.meterId);
+      if (typeof req.query.meterId === 'string')
+        match.meterId = new Types.ObjectId(req.query.meterId);
       const rows = await UtilityReading.aggregate<{ _id: string; total: number }>([
         { $match: match },
-        { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$readAt' } }, total: { $sum: '$consumption' } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m', date: '$readAt' } },
+            total: { $sum: '$consumption' },
+          },
+        },
         { $sort: { _id: 1 } },
       ]);
       res.locals.data = rows.map((row) => ({ month: row._id, consumption: row.total }));

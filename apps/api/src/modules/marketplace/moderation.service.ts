@@ -179,11 +179,7 @@ export async function listAdminAgentPlans(req: Request, res: Response): Promise<
 export async function updateAdminAgentPlan(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
 
-  const plan = await AgentPlan.findByIdAndUpdate(
-    id,
-    { $set: req.body },
-    { new: true }
-  );
+  const plan = await AgentPlan.findByIdAndUpdate(id, { $set: req.body }, { new: true });
 
   if (!plan) {
     throw new HttpError(404, 'Formule d’abonnement introuvable.');

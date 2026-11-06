@@ -32,7 +32,7 @@ export async function uploadToCloudinary(
     folder?: string;
     publicId?: string;
     resourceType?: 'image' | 'raw' | 'auto';
-  } = {}
+  } = {},
 ): Promise<CloudinaryUploadResult> {
   if (!isConfigured) {
     // Si Cloudinary n'est pas encore configuré (ex: variables non fournies), renvoie l'URL source

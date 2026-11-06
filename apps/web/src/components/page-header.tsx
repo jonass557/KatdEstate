@@ -24,7 +24,9 @@ export function PageHeader({
             <BackButton to={backTo} label={backLabel} />
           </div>
         ) : null}
-        <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">{title}</h1>
+        <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+          {title}
+        </h1>
         {description ? (
           <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>
         ) : null}

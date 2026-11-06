@@ -39,10 +39,7 @@ describe('organisations et multi-tenancy', () => {
       },
     };
 
-    const res = await api()
-      .post('/api/v1/organizations')
-      .set(authed(owner))
-      .send(payload);
+    const res = await api().post('/api/v1/organizations').set(authed(owner)).send(payload);
 
     expect(res.status).toBe(201);
     expect(res.body.data.name).toBe('DOMORA Immo Dakar');

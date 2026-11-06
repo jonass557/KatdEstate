@@ -25,7 +25,12 @@ export function ChefferieDashboard() {
   const client = useQueryClient();
   const { toast } = useToast();
   const [tab, setTab] = useState<
-    'overview' | 'house-sales' | 'house-rentals' | 'land-sales' | 'certificates' | 'commissions-config'
+    | 'overview'
+    | 'house-sales'
+    | 'house-rentals'
+    | 'land-sales'
+    | 'certificates'
+    | 'commissions-config'
   >('overview');
 
   // Selected neighborhood filter
@@ -56,7 +61,7 @@ export function ChefferieDashboard() {
     ['chefferie-dashboard-stats', selectedNeighborhoodId],
     selectedNeighborhoodId
       ? `/quartier/chefferie/dashboard?neighborhoodId=${selectedNeighborhoodId}`
-      : '/quartier/chefferie/dashboard'
+      : '/quartier/chefferie/dashboard',
   );
 
   // 3. Transactions queries
@@ -64,14 +69,14 @@ export function ChefferieDashboard() {
     ['chefferie-house-sales', selectedNeighborhoodId],
     selectedNeighborhoodId
       ? `/quartier/chefferie/house-sales?neighborhoodId=${selectedNeighborhoodId}`
-      : '/quartier/chefferie/house-sales'
+      : '/quartier/chefferie/house-sales',
   );
 
   const { data: houseRentalsData } = useOrgQuery<any>(
     ['chefferie-house-rentals', selectedNeighborhoodId],
     selectedNeighborhoodId
       ? `/quartier/chefferie/house-rentals?neighborhoodId=${selectedNeighborhoodId}`
-      : '/quartier/chefferie/house-rentals'
+      : '/quartier/chefferie/house-rentals',
   );
   const houseRentals = houseRentalsData?.rentals || [];
 
@@ -79,14 +84,14 @@ export function ChefferieDashboard() {
     ['chefferie-land-sales', selectedNeighborhoodId],
     selectedNeighborhoodId
       ? `/quartier/chefferie/land-sales?neighborhoodId=${selectedNeighborhoodId}`
-      : '/quartier/chefferie/land-sales'
+      : '/quartier/chefferie/land-sales',
   );
 
   const { data: certificates } = useOrgQuery<any[]>(
     ['chefferie-certificates', selectedNeighborhoodId],
     selectedNeighborhoodId
       ? `/quartier/chefferie/certificates?neighborhoodId=${selectedNeighborhoodId}`
-      : '/quartier/chefferie/certificates'
+      : '/quartier/chefferie/certificates',
   );
 
   const { data: commissionSettingsData } = useOrgQuery<any>(
@@ -94,24 +99,26 @@ export function ChefferieDashboard() {
     selectedNeighborhoodId
       ? `/quartier/chefferie/commissions/settings?neighborhoodId=${selectedNeighborhoodId}`
       : '/quartier/chefferie/commissions/settings',
-    Boolean(selectedNeighborhoodId)
+    Boolean(selectedNeighborhoodId),
   );
 
   // Active service hours status
-  const serviceHours = statsData?.serviceHours || houseRentalsData?.serviceHours || {
-    isOpen: new Date().getHours() >= 5 && new Date().getHours() < 22,
-    openingTime: '05:00',
-    closingTime: '22:00',
-    currentServerTime: `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`,
-    statusMessage: 'Service locatif ouvert de 05h00 à 22h00',
-  };
+  const serviceHours = statsData?.serviceHours ||
+    houseRentalsData?.serviceHours || {
+      isOpen: new Date().getHours() >= 5 && new Date().getHours() < 22,
+      openingTime: '05:00',
+      closingTime: '22:00',
+      currentServerTime: `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`,
+      statusMessage: 'Service locatif ouvert de 05h00 à 22h00',
+    };
 
   // State for printable certificate modal
   const [selectedCertificate, setSelectedCertificate] = useState<any | null>(null);
 
   // Mutations
   const recordHouseSaleMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/quartier/chefferie/house-sales`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest(`${base}/quartier/chefferie/house-sales`, { method: 'POST', body }),
     onSuccess: () => {
       toast({ title: 'Vente de maison enregistrée avec succès', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['chefferie-dashboard-stats'] });
@@ -122,7 +129,8 @@ export function ChefferieDashboard() {
   });
 
   const recordHouseRentalMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/quartier/chefferie/house-rentals`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest(`${base}/quartier/chefferie/house-rentals`, { method: 'POST', body }),
     onSuccess: () => {
       toast({ title: 'Location enregistrée avec succès', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['chefferie-dashboard-stats'] });
@@ -133,7 +141,8 @@ export function ChefferieDashboard() {
   });
 
   const recordLandSaleMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/quartier/chefferie/land-sales`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest(`${base}/quartier/chefferie/land-sales`, { method: 'POST', body }),
     onSuccess: () => {
       toast({ title: 'Vente de terrain enregistrée avec succès', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['chefferie-dashboard-stats'] });
@@ -144,7 +153,8 @@ export function ChefferieDashboard() {
   });
 
   const issueCertificateMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/quartier/chefferie/certificates`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest(`${base}/quartier/chefferie/certificates`, { method: 'POST', body }),
     onSuccess: (res: any) => {
       toast({ title: 'Certificat officiel délivré !', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['chefferie-dashboard-stats'] });
@@ -158,7 +168,8 @@ export function ChefferieDashboard() {
   });
 
   const updateCommissionsMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/quartier/chefferie/commissions/settings`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest(`${base}/quartier/chefferie/commissions/settings`, { method: 'POST', body }),
     onSuccess: () => {
       toast({ title: 'Taux de commission enregistrés', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['chefferie-commissions-settings'] });
@@ -177,13 +188,16 @@ export function ChefferieDashboard() {
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-600 text-white font-bold text-xs shadow-sm">
               👑
             </span>
-            <h1 className="text-xl font-black text-foreground">Chefferie Traditionnelle & Immobilière</h1>
+            <h1 className="text-xl font-black text-foreground">
+              Chefferie Traditionnelle & Immobilière
+            </h1>
             <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
               KatdEstate Chefferie
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Enregistrement des ventes de maisons, locations, transactions foncières, calcul automatique des commissions et délivrance des certificats officiels.
+            Enregistrement des ventes de maisons, locations, transactions foncières, calcul
+            automatique des commissions et délivrance des certificats officiels.
           </p>
         </div>
 
@@ -197,8 +211,12 @@ export function ChefferieDashboard() {
             }`}
           >
             <Clock className="h-3.5 w-3.5" />
-            <span>{serviceHours.isOpen ? 'Service Locatif : OUVERT' : 'Service Locatif : FERMÉ'}</span>
-            <span className="font-normal opacity-90">({serviceHours.openingTime} - {serviceHours.closingTime})</span>
+            <span>
+              {serviceHours.isOpen ? 'Service Locatif : OUVERT' : 'Service Locatif : FERMÉ'}
+            </span>
+            <span className="font-normal opacity-90">
+              ({serviceHours.openingTime} - {serviceHours.closingTime})
+            </span>
           </div>
           <span className="text-[11px] text-muted-foreground">
             Heure locale : <strong>{serviceHours.currentServerTime}</strong>
@@ -222,7 +240,9 @@ export function ChefferieDashboard() {
         >
           <option value="">Toutes les villes</option>
           {cities?.map((c) => (
-            <option key={c._id} value={c._id}>{c.name}</option>
+            <option key={c._id} value={c._id}>
+              {c.name}
+            </option>
           ))}
         </select>
 
@@ -237,7 +257,9 @@ export function ChefferieDashboard() {
         >
           <option value="">Tous les quartiers</option>
           {neighborhoods?.map((n) => (
-            <option key={n._id} value={n._id}>{n.name}</option>
+            <option key={n._id} value={n._id}>
+              {n.name}
+            </option>
           ))}
         </select>
 
@@ -249,7 +271,9 @@ export function ChefferieDashboard() {
         >
           <option value="">Tous les blocs</option>
           {blocks?.map((b) => (
-            <option key={b._id} value={b._id}>{b.name} ({b.code})</option>
+            <option key={b._id} value={b._id}>
+              {b.name} ({b.code})
+            </option>
           ))}
         </select>
       </div>
@@ -258,10 +282,26 @@ export function ChefferieDashboard() {
       <div className="flex flex-wrap gap-2 border-b border-border pb-2 text-xs">
         {[
           { key: 'overview', label: 'Tableau de bord Chefferie', icon: Award },
-          { key: 'house-sales', label: `Ventes de Maisons (${houseSales?.length || 0})`, icon: Home },
-          { key: 'house-rentals', label: `Locations de Maisons (${houseRentals?.length || 0})`, icon: Building },
-          { key: 'land-sales', label: `Ventes de Terrains (${landSales?.length || 0})`, icon: MapPin },
-          { key: 'certificates', label: `Certificats Officiels (${certificates?.length || 0})`, icon: FileCheck },
+          {
+            key: 'house-sales',
+            label: `Ventes de Maisons (${houseSales?.length || 0})`,
+            icon: Home,
+          },
+          {
+            key: 'house-rentals',
+            label: `Locations de Maisons (${houseRentals?.length || 0})`,
+            icon: Building,
+          },
+          {
+            key: 'land-sales',
+            label: `Ventes de Terrains (${landSales?.length || 0})`,
+            icon: MapPin,
+          },
+          {
+            key: 'certificates',
+            label: `Certificats Officiels (${certificates?.length || 0})`,
+            icon: FileCheck,
+          },
           { key: 'commissions-config', label: 'Taux de Commission Chefferie', icon: Sliders },
         ].map((t) => {
           const Icon = t.icon;
@@ -290,7 +330,9 @@ export function ChefferieDashboard() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Ventes de Maisons</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Ventes de Maisons
+                </CardTitle>
                 <Home className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
@@ -303,20 +345,27 @@ export function ChefferieDashboard() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Maisons en Location</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Maisons en Location
+                </CardTitle>
                 <Building className="h-4 w-4 text-emerald-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-emerald-600">{kpis?.totalHousesRented || 0}</div>
+                <div className="text-2xl font-bold text-emerald-600">
+                  {kpis?.totalHousesRented || 0}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Loyers mensuels : {(kpis?.totalRentalsVolumeMinor || 0).toLocaleString('fr-FR')} XOF
+                  Loyers mensuels : {(kpis?.totalRentalsVolumeMinor || 0).toLocaleString('fr-FR')}{' '}
+                  XOF
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Terrains Vendus</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Terrains Vendus
+                </CardTitle>
                 <MapPin className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent>
@@ -329,12 +378,18 @@ export function ChefferieDashboard() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Certificats Délivrés</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Certificats Délivrés
+                </CardTitle>
                 <FileCheck className="h-4 w-4 text-purple-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{kpis?.totalCertificatesIssued || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">Documents officiels vérifiables</p>
+                <div className="text-2xl font-bold text-purple-600">
+                  {kpis?.totalCertificatesIssued || 0}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Documents officiels vérifiables
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -342,11 +397,15 @@ export function ChefferieDashboard() {
           {/* Financial summary: commissions due vs paid */}
           <div className="grid gap-4 sm:grid-cols-3">
             <Card className="p-4 bg-muted/20 border-border text-xs space-y-1">
-              <span className="text-muted-foreground font-semibold">Total Transactions Enregistrées</span>
+              <span className="text-muted-foreground font-semibold">
+                Total Transactions Enregistrées
+              </span>
               <div className="text-xl font-black text-foreground">
                 {(kpis?.totalTransactionsVolumeMinor || 0).toLocaleString('fr-FR')} XOF
               </div>
-              <p className="text-[11px] text-muted-foreground">{kpis?.totalTransactionsCount || 0} actes notifiés</p>
+              <p className="text-[11px] text-muted-foreground">
+                {kpis?.totalTransactionsCount || 0} actes notifiés
+              </p>
             </Card>
 
             <Card className="p-4 bg-emerald-500/10 border-emerald-500/30 text-xs space-y-1">
@@ -384,7 +443,8 @@ export function ChefferieDashboard() {
                 <Home className="h-5 w-5 text-amber-600" /> Enregistrer une Vente de Maison
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Saisie de l'ancien propriétaire, nouvel acquéreur, prix de vente et calcul automatique de la commission chefferie.
+                Saisie de l'ancien propriétaire, nouvel acquéreur, prix de vente et calcul
+                automatique de la commission chefferie.
               </p>
             </CardHeader>
             <CardContent>
@@ -427,16 +487,24 @@ export function ChefferieDashboard() {
                     >
                       <option value="">Sélectionnez le quartier...</option>
                       {neighborhoods?.map((n) => (
-                        <option key={n._id} value={n._id}>{n.name}</option>
+                        <option key={n._id} value={n._id}>
+                          {n.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="font-semibold block mb-1">Bloc / Carré *</label>
-                    <select name="blockId" className="w-full rounded-md border border-input bg-background p-2 text-xs" required>
+                    <select
+                      name="blockId"
+                      className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                      required
+                    >
                       <option value="">Sélectionnez le bloc...</option>
                       {blocks?.map((b) => (
-                        <option key={b._id} value={b._id}>{b.name} ({b.code})</option>
+                        <option key={b._id} value={b._id}>
+                          {b.name} ({b.code})
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -445,7 +513,11 @@ export function ChefferieDashboard() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="font-semibold block mb-1">Désignation du bien vendu *</label>
-                    <Input name="houseDescription" placeholder="Ex: Villa R+1 avec 4 chambres et cour" required />
+                    <Input
+                      name="houseDescription"
+                      placeholder="Ex: Villa R+1 avec 4 chambres et cour"
+                      required
+                    />
                   </div>
                   <div>
                     <label className="font-semibold block mb-1">Adresse ou numéro de rue *</label>
@@ -473,10 +545,18 @@ export function ChefferieDashboard() {
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
                     <label className="font-semibold block mb-1">Prix de vente total (XOF) *</label>
-                    <Input name="salePriceMinor" type="number" min="1" placeholder="Ex: 45000000" required />
+                    <Input
+                      name="salePriceMinor"
+                      type="number"
+                      min="1"
+                      placeholder="Ex: 45000000"
+                      required
+                    />
                   </div>
                   <div>
-                    <label className="font-semibold block mb-1">Taux Chefferie (% configurable)</label>
+                    <label className="font-semibold block mb-1">
+                      Taux Chefferie (% configurable)
+                    </label>
                     <Input
                       name="customCommissionPercent"
                       type="number"
@@ -485,13 +565,27 @@ export function ChefferieDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="font-semibold block mb-1">Montant perçu par la chefferie (XOF)</label>
-                    <Input name="commissionPaidMinor" type="number" min="0" placeholder="Ex: 1350000" defaultValue="0" />
+                    <label className="font-semibold block mb-1">
+                      Montant perçu par la chefferie (XOF)
+                    </label>
+                    <Input
+                      name="commissionPaidMinor"
+                      type="number"
+                      min="0"
+                      placeholder="Ex: 1350000"
+                      defaultValue="0"
+                    />
                   </div>
                 </div>
 
-                <Button type="submit" disabled={recordHouseSaleMutation.isPending} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold">
-                  {recordHouseSaleMutation.isPending ? 'Enregistrement...' : 'Enregistrer la vente de maison'}
+                <Button
+                  type="submit"
+                  disabled={recordHouseSaleMutation.isPending}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                >
+                  {recordHouseSaleMutation.isPending
+                    ? 'Enregistrement...'
+                    : 'Enregistrer la vente de maison'}
                 </Button>
               </form>
             </CardContent>
@@ -516,22 +610,31 @@ export function ChefferieDashboard() {
                 <tbody className="divide-y divide-border">
                   {houseSales?.map((h) => (
                     <tr key={h._id} className="hover:bg-muted/30">
-                      <td className="p-3 font-mono font-bold text-primary">{h.transactionNumber}</td>
+                      <td className="p-3 font-mono font-bold text-primary">
+                        {h.transactionNumber}
+                      </td>
                       <td className="p-3">
                         <span className="font-semibold block">{h.houseDescription}</span>
                         <span className="text-[11px] text-muted-foreground">{h.address}</span>
                       </td>
                       <td className="p-3">
-                        <span className="block text-[11px]">De : <strong>{h.formerOwner?.fullName}</strong></span>
-                        <span className="block text-[11px]">À : <strong>{h.newBuyer?.fullName}</strong></span>
+                        <span className="block text-[11px]">
+                          De : <strong>{h.formerOwner?.fullName}</strong>
+                        </span>
+                        <span className="block text-[11px]">
+                          À : <strong>{h.newBuyer?.fullName}</strong>
+                        </span>
                       </td>
-                      <td className="p-3 font-bold">{h.salePriceMinor?.toLocaleString('fr-FR')} XOF</td>
+                      <td className="p-3 font-bold">
+                        {h.salePriceMinor?.toLocaleString('fr-FR')} XOF
+                      </td>
                       <td className="p-3">
                         <span className="font-bold text-emerald-600">
                           {h.commissionPaidMinor?.toLocaleString('fr-FR')} XOF
                         </span>
                         <span className="block text-[10px] text-muted-foreground">
-                          Dû : {h.commissionDueMinor?.toLocaleString('fr-FR')} XOF ({h.commissionPercent}%)
+                          Dû : {h.commissionDueMinor?.toLocaleString('fr-FR')} XOF (
+                          {h.commissionPercent}%)
                         </span>
                       </td>
                       <td className="p-3">
@@ -558,7 +661,9 @@ export function ChefferieDashboard() {
                             variant="outline"
                             className="h-7 text-xs"
                             onClick={() => {
-                              const chefName = prompt('Nom du Chef signataire (ex: El Hadj Amadou Diop) :');
+                              const chefName = prompt(
+                                'Nom du Chef signataire (ex: El Hadj Amadou Diop) :',
+                              );
                               if (chefName) {
                                 issueCertificateMutation.mutate({
                                   operationType: 'HOUSE_SALE',
@@ -590,18 +695,22 @@ export function ChefferieDashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Building className="h-5 w-5 text-emerald-600" /> Enregistrer un Contrat de Location
+                  <Building className="h-5 w-5 text-emerald-600" /> Enregistrer un Contrat de
+                  Location
                 </CardTitle>
                 <span
                   className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-                    serviceHours.isOpen ? 'bg-emerald-500/20 text-emerald-600' : 'bg-amber-500/20 text-amber-600'
+                    serviceHours.isOpen
+                      ? 'bg-emerald-500/20 text-emerald-600'
+                      : 'bg-amber-500/20 text-amber-600'
                   }`}
                 >
                   Horaires : 05h00 - 22h00
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Enregistrement du bailleur, du locataire, du loyer mensuel et calcul automatique de la commission de la chefferie.
+                Enregistrement du bailleur, du locataire, du loyer mensuel et calcul automatique de
+                la commission de la chefferie.
               </p>
             </CardHeader>
             <CardContent>
@@ -645,16 +754,24 @@ export function ChefferieDashboard() {
                     >
                       <option value="">Sélectionnez le quartier...</option>
                       {neighborhoods?.map((n) => (
-                        <option key={n._id} value={n._id}>{n.name}</option>
+                        <option key={n._id} value={n._id}>
+                          {n.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="font-semibold block mb-1">Bloc *</label>
-                    <select name="blockId" className="w-full rounded-md border border-input bg-background p-2 text-xs" required>
+                    <select
+                      name="blockId"
+                      className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                      required
+                    >
                       <option value="">Sélectionnez le bloc...</option>
                       {blocks?.map((b) => (
-                        <option key={b._id} value={b._id}>{b.name} ({b.code})</option>
+                        <option key={b._id} value={b._id}>
+                          {b.name} ({b.code})
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -663,7 +780,11 @@ export function ChefferieDashboard() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="font-semibold block mb-1">Logement loué *</label>
-                    <Input name="houseDescription" placeholder="Ex: Appartement 3 pièces au 2ème étage" required />
+                    <Input
+                      name="houseDescription"
+                      placeholder="Ex: Appartement 3 pièces au 2ème étage"
+                      required
+                    />
                   </div>
                   <div>
                     <label className="font-semibold block mb-1">Adresse précise *</label>
@@ -689,11 +810,23 @@ export function ChefferieDashboard() {
                 <div className="grid gap-3 sm:grid-cols-4">
                   <div>
                     <label className="font-semibold block mb-1">Montant Loyer / mois *</label>
-                    <Input name="rentAmountMinor" type="number" min="1" placeholder="Ex: 200000" required />
+                    <Input
+                      name="rentAmountMinor"
+                      type="number"
+                      min="1"
+                      placeholder="Ex: 200000"
+                      required
+                    />
                   </div>
                   <div>
                     <label className="font-semibold block mb-1">Durée (mois) *</label>
-                    <Input name="rentalDurationMonths" type="number" min="1" defaultValue="12" required />
+                    <Input
+                      name="rentalDurationMonths"
+                      type="number"
+                      min="1"
+                      defaultValue="12"
+                      required
+                    />
                   </div>
                   <div>
                     <label className="font-semibold block mb-1">Date d'effet *</label>
@@ -701,12 +834,24 @@ export function ChefferieDashboard() {
                   </div>
                   <div>
                     <label className="font-semibold block mb-1">Commission perçue (XOF)</label>
-                    <Input name="commissionPaidMinor" type="number" min="0" placeholder="Ex: 20000" defaultValue="0" />
+                    <Input
+                      name="commissionPaidMinor"
+                      type="number"
+                      min="0"
+                      placeholder="Ex: 20000"
+                      defaultValue="0"
+                    />
                   </div>
                 </div>
 
-                <Button type="submit" disabled={recordHouseRentalMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
-                  {recordHouseRentalMutation.isPending ? 'Enregistrement...' : 'Enregistrer la location'}
+                <Button
+                  type="submit"
+                  disabled={recordHouseRentalMutation.isPending}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                >
+                  {recordHouseRentalMutation.isPending
+                    ? 'Enregistrement...'
+                    : 'Enregistrer la location'}
                 </Button>
               </form>
             </CardContent>
@@ -736,17 +881,27 @@ export function ChefferieDashboard() {
                         <span className="text-[11px] text-muted-foreground">{r.address}</span>
                       </td>
                       <td className="p-3">
-                        <span className="block text-[11px]">Bailleur : <strong>{r.owner?.fullName}</strong></span>
-                        <span className="block text-[11px]">Locataire : <strong>{r.tenant?.fullName}</strong></span>
+                        <span className="block text-[11px]">
+                          Bailleur : <strong>{r.owner?.fullName}</strong>
+                        </span>
+                        <span className="block text-[11px]">
+                          Locataire : <strong>{r.tenant?.fullName}</strong>
+                        </span>
                       </td>
-                      <td className="p-3 font-bold">{r.rentAmountMinor?.toLocaleString('fr-FR')} XOF</td>
+                      <td className="p-3 font-bold">
+                        {r.rentAmountMinor?.toLocaleString('fr-FR')} XOF
+                      </td>
                       <td className="p-3 font-bold text-emerald-600">
                         {r.commissionPaidMinor?.toLocaleString('fr-FR')} XOF
-                        <span className="block text-[10px] text-muted-foreground">Dû : {r.commissionDueMinor?.toLocaleString('fr-FR')} XOF</span>
+                        <span className="block text-[10px] text-muted-foreground">
+                          Dû : {r.commissionDueMinor?.toLocaleString('fr-FR')} XOF
+                        </span>
                       </td>
                       <td className="p-3">
                         {r.certificateNumber ? (
-                          <span className="font-mono text-[11px] font-bold text-purple-600">{r.certificateNumber}</span>
+                          <span className="font-mono text-[11px] font-bold text-purple-600">
+                            {r.certificateNumber}
+                          </span>
                         ) : (
                           <Button
                             size="sm"
@@ -784,10 +939,12 @@ export function ChefferieDashboard() {
           <Card className="max-w-3xl mx-auto">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-amber-600" /> Enregistrer une Transaction Foncière (Vente de Terrain)
+                <MapPin className="h-5 w-5 text-amber-600" /> Enregistrer une Transaction Foncière
+                (Vente de Terrain)
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Identification du cédant, de l'acquéreur, superficie, localisation précise et calcul de la commission chefferie.
+                Identification du cédant, de l'acquéreur, superficie, localisation précise et calcul
+                de la commission chefferie.
               </p>
             </CardHeader>
             <CardContent>
@@ -829,16 +986,24 @@ export function ChefferieDashboard() {
                     >
                       <option value="">Sélectionnez le quartier...</option>
                       {neighborhoods?.map((n) => (
-                        <option key={n._id} value={n._id}>{n.name}</option>
+                        <option key={n._id} value={n._id}>
+                          {n.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="font-semibold block mb-1">Bloc / Secteur *</label>
-                    <select name="blockId" className="w-full rounded-md border border-input bg-background p-2 text-xs" required>
+                    <select
+                      name="blockId"
+                      className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                      required
+                    >
                       <option value="">Sélectionnez le bloc...</option>
                       {blocks?.map((b) => (
-                        <option key={b._id} value={b._id}>{b.name} ({b.code})</option>
+                        <option key={b._id} value={b._id}>
+                          {b.name} ({b.code})
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -854,8 +1019,14 @@ export function ChefferieDashboard() {
                     <Input name="plotNumber" placeholder="Ex: Lot n° 42-B" />
                   </div>
                   <div>
-                    <label className="font-semibold block mb-1">Localisation précise & Repères *</label>
-                    <Input name="locationText" placeholder="Ex: En face de l'école primaire" required />
+                    <label className="font-semibold block mb-1">
+                      Localisation précise & Repères *
+                    </label>
+                    <Input
+                      name="locationText"
+                      placeholder="Ex: En face de l'école primaire"
+                      required
+                    />
                   </div>
                 </div>
 
@@ -876,8 +1047,16 @@ export function ChefferieDashboard() {
 
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
-                    <label className="font-semibold block mb-1">Prix de vente du terrain (XOF) *</label>
-                    <Input name="salePriceMinor" type="number" min="1" placeholder="Ex: 25000000" required />
+                    <label className="font-semibold block mb-1">
+                      Prix de vente du terrain (XOF) *
+                    </label>
+                    <Input
+                      name="salePriceMinor"
+                      type="number"
+                      min="1"
+                      placeholder="Ex: 25000000"
+                      required
+                    />
                   </div>
                   <div>
                     <label className="font-semibold block mb-1">Taux Chefferie (% foncier)</label>
@@ -889,13 +1068,27 @@ export function ChefferieDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="font-semibold block mb-1">Montant perçu par chefferie (XOF)</label>
-                    <Input name="commissionPaidMinor" type="number" min="0" placeholder="Ex: 1250000" defaultValue="0" />
+                    <label className="font-semibold block mb-1">
+                      Montant perçu par chefferie (XOF)
+                    </label>
+                    <Input
+                      name="commissionPaidMinor"
+                      type="number"
+                      min="0"
+                      placeholder="Ex: 1250000"
+                      defaultValue="0"
+                    />
                   </div>
                 </div>
 
-                <Button type="submit" disabled={recordLandSaleMutation.isPending} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold">
-                  {recordLandSaleMutation.isPending ? 'Enregistrement...' : 'Enregistrer la transaction foncière'}
+                <Button
+                  type="submit"
+                  disabled={recordLandSaleMutation.isPending}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                >
+                  {recordLandSaleMutation.isPending
+                    ? 'Enregistrement...'
+                    : 'Enregistrer la transaction foncière'}
                 </Button>
               </form>
             </CardContent>
@@ -919,7 +1112,9 @@ export function ChefferieDashboard() {
                 <tbody className="divide-y divide-border">
                   {landSales?.map((l: any) => (
                     <tr key={l._id} className="hover:bg-muted/30">
-                      <td className="p-3 font-mono font-bold text-primary">{l.transactionNumber}</td>
+                      <td className="p-3 font-mono font-bold text-primary">
+                        {l.transactionNumber}
+                      </td>
                       <td className="p-3">
                         <span className="font-semibold block">{l.locationText}</span>
                         <span className="text-[11px] text-muted-foreground">
@@ -927,17 +1122,27 @@ export function ChefferieDashboard() {
                         </span>
                       </td>
                       <td className="p-3">
-                        <span className="block text-[11px]">De : <strong>{l.initialOwner?.fullName}</strong></span>
-                        <span className="block text-[11px]">À : <strong>{l.newBuyer?.fullName}</strong></span>
+                        <span className="block text-[11px]">
+                          De : <strong>{l.initialOwner?.fullName}</strong>
+                        </span>
+                        <span className="block text-[11px]">
+                          À : <strong>{l.newBuyer?.fullName}</strong>
+                        </span>
                       </td>
-                      <td className="p-3 font-bold">{l.salePriceMinor?.toLocaleString('fr-FR')} XOF</td>
+                      <td className="p-3 font-bold">
+                        {l.salePriceMinor?.toLocaleString('fr-FR')} XOF
+                      </td>
                       <td className="p-3 font-bold text-amber-600">
                         {l.commissionPaidMinor?.toLocaleString('fr-FR')} XOF
-                        <span className="block text-[10px] text-muted-foreground">Dû : {l.commissionDueMinor?.toLocaleString('fr-FR')} XOF</span>
+                        <span className="block text-[10px] text-muted-foreground">
+                          Dû : {l.commissionDueMinor?.toLocaleString('fr-FR')} XOF
+                        </span>
                       </td>
                       <td className="p-3">
                         {l.certificateNumber ? (
-                          <span className="font-mono text-[11px] font-bold text-purple-600">{l.certificateNumber}</span>
+                          <span className="font-mono text-[11px] font-bold text-purple-600">
+                            {l.certificateNumber}
+                          </span>
                         ) : (
                           <Button
                             size="sm"
@@ -974,33 +1179,44 @@ export function ChefferieDashboard() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-foreground">Registre des Certificats Officiels Délivrés</h2>
+              <h2 className="text-base font-bold text-foreground">
+                Registre des Certificats Officiels Délivrés
+              </h2>
               <p className="text-xs text-muted-foreground">
-                Documents officiels téléchargeables en PDF, imprimables directement et authentifiables par QR code.
+                Documents officiels téléchargeables en PDF, imprimables directement et
+                authentifiables par QR code.
               </p>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {certificates?.map((cert: any) => (
-              <Card key={cert._id} className="p-4 flex flex-col justify-between border-amber-500/30 text-xs space-y-3">
+              <Card
+                key={cert._id}
+                className="p-4 flex flex-col justify-between border-amber-500/30 text-xs space-y-3"
+              >
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-primary">{cert.certificateNumber}</span>
+                    <span className="font-mono font-bold text-primary">
+                      {cert.certificateNumber}
+                    </span>
                     <span className="rounded bg-emerald-500/20 text-emerald-600 px-2 py-0.5 text-[10px] font-bold">
                       {cert.status}
                     </span>
                   </div>
                   <h4 className="font-bold text-foreground">{cert.chefferieName}</h4>
                   <p className="text-[11px] text-muted-foreground">
-                    Opération : <strong>{cert.operationType}</strong> • Réf : {cert.transactionNumber}
+                    Opération : <strong>{cert.operationType}</strong> • Réf :{' '}
+                    {cert.transactionNumber}
                   </p>
                   <div className="pt-2 border-t border-border space-y-1">
                     <p className="text-[11px]">
-                      Partie A : <strong>{cert.parties?.partyA}</strong> ({cert.parties?.partyARole})
+                      Partie A : <strong>{cert.parties?.partyA}</strong> ({cert.parties?.partyARole}
+                      )
                     </p>
                     <p className="text-[11px]">
-                      Partie B : <strong>{cert.parties?.partyB}</strong> ({cert.parties?.partyBRole})
+                      Partie B : <strong>{cert.parties?.partyB}</strong> ({cert.parties?.partyBRole}
+                      )
                     </p>
                     <p className="text-[11px] text-muted-foreground">
                       Lieu : {cert.propertyDetails?.address}
@@ -1009,7 +1225,9 @@ export function ChefferieDashboard() {
                 </div>
 
                 <div className="pt-3 border-t border-border flex items-center justify-between">
-                  <span className="font-mono text-[10px] text-muted-foreground">{cert.verificationCode}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {cert.verificationCode}
+                  </span>
                   <Button
                     size="sm"
                     className="bg-amber-600 hover:bg-amber-700 h-7 text-xs font-bold"
@@ -1029,10 +1247,12 @@ export function ChefferieDashboard() {
         <Card className="max-w-xl mx-auto">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Sliders className="h-5 w-5 text-amber-600" /> Paramétrage des Pourcentages de la Chefferie
+              <Sliders className="h-5 w-5 text-amber-600" /> Paramétrage des Pourcentages de la
+              Chefferie
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              Définissez les taux de commission légaux et coutumiers applicables aux transactions dans votre secteur.
+              Définissez les taux de commission légaux et coutumiers applicables aux transactions
+              dans votre secteur.
             </p>
           </CardHeader>
           <CardContent>
@@ -1060,13 +1280,17 @@ export function ChefferieDashboard() {
                 >
                   <option value="">Sélectionnez le quartier...</option>
                   {neighborhoods?.map((n) => (
-                    <option key={n._id} value={n._id}>{n.name}</option>
+                    <option key={n._id} value={n._id}>
+                      {n.name}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Pourcentage applicable à chaque maison vendue (%) *</label>
+                <label className="font-semibold block mb-1">
+                  Pourcentage applicable à chaque maison vendue (%) *
+                </label>
                 <Input
                   name="houseSalePercent"
                   type="number"
@@ -1076,11 +1300,15 @@ export function ChefferieDashboard() {
                   defaultValue={commissionSettingsData?.settings?.houseSalePercent ?? 3}
                   required
                 />
-                <span className="text-[10px] text-muted-foreground">Ex: 3% ou 5% de la valeur totale de vente.</span>
+                <span className="text-[10px] text-muted-foreground">
+                  Ex: 3% ou 5% de la valeur totale de vente.
+                </span>
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Pourcentage applicable à chaque maison louée (%) *</label>
+                <label className="font-semibold block mb-1">
+                  Pourcentage applicable à chaque maison louée (%) *
+                </label>
                 <Input
                   name="houseRentPercent"
                   type="number"
@@ -1090,11 +1318,15 @@ export function ChefferieDashboard() {
                   defaultValue={commissionSettingsData?.settings?.houseRentPercent ?? 10}
                   required
                 />
-                <span className="text-[10px] text-muted-foreground">Ex: 10% du premier mois de loyer.</span>
+                <span className="text-[10px] text-muted-foreground">
+                  Ex: 10% du premier mois de loyer.
+                </span>
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Pourcentage applicable à chaque terrain vendu (%) *</label>
+                <label className="font-semibold block mb-1">
+                  Pourcentage applicable à chaque terrain vendu (%) *
+                </label>
                 <Input
                   name="landSalePercent"
                   type="number"
@@ -1104,7 +1336,9 @@ export function ChefferieDashboard() {
                   defaultValue={commissionSettingsData?.settings?.landSalePercent ?? 5}
                   required
                 />
-                <span className="text-[10px] text-muted-foreground">Ex: 5% ou 10% sur les transactions foncières.</span>
+                <span className="text-[10px] text-muted-foreground">
+                  Ex: 5% ou 10% sur les transactions foncières.
+                </span>
               </div>
 
               <Button
@@ -1112,7 +1346,9 @@ export function ChefferieDashboard() {
                 disabled={updateCommissionsMutation.isPending || !selectedNeighborhoodId}
                 className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold"
               >
-                {updateCommissionsMutation.isPending ? 'Enregistrement...' : 'Enregistrer les pourcentages'}
+                {updateCommissionsMutation.isPending
+                  ? 'Enregistrement...'
+                  : 'Enregistrer les pourcentages'}
               </Button>
             </form>
           </CardContent>
@@ -1139,35 +1375,70 @@ export function ChefferieDashboard() {
             {/* Certificate Title */}
             <div className="text-center py-2">
               <h2 className="text-lg font-black uppercase tracking-wide underline underline-offset-4 text-slate-900">
-                CERTIFICAT OFFICIEL DE {selectedCertificate.operationType === 'HOUSE_SALE' ? 'VENTE DE MAISON' : selectedCertificate.operationType === 'HOUSE_RENTAL' ? 'LOCATION RÉSIDENTIELLE' : 'TRANSACTION FONCIÈRE'}
+                CERTIFICAT OFFICIEL DE{' '}
+                {selectedCertificate.operationType === 'HOUSE_SALE'
+                  ? 'VENTE DE MAISON'
+                  : selectedCertificate.operationType === 'HOUSE_RENTAL'
+                    ? 'LOCATION RÉSIDENTIELLE'
+                    : 'TRANSACTION FONCIÈRE'}
               </h2>
-              <p className="text-xs text-slate-600 mt-1">Délivré sous l'autorité du Chef compétent</p>
+              <p className="text-xs text-slate-600 mt-1">
+                Délivré sous l'autorité du Chef compétent
+              </p>
             </div>
 
             {/* Certificate Content */}
             <div className="space-y-4 text-xs leading-relaxed text-slate-800">
               <p>
-                La Chefferie atteste par le présent document que la transaction ci-après désignée a été légalement enregistrée, vérifiée et répertoriée dans le registre officiel :
+                La Chefferie atteste par le présent document que la transaction ci-après désignée a
+                été légalement enregistrée, vérifiée et répertoriée dans le registre officiel :
               </p>
 
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
-                  <div><strong>Partie A :</strong> {selectedCertificate.parties?.partyA} ({selectedCertificate.parties?.partyARole})</div>
-                  <div><strong>Partie B :</strong> {selectedCertificate.parties?.partyB} ({selectedCertificate.parties?.partyBRole})</div>
+                  <div>
+                    <strong>Partie A :</strong> {selectedCertificate.parties?.partyA} (
+                    {selectedCertificate.parties?.partyARole})
+                  </div>
+                  <div>
+                    <strong>Partie B :</strong> {selectedCertificate.parties?.partyB} (
+                    {selectedCertificate.parties?.partyBRole})
+                  </div>
                 </div>
-                <div><strong>Désignation du bien :</strong> {selectedCertificate.propertyDetails?.description}</div>
-                <div><strong>Localisation :</strong> {selectedCertificate.propertyDetails?.address}</div>
+                <div>
+                  <strong>Désignation du bien :</strong>{' '}
+                  {selectedCertificate.propertyDetails?.description}
+                </div>
+                <div>
+                  <strong>Localisation :</strong> {selectedCertificate.propertyDetails?.address}
+                </div>
                 {selectedCertificate.propertyDetails?.surfaceM2 && (
-                  <div><strong>Superficie :</strong> {selectedCertificate.propertyDetails?.surfaceM2} m²</div>
+                  <div>
+                    <strong>Superficie :</strong> {selectedCertificate.propertyDetails?.surfaceM2}{' '}
+                    m²
+                  </div>
                 )}
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
-                  <div><strong>Montant déclaré :</strong> {selectedCertificate.financialDetails?.transactionAmountMinor?.toLocaleString('fr-FR')} {selectedCertificate.financialDetails?.currency}</div>
-                  <div><strong>Droits Chefferie acquittés :</strong> {selectedCertificate.financialDetails?.commissionPaidMinor?.toLocaleString('fr-FR')} {selectedCertificate.financialDetails?.currency}</div>
+                  <div>
+                    <strong>Montant déclaré :</strong>{' '}
+                    {selectedCertificate.financialDetails?.transactionAmountMinor?.toLocaleString(
+                      'fr-FR',
+                    )}{' '}
+                    {selectedCertificate.financialDetails?.currency}
+                  </div>
+                  <div>
+                    <strong>Droits Chefferie acquittés :</strong>{' '}
+                    {selectedCertificate.financialDetails?.commissionPaidMinor?.toLocaleString(
+                      'fr-FR',
+                    )}{' '}
+                    {selectedCertificate.financialDetails?.currency}
+                  </div>
                 </div>
               </div>
 
               <p className="text-[11px] text-slate-600 italic">
-                En foi de quoi, le présent certificat officiel est délivré aux parties pour servir et valoir ce que de droit.
+                En foi de quoi, le présent certificat officiel est délivré aux parties pour servir
+                et valoir ce que de droit.
               </p>
             </div>
 
@@ -1181,9 +1452,15 @@ export function ChefferieDashboard() {
               </div>
 
               <div className="border border-dashed border-slate-300 p-4 rounded-xl flex flex-col items-center justify-between min-h-[120px]">
-                <span className="text-[11px] text-slate-600">Fait le {new Date(selectedCertificate.issuedDate).toLocaleDateString('fr-FR')}</span>
-                <div className="font-serif italic font-bold text-sm text-slate-900">{selectedCertificate.signatoryName}</div>
-                <span className="text-[10px] font-bold text-slate-700">{selectedCertificate.signatoryTitle}</span>
+                <span className="text-[11px] text-slate-600">
+                  Fait le {new Date(selectedCertificate.issuedDate).toLocaleDateString('fr-FR')}
+                </span>
+                <div className="font-serif italic font-bold text-sm text-slate-900">
+                  {selectedCertificate.signatoryName}
+                </div>
+                <span className="text-[10px] font-bold text-slate-700">
+                  {selectedCertificate.signatoryTitle}
+                </span>
               </div>
             </div>
 

@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Inbox,
-  MessageSquare,
-  Plus,
-  Send,
-} from 'lucide-react';
+import { Inbox, MessageSquare, Plus, Send } from 'lucide-react';
 import { PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -70,7 +65,10 @@ export function MessagesPage() {
 
   // Messages list query
   const queryUrl = filterCategory === 'ALL' ? '/messages' : `/messages?category=${filterCategory}`;
-  const { data: messages, isLoading } = useOrgQuery<Message[]>(['messages', filterCategory], queryUrl);
+  const { data: messages, isLoading } = useOrgQuery<Message[]>(
+    ['messages', filterCategory],
+    queryUrl,
+  );
 
   // Selected message detail query
   const { data: selectedMessage } = useOrgQuery<Message>(
@@ -111,7 +109,11 @@ export function MessagesPage() {
       toast({ title: 'Réponse transmise', variant: 'success' });
     },
     onError: (err: Error) => {
-      toast({ title: 'Impossible d’envoyer la réponse', description: err.message, variant: 'error' });
+      toast({
+        title: 'Impossible d’envoyer la réponse',
+        description: err.message,
+        variant: 'error',
+      });
     },
   });
 
@@ -143,7 +145,10 @@ export function MessagesPage() {
         title="Messagerie Interne"
         description="Échanges directs et sécurisés entre locataires, propriétaires et gestionnaires."
         actions={
-          <Button onClick={() => setNewModalOpen(true)} className="inline-flex items-center gap-1.5">
+          <Button
+            onClick={() => setNewModalOpen(true)}
+            className="inline-flex items-center gap-1.5"
+          >
             <Plus className="size-4" />
             Nouveau message
           </Button>
@@ -175,7 +180,9 @@ export function MessagesPage() {
         {/* Liste des conversations */}
         <div className="lg:col-span-5 space-y-2">
           {isLoading && (
-            <p className="py-8 text-center text-xs text-muted-foreground">Chargement des messages…</p>
+            <p className="py-8 text-center text-xs text-muted-foreground">
+              Chargement des messages…
+            </p>
           )}
 
           {!isLoading && messages?.length === 0 && (
@@ -216,7 +223,12 @@ export function MessagesPage() {
                         {replyCount}
                       </span>
                     )}
-                    <span>{new Date(msg.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
+                    <span>
+                      {new Date(msg.createdAt).toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: 'short',
+                      })}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -231,9 +243,15 @@ export function MessagesPage() {
               <CardHeader className="border-b border-border pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <CardTitle className="text-base font-semibold">{selectedMessage.subject}</CardTitle>
+                    <CardTitle className="text-base font-semibold">
+                      {selectedMessage.subject}
+                    </CardTitle>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Initié par <span className="font-medium text-foreground">{selectedMessage.senderName}</span> ({selectedMessage.senderRole})
+                      Initié par{' '}
+                      <span className="font-medium text-foreground">
+                        {selectedMessage.senderName}
+                      </span>{' '}
+                      ({selectedMessage.senderRole})
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -252,10 +270,14 @@ export function MessagesPage() {
                 {/* Message initial */}
                 <div className="rounded-xl border border-border bg-muted/20 p-3.5 text-xs space-y-2">
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span className="font-semibold text-foreground">{selectedMessage.senderName}</span>
+                    <span className="font-semibold text-foreground">
+                      {selectedMessage.senderName}
+                    </span>
                     <span>{new Date(selectedMessage.createdAt).toLocaleString('fr-FR')}</span>
                   </div>
-                  <p className="whitespace-pre-wrap leading-relaxed text-foreground">{selectedMessage.body}</p>
+                  <p className="whitespace-pre-wrap leading-relaxed text-foreground">
+                    {selectedMessage.body}
+                  </p>
                 </div>
 
                 {/* Réponses successives */}
@@ -274,7 +296,9 @@ export function MessagesPage() {
                       </span>
                       <span>{new Date(reply.createdAt).toLocaleString('fr-FR')}</span>
                     </div>
-                    <p className="whitespace-pre-wrap leading-relaxed text-foreground">{reply.body}</p>
+                    <p className="whitespace-pre-wrap leading-relaxed text-foreground">
+                      {reply.body}
+                    </p>
                   </div>
                 ))}
               </CardContent>
@@ -308,21 +332,24 @@ export function MessagesPage() {
       </div>
 
       {/* Modale de nouveau message */}
-      <Modal
-        open={newModalOpen}
-        onOpenChange={setNewModalOpen}
-        title="Nouveau message interne"
-      >
+      <Modal open={newModalOpen} onOpenChange={setNewModalOpen} title="Nouveau message interne">
         <form onSubmit={handleCreate} className="space-y-4 text-sm">
           <div className="space-y-1">
             <label className="text-xs font-medium">Sujet *</label>
-            <Input name="subject" placeholder="ex: Question relative à la quittance du mois de mai" required />
+            <Input
+              name="subject"
+              placeholder="ex: Question relative à la quittance du mois de mai"
+              required
+            />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <label className="text-xs font-medium">Catégorie</label>
-              <select name="category" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+              <select
+                name="category"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              >
                 {Object.entries(CATEGORY_LABELS).map(([val, lab]) => (
                   <option key={val} value={val}>
                     {lab}
@@ -332,7 +359,10 @@ export function MessagesPage() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium">Priorité</label>
-              <select name="priority" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+              <select
+                name="priority"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              >
                 {Object.entries(PRIORITY_LABELS).map(([val, lab]) => (
                   <option key={val} value={val}>
                     {lab}

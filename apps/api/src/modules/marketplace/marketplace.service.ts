@@ -104,7 +104,10 @@ export async function searchListings(req: Request, res: Response): Promise<void>
       .sort(sortOption)
       .skip(skip)
       .limit(limitNum)
-      .populate('agentProfileId', 'firstName lastName phone email agencyName photoUrl rating verificationStatus')
+      .populate(
+        'agentProfileId',
+        'firstName lastName phone email agencyName photoUrl rating verificationStatus',
+      )
       .lean(),
     Listing.countDocuments(filter),
   ]);
@@ -137,11 +140,7 @@ export async function searchListings(req: Request, res: Response): Promise<void>
 export async function getListingById(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
 
-  const listing = await Listing.findByIdAndUpdate(
-    id,
-    { $inc: { viewsCount: 1 } },
-    { new: true }
-  )
+  const listing = await Listing.findByIdAndUpdate(id, { $inc: { viewsCount: 1 } }, { new: true })
     .populate('agentProfileId')
     .populate('publisherId', 'name email phone')
     .populate('propertyId', 'name type address')

@@ -12,7 +12,9 @@ export function QuartierHomePage() {
   const { user, memberships } = useSession();
   const userRole = memberships?.[0]?.role || (user as any)?.platformRole || 'RESIDENT';
 
-  const getDefaultView = (role: string): 'resident' | 'block-leader' | 'neighborhood-leader' | 'chefferie' | 'map' | 'admin' => {
+  const getDefaultView = (
+    role: string,
+  ): 'resident' | 'block-leader' | 'neighborhood-leader' | 'chefferie' | 'map' | 'admin' => {
     switch (role) {
       case 'SUPER_ADMIN':
         return 'chefferie';
@@ -26,7 +28,9 @@ export function QuartierHomePage() {
     }
   };
 
-  const [activeView, setActiveView] = useState<'resident' | 'block-leader' | 'neighborhood-leader' | 'chefferie' | 'map' | 'admin'>(() => getDefaultView(userRole));
+  const [activeView, setActiveView] = useState<
+    'resident' | 'block-leader' | 'neighborhood-leader' | 'chefferie' | 'map' | 'admin'
+  >(() => getDefaultView(userRole));
 
   return (
     <div className="space-y-6">
@@ -46,13 +50,13 @@ export function QuartierHomePage() {
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Outil numérique de gestion foncière, administrative et sécuritaire. Accès cloisonné selon votre profil certifié.
+            Outil numérique de gestion foncière, administrative et sécuritaire. Accès cloisonné
+            selon votre profil certifié.
           </p>
         </div>
 
         {/* View Switcher Pills - Strictly filtered by role permissions */}
         <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border bg-card/80 p-1.5 text-xs shadow-sm">
-          
           {/* Chefferie & Foncier: Only for Super Admin & Neighborhood Leader */}
           {(userRole === 'SUPER_ADMIN' || userRole === 'NEIGHBORHOOD_LEADER') && (
             <button
@@ -70,7 +74,11 @@ export function QuartierHomePage() {
           )}
 
           {/* Espace Résident: For Residents, Block Leaders, and Super Admin */}
-          {(userRole === 'SUPER_ADMIN' || userRole === 'RESIDENT' || userRole === 'BLOCK_LEADER' || userRole === 'OWNER' || userRole === 'TENANT') && (
+          {(userRole === 'SUPER_ADMIN' ||
+            userRole === 'RESIDENT' ||
+            userRole === 'BLOCK_LEADER' ||
+            userRole === 'OWNER' ||
+            userRole === 'TENANT') && (
             <button
               type="button"
               onClick={() => setActiveView('resident')}

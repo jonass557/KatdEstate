@@ -33,7 +33,11 @@ export async function getAgentDashboard(req: Request, res: Response): Promise<vo
     Listing.countDocuments({ publisherId: userId, status: 'RENTED' }),
     Lead.countDocuments({ agentId: userId }),
     Lead.countDocuments({ agentId: userId, status: 'NEW' }),
-    Viewing.find({ agentId: userId, date: { $gte: new Date() }, status: { $in: ['SCHEDULED', 'CONFIRMED'] } })
+    Viewing.find({
+      agentId: userId,
+      date: { $gte: new Date() },
+      status: { $in: ['SCHEDULED', 'CONFIRMED'] },
+    })
       .sort({ date: 1 })
       .limit(5)
       .populate('listingId', 'title location priceMinor currency')
@@ -98,7 +102,7 @@ export async function updateAgentProfile(req: Request, res: Response): Promise<v
   const profile = await AgentProfile.findOneAndUpdate(
     { userId },
     { $set: updates },
-    { new: true, upsert: true }
+    { new: true, upsert: true },
   );
 
   res.locals.data = profile;
@@ -131,7 +135,7 @@ export async function changeAgentSubscriptionPlan(req: Request, res: Response): 
         subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours
       },
     },
-    { new: true, upsert: true }
+    { new: true, upsert: true },
   );
 
   res.locals.data = {
@@ -187,7 +191,7 @@ export async function createAgentListing(req: Request, res: Response): Promise<v
     if (!activeMandate) {
       throw new HttpError(
         403,
-        'Aucun mandat actif n’a été trouvé pour commercialiser ce bien au nom du propriétaire.'
+        'Aucun mandat actif n’a été trouvé pour commercialiser ce bien au nom du propriétaire.',
       );
     }
     body.mandateId = activeMandate._id;
@@ -285,7 +289,7 @@ export async function updateAgentLead(req: Request, res: Response): Promise<void
   const lead = await Lead.findOneAndUpdate(
     { _id: id, agentId: userId },
     { $set: req.body },
-    { new: true }
+    { new: true },
   );
 
   if (!lead) {
@@ -324,7 +328,7 @@ export async function updateAgentViewing(req: Request, res: Response): Promise<v
   const viewing = await Viewing.findOneAndUpdate(
     { _id: id, agentId: userId },
     { $set: req.body },
-    { new: true }
+    { new: true },
   );
 
   if (!viewing) {

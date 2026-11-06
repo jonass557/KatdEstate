@@ -12,7 +12,16 @@ const models = mongoose.models;
 const timestamps = true;
 const org = { type: Schema.Types.ObjectId, ref: 'Organization', required: true } as const;
 
-const DOCUMENT_TYPES = ['LEASE_CONTRACT', 'IDENTITY', 'RECEIPT', 'INVOICE', 'PAYMENT_RECEIPT', 'INSURANCE', 'VENDOR_INVOICE', 'OTHER'] as const;
+const DOCUMENT_TYPES = [
+  'LEASE_CONTRACT',
+  'IDENTITY',
+  'RECEIPT',
+  'INVOICE',
+  'PAYMENT_RECEIPT',
+  'INSURANCE',
+  'VENDOR_INVOICE',
+  'OTHER',
+] as const;
 
 const documentFolderSchema = new Schema(
   {
@@ -45,7 +54,11 @@ const documentSchema = new Schema(
     version: { type: Number, required: true, default: 1 },
     isArchived: { type: Boolean, default: false },
     signature: {
-      status: { type: String, enum: ['NOT_REQUESTED', 'PENDING', 'SIGNED'], default: 'NOT_REQUESTED' },
+      status: {
+        type: String,
+        enum: ['NOT_REQUESTED', 'PENDING', 'SIGNED'],
+        default: 'NOT_REQUESTED',
+      },
       requestedAt: { type: Date },
       signedAt: { type: Date },
       documentHash: { type: String },
@@ -78,14 +91,19 @@ const dashboardLayoutSchema = new Schema(
   },
   { timestamps },
 );
-dashboardLayoutSchema.index({ organizationId: 1, userId: 1 }, { unique: true, name: 'layouts_org_user_unique' });
+dashboardLayoutSchema.index(
+  { organizationId: 1, userId: 1 },
+  { unique: true, name: 'layouts_org_user_unique' },
+);
 
 const aiConversationSchema = new Schema(
   {
     organizationId: org,
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     messages: {
-      type: [{ role: { type: String, enum: ['user', 'assistant'] }, content: String, tools: [String] }],
+      type: [
+        { role: { type: String, enum: ['user', 'assistant'] }, content: String, tools: [String] },
+      ],
       default: [],
     },
   },
@@ -143,37 +161,72 @@ const supportTicketSchema = new Schema(
     authorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     subject: { type: String, required: true, maxlength: 200 },
     status: { type: String, enum: ['OPEN', 'PENDING', 'RESOLVED', 'CLOSED'], default: 'OPEN' },
-    messages: { type: [{ authorId: Schema.Types.ObjectId, body: String, createdAt: Date }], default: [] },
+    messages: {
+      type: [{ authorId: Schema.Types.ObjectId, body: String, createdAt: Date }],
+      default: [],
+    },
   },
   { timestamps },
 );
 
-export type DocumentFolderDocument = InferSchemaType<typeof documentFolderSchema> & { _id: Types.ObjectId };
+export type DocumentFolderDocument = InferSchemaType<typeof documentFolderSchema> & {
+  _id: Types.ObjectId;
+};
 export type PlatformDocument = InferSchemaType<typeof documentSchema> & { _id: Types.ObjectId };
-export type DocumentVersionDocument = InferSchemaType<typeof documentVersionSchema> & { _id: Types.ObjectId };
-export type DashboardLayoutDocument = InferSchemaType<typeof dashboardLayoutSchema> & { _id: Types.ObjectId };
-export type AIConversationDocument = InferSchemaType<typeof aiConversationSchema> & { _id: Types.ObjectId };
+export type DocumentVersionDocument = InferSchemaType<typeof documentVersionSchema> & {
+  _id: Types.ObjectId;
+};
+export type DashboardLayoutDocument = InferSchemaType<typeof dashboardLayoutSchema> & {
+  _id: Types.ObjectId;
+};
+export type AIConversationDocument = InferSchemaType<typeof aiConversationSchema> & {
+  _id: Types.ObjectId;
+};
 export type AIUsageDocument = InferSchemaType<typeof aiUsageSchema> & { _id: Types.ObjectId };
 export type PlanDocument = InferSchemaType<typeof planSchema> & { _id: Types.ObjectId };
-export type SubscriptionDocument = InferSchemaType<typeof subscriptionSchema> & { _id: Types.ObjectId };
-export type FeatureFlagDocument = InferSchemaType<typeof featureFlagSchema> & { _id: Types.ObjectId };
-export type SupportTicketDocument = InferSchemaType<typeof supportTicketSchema> & { _id: Types.ObjectId };
+export type SubscriptionDocument = InferSchemaType<typeof subscriptionSchema> & {
+  _id: Types.ObjectId;
+};
+export type FeatureFlagDocument = InferSchemaType<typeof featureFlagSchema> & {
+  _id: Types.ObjectId;
+};
+export type SupportTicketDocument = InferSchemaType<typeof supportTicketSchema> & {
+  _id: Types.ObjectId;
+};
 
 function modelOf<T>(name: string, schema: Schema): Model<T> {
   return (models[name] as Model<T> | undefined) ?? model<T>(name, schema);
 }
 
-export const DocumentFolder = modelOf<DocumentFolderDocument>('DocumentFolder', documentFolderSchema);
+export const DocumentFolder = modelOf<DocumentFolderDocument>(
+  'DocumentFolder',
+  documentFolderSchema,
+);
 export const PlatformDocumentModel = modelOf<PlatformDocument>('PlatformDocument', documentSchema);
-export const DocumentVersion = modelOf<DocumentVersionDocument>('DocumentVersion', documentVersionSchema);
-export const DashboardLayout = modelOf<DashboardLayoutDocument>('DashboardLayout', dashboardLayoutSchema);
-export const AIConversation = modelOf<AIConversationDocument>('AIConversation', aiConversationSchema);
+export const DocumentVersion = modelOf<DocumentVersionDocument>(
+  'DocumentVersion',
+  documentVersionSchema,
+);
+export const DashboardLayout = modelOf<DashboardLayoutDocument>(
+  'DashboardLayout',
+  dashboardLayoutSchema,
+);
+export const AIConversation = modelOf<AIConversationDocument>(
+  'AIConversation',
+  aiConversationSchema,
+);
 export const AIUsage = modelOf<AIUsageDocument>('AIUsage', aiUsageSchema);
 export const Plan = modelOf<PlanDocument>('Plan', planSchema);
 export const Subscription = modelOf<SubscriptionDocument>('Subscription', subscriptionSchema);
 export const FeatureFlag = modelOf<FeatureFlagDocument>('FeatureFlag', featureFlagSchema);
 export const SupportTicket = modelOf<SupportTicketDocument>('SupportTicket', supportTicketSchema);
 
-export const FEATURE_FLAGS = ['AI_ASSISTANT', 'WHATSAPP', 'SMS', 'ADVANCED_REPORTS', 'MULTI_PROPERTY'] as const;
+export const FEATURE_FLAGS = [
+  'AI_ASSISTANT',
+  'WHATSAPP',
+  'SMS',
+  'ADVANCED_REPORTS',
+  'MULTI_PROPERTY',
+] as const;
 export const DOCUMENT_TYPE_VALUES = DOCUMENT_TYPES;
 export const PLAN_CODE_VALUES = PLAN_CODES;

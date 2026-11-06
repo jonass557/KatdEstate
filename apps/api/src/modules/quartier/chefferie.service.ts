@@ -50,7 +50,10 @@ export function getRentalServiceHoursStatus(): {
  * Récupère les taux de commission configurés pour un quartier (ou les valeurs par défaut)
  */
 async function getEffectiveCommissionRates(organizationId: string, neighborhoodId: string) {
-  const settings = await ChefferieCommissionSettings.findOne({ organizationId, neighborhoodId }).lean();
+  const settings = await ChefferieCommissionSettings.findOne({
+    organizationId,
+    neighborhoodId,
+  }).lean();
   return {
     houseSalePercent: settings?.houseSalePercent ?? 3,
     houseRentPercent: settings?.houseRentPercent ?? 10,
@@ -71,7 +74,10 @@ export async function getCommissionSettings(req: Request, res: Response): Promis
   }
 
   const rates = await getEffectiveCommissionRates(organizationId, neighborhoodId);
-  const settings = await ChefferieCommissionSettings.findOne({ organizationId, neighborhoodId }).lean();
+  const settings = await ChefferieCommissionSettings.findOne({
+    organizationId,
+    neighborhoodId,
+  }).lean();
 
   res.locals.data = {
     settings: settings ?? { neighborhoodId, ...rates },
@@ -94,7 +100,7 @@ export async function updateCommissionSettings(req: Request, res: Response): Pro
         updatedBy: userId,
       },
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, new: true, setDefaultsOnInsert: true },
   ).lean();
 
   res.locals.data = {
@@ -361,8 +367,12 @@ export async function issueChefferieCertificate(req: Request, res: Response): Pr
   let operationDate = new Date();
 
   if (parsed.operationType === 'HOUSE_SALE') {
-    transactionRecord = await HouseSaleTransaction.findOne({ _id: parsed.transactionId, organizationId });
-    if (!transactionRecord) throw new AppError('NOT_FOUND', 'Transaction de vente de maison introuvable.', 404);
+    transactionRecord = await HouseSaleTransaction.findOne({
+      _id: parsed.transactionId,
+      organizationId,
+    });
+    if (!transactionRecord)
+      throw new AppError('NOT_FOUND', 'Transaction de vente de maison introuvable.', 404);
     transactionNumber = transactionRecord.transactionNumber;
     cityId = transactionRecord.cityId;
     neighborhoodId = transactionRecord.neighborhoodId;
@@ -386,8 +396,12 @@ export async function issueChefferieCertificate(req: Request, res: Response): Pr
     };
     operationDate = transactionRecord.transactionDate;
   } else if (parsed.operationType === 'HOUSE_RENTAL') {
-    transactionRecord = await HouseRentalRecord.findOne({ _id: parsed.transactionId, organizationId });
-    if (!transactionRecord) throw new AppError('NOT_FOUND', 'Dossier de location introuvable.', 404);
+    transactionRecord = await HouseRentalRecord.findOne({
+      _id: parsed.transactionId,
+      organizationId,
+    });
+    if (!transactionRecord)
+      throw new AppError('NOT_FOUND', 'Dossier de location introuvable.', 404);
     transactionNumber = transactionRecord.rentalNumber;
     cityId = transactionRecord.cityId;
     neighborhoodId = transactionRecord.neighborhoodId;
@@ -411,8 +425,12 @@ export async function issueChefferieCertificate(req: Request, res: Response): Pr
     };
     operationDate = transactionRecord.startDate;
   } else if (parsed.operationType === 'LAND_SALE') {
-    transactionRecord = await LandSaleTransaction.findOne({ _id: parsed.transactionId, organizationId });
-    if (!transactionRecord) throw new AppError('NOT_FOUND', 'Transaction foncière introuvable.', 404);
+    transactionRecord = await LandSaleTransaction.findOne({
+      _id: parsed.transactionId,
+      organizationId,
+    });
+    if (!transactionRecord)
+      throw new AppError('NOT_FOUND', 'Transaction foncière introuvable.', 404);
     transactionNumber = transactionRecord.transactionNumber;
     cityId = transactionRecord.cityId;
     neighborhoodId = transactionRecord.neighborhoodId;
@@ -511,7 +529,11 @@ export async function verifyCertificatePublic(req: Request, res: Response): Prom
     .lean();
 
   if (!certificate) {
-    throw new AppError('NOT_FOUND', 'Certificat introuvable ou code de vérification invalide.', 404);
+    throw new AppError(
+      'NOT_FOUND',
+      'Certificat introuvable ou code de vérification invalide.',
+      404,
+    );
   }
 
   res.locals.data = {
@@ -534,23 +556,44 @@ export async function getChefferieDashboardStats(req: Request, res: Response): P
   // 1. Maisons vendues
   const houseSales = await HouseSaleTransaction.find(filter).lean();
   const totalHousesSold = houseSales.length;
-  const totalHousesSoldVolumeMinor = houseSales.reduce((acc, h) => acc + (h.salePriceMinor || 0), 0);
-  const houseSalesCommissionsDueMinor = houseSales.reduce((acc, h) => acc + (h.commissionDueMinor || 0), 0);
-  const houseSalesCommissionsPaidMinor = houseSales.reduce((acc, h) => acc + (h.commissionPaidMinor || 0), 0);
+  const totalHousesSoldVolumeMinor = houseSales.reduce(
+    (acc, h) => acc + (h.salePriceMinor || 0),
+    0,
+  );
+  const houseSalesCommissionsDueMinor = houseSales.reduce(
+    (acc, h) => acc + (h.commissionDueMinor || 0),
+    0,
+  );
+  const houseSalesCommissionsPaidMinor = houseSales.reduce(
+    (acc, h) => acc + (h.commissionPaidMinor || 0),
+    0,
+  );
 
   // 2. Maisons en location
   const rentals = await HouseRentalRecord.find(filter).lean();
   const totalHousesRented = rentals.length;
   const totalRentalsVolumeMinor = rentals.reduce((acc, r) => acc + (r.rentAmountMinor || 0), 0);
-  const rentalsCommissionsDueMinor = rentals.reduce((acc, r) => acc + (r.commissionDueMinor || 0), 0);
-  const rentalsCommissionsPaidMinor = rentals.reduce((acc, r) => acc + (r.commissionPaidMinor || 0), 0);
+  const rentalsCommissionsDueMinor = rentals.reduce(
+    (acc, r) => acc + (r.commissionDueMinor || 0),
+    0,
+  );
+  const rentalsCommissionsPaidMinor = rentals.reduce(
+    (acc, r) => acc + (r.commissionPaidMinor || 0),
+    0,
+  );
 
   // 3. Terrains vendus
   const landSales = await LandSaleTransaction.find(filter).lean();
   const totalLandsSold = landSales.length;
   const totalLandsSoldVolumeMinor = landSales.reduce((acc, l) => acc + (l.salePriceMinor || 0), 0);
-  const landSalesCommissionsDueMinor = landSales.reduce((acc, l) => acc + (l.commissionDueMinor || 0), 0);
-  const landSalesCommissionsPaidMinor = landSales.reduce((acc, l) => acc + (l.commissionPaidMinor || 0), 0);
+  const landSalesCommissionsDueMinor = landSales.reduce(
+    (acc, l) => acc + (l.commissionDueMinor || 0),
+    0,
+  );
+  const landSalesCommissionsPaidMinor = landSales.reduce(
+    (acc, l) => acc + (l.commissionPaidMinor || 0),
+    0,
+  );
 
   // 4. Totaux consolidés
   const totalTransactionsCount = totalHousesSold + totalHousesRented + totalLandsSold;

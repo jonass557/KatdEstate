@@ -22,7 +22,13 @@ const TOOLS: Record<string, Tool> = {
 
     const [monthlyCollected, allTimeCollected, monthlyExpected] = await Promise.all([
       Payment.aggregate<{ total: number }>([
-        { $match: { organizationId: orgObjectId, paidAt: { $gte: startOfMonth }, status: { $ne: 'REFUNDED' } } },
+        {
+          $match: {
+            organizationId: orgObjectId,
+            paidAt: { $gte: startOfMonth },
+            status: { $ne: 'REFUNDED' },
+          },
+        },
         { $group: { _id: null, total: { $sum: '$amountMinor' } } },
       ]),
       Payment.aggregate<{ total: number }>([
@@ -30,7 +36,13 @@ const TOOLS: Record<string, Tool> = {
         { $group: { _id: null, total: { $sum: '$amountMinor' } } },
       ]),
       RentSchedule.aggregate<{ total: number }>([
-        { $match: { organizationId: orgObjectId, dueDate: { $gte: startOfMonth }, status: { $ne: 'CANCELLED' } } },
+        {
+          $match: {
+            organizationId: orgObjectId,
+            dueDate: { $gte: startOfMonth },
+            status: { $ne: 'CANCELLED' },
+          },
+        },
         { $group: { _id: null, total: { $sum: '$amountDueMinor' } } },
       ]),
     ]);
@@ -38,7 +50,8 @@ const TOOLS: Record<string, Tool> = {
     const monthlyMinor = monthlyCollected[0]?.total ?? 0;
     const totalMinor = allTimeCollected[0]?.total ?? 0;
     const expectedMinor = monthlyExpected[0]?.total ?? 0;
-    const recoveryRate = expectedMinor === 0 ? 100 : Math.round((monthlyMinor / expectedMinor) * 100);
+    const recoveryRate =
+      expectedMinor === 0 ? 100 : Math.round((monthlyMinor / expectedMinor) * 100);
 
     return {
       monthlyCollectedMinor: monthlyMinor,
@@ -60,7 +73,10 @@ const TOOLS: Record<string, Tool> = {
     );
 
     const debtors = rows.map((r) => {
-      const daysOverdue = Math.max(0, Math.floor((Date.now() - new Date(r.dueDate).getTime()) / (1000 * 60 * 60 * 24)));
+      const daysOverdue = Math.max(
+        0,
+        Math.floor((Date.now() - new Date(r.dueDate).getTime()) / (1000 * 60 * 60 * 24)),
+      );
       return {
         tenantName: r.tenantId?.fullName ?? 'Locataire inconnu',
         amountDueMinor: r.amountDueMinor + (r.penaltyMinor || 0) - r.amountPaidMinor,
@@ -78,9 +94,21 @@ const TOOLS: Record<string, Tool> = {
 
   async getPropertyOccupancy(organizationId) {
     const total = await Unit.countDocuments({ organizationId, deletedAt: null });
-    const occupied = await Unit.countDocuments({ organizationId, status: 'OCCUPIED', deletedAt: null });
-    const available = await Unit.countDocuments({ organizationId, status: 'AVAILABLE', deletedAt: null });
-    const maintenance = await Unit.countDocuments({ organizationId, status: 'MAINTENANCE', deletedAt: null });
+    const occupied = await Unit.countDocuments({
+      organizationId,
+      status: 'OCCUPIED',
+      deletedAt: null,
+    });
+    const available = await Unit.countDocuments({
+      organizationId,
+      status: 'AVAILABLE',
+      deletedAt: null,
+    });
+    const maintenance = await Unit.countDocuments({
+      organizationId,
+      status: 'MAINTENANCE',
+      deletedAt: null,
+    });
     const occupancyRate = total === 0 ? 0 : Math.round((occupied / total) * 100);
     const vacancyRate = total === 0 ? 0 : Math.max(0, 100 - occupancyRate);
 
@@ -89,17 +117,33 @@ const TOOLS: Record<string, Tool> = {
 
   async getMostProfitableProperty(organizationId) {
     const orgObjectId = new Types.ObjectId(organizationId);
-    const properties = await Property.find({ organizationId, deletedAt: null }).select('name type city');
+    const properties = await Property.find({ organizationId, deletedAt: null }).select(
+      'name type city',
+    );
 
     const profitability = await Promise.all(
       properties.map(async (prop) => {
         const [income, expenses] = await Promise.all([
           Transaction.aggregate<{ total: number }>([
-            { $match: { organizationId: orgObjectId, propertyId: prop._id, direction: 'INCOME', deletedAt: null } },
+            {
+              $match: {
+                organizationId: orgObjectId,
+                propertyId: prop._id,
+                direction: 'INCOME',
+                deletedAt: null,
+              },
+            },
             { $group: { _id: null, total: { $sum: '$amountMinor' } } },
           ]),
           Transaction.aggregate<{ total: number }>([
-            { $match: { organizationId: orgObjectId, propertyId: prop._id, direction: 'EXPENSE', deletedAt: null } },
+            {
+              $match: {
+                organizationId: orgObjectId,
+                propertyId: prop._id,
+                direction: 'EXPENSE',
+                deletedAt: null,
+              },
+            },
             { $group: { _id: null, total: { $sum: '$amountMinor' } } },
           ]),
         ]);
@@ -132,7 +176,10 @@ const TOOLS: Record<string, Tool> = {
       .populate<{ propertyId: { name: string; city: string } }>('propertyId', 'name city')
       .select('name type rentAmountMinor surfaceM2 propertyId');
 
-    const totalPotentialRentMinor = vacantUnits.reduce((sum, u) => sum + (u.rentAmountMinor || 0), 0);
+    const totalPotentialRentMinor = vacantUnits.reduce(
+      (sum, u) => sum + (u.rentAmountMinor || 0),
+      0,
+    );
 
     return {
       vacantCount: vacantUnits.length,
@@ -193,7 +240,9 @@ const TOOLS: Record<string, Tool> = {
         tenantName: l.tenantId?.fullName ?? 'Locataire',
         unitName: l.unitId?.name ?? 'Logement',
         endDate: l.endDate.toISOString().slice(0, 10),
-        daysRemaining: Math.ceil((new Date(l.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+        daysRemaining: Math.ceil(
+          (new Date(l.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+        ),
       })),
     };
   },
@@ -228,7 +277,12 @@ function selectTools(question: string): string[] {
   if (text.includes('encaiss') || text.includes('loyer') || text.includes('revenu')) {
     selected.push('getRentSummary');
   }
-  if (text.includes('impay') || text.includes('retard') || text.includes('payé') || text.includes('dette')) {
+  if (
+    text.includes('impay') ||
+    text.includes('retard') ||
+    text.includes('payé') ||
+    text.includes('dette')
+  ) {
     selected.push('getOverdueRents');
   }
   if (text.includes('rentab') || text.includes('meilleur') || text.includes('profit')) {
@@ -243,7 +297,12 @@ function selectTools(question: string): string[] {
   if (text.includes('répar') || text.includes('dépens') || text.includes('travaux')) {
     selected.push('getRepairExpenses');
   }
-  if (text.includes('expir') || text.includes('contrat') || text.includes('bail') || text.includes('échéance')) {
+  if (
+    text.includes('expir') ||
+    text.includes('contrat') ||
+    text.includes('bail') ||
+    text.includes('échéance')
+  ) {
     selected.push('getLeaseExpirations');
   }
   if (text.includes('maintenance') || text.includes('panne') || text.includes('ticket')) {
@@ -259,65 +318,108 @@ function selectTools(question: string): string[] {
 }
 
 /** Moteur de synthèse en langage naturel DOMORA AI */
-function generateNaturalAnswer(question: string, results: ToolResult[]): { answer: string; suggestions: string[] } {
+function generateNaturalAnswer(
+  question: string,
+  results: ToolResult[],
+): { answer: string; suggestions: string[] } {
   const paragraphs: string[] = [];
   const suggestions: string[] = [];
 
   for (const res of results) {
     if (res.name === 'getRentSummary') {
-      const data = res.data as { monthlyCollectedMinor: number; allTimeCollectedMinor: number; recoveryRate: number };
+      const data = res.data as {
+        monthlyCollectedMinor: number;
+        allTimeCollectedMinor: number;
+        recoveryRate: number;
+      };
       paragraphs.push(
         `📊 **Encaissements** : Pour le mois en cours, vous avez encaissé **${data.monthlyCollectedMinor.toLocaleString('fr-FR')} FCFA** (avec un taux de recouvrement de **${data.recoveryRate}%**). Depuis le début de vos activités sur DOMORA, vos encaissements cumulés s'élèvent à **${data.allTimeCollectedMinor.toLocaleString('fr-FR')} FCFA**.`,
       );
       if (data.recoveryRate < 80) {
-        suggestions.push('Le taux de recouvrement de ce mois est inférieur à 80 %. Pensez à envoyer des relances amiables par SMS ou email.');
+        suggestions.push(
+          'Le taux de recouvrement de ce mois est inférieur à 80 %. Pensez à envoyer des relances amiables par SMS ou email.',
+        );
       }
     }
 
     if (res.name === 'getOverdueRents') {
-      const data = res.data as { count: number; totalOverdueMinor: number; debtors: { tenantName: string; amountDueMinor: number; daysOverdue: number }[] };
+      const data = res.data as {
+        count: number;
+        totalOverdueMinor: number;
+        debtors: { tenantName: string; amountDueMinor: number; daysOverdue: number }[];
+      };
       if (data.count === 0) {
-        paragraphs.push(`✅ **Impayés** : Félicitations, vous n'avez aucun loyer en retard actuellement. Vos locataires sont tous à jour.`);
+        paragraphs.push(
+          `✅ **Impayés** : Félicitations, vous n'avez aucun loyer en retard actuellement. Vos locataires sont tous à jour.`,
+        );
       } else {
         const debtorLines = data.debtors
           .slice(0, 3)
-          .map((d) => `• **${d.tenantName}** : ${d.amountDueMinor.toLocaleString('fr-FR')} FCFA (${d.daysOverdue} j de retard)`)
+          .map(
+            (d) =>
+              `• **${d.tenantName}** : ${d.amountDueMinor.toLocaleString('fr-FR')} FCFA (${d.daysOverdue} j de retard)`,
+          )
           .join('\n');
         paragraphs.push(
           `⚠️ **Impayés constatés** : Il y a actuellement **${data.count} échéance(s) en retard**, pour un montant total d'arriérés de **${data.totalOverdueMinor.toLocaleString('fr-FR')} FCFA**.\nLocataires concernés :\n${debtorLines}`,
         );
-        suggestions.push('Vous pouvez générer une lettre de mise en demeure directement depuis l’onglet communications.');
+        suggestions.push(
+          'Vous pouvez générer une lettre de mise en demeure directement depuis l’onglet communications.',
+        );
       }
     }
 
     if (res.name === 'getPropertyOccupancy') {
-      const data = res.data as { total: number; occupied: number; available: number; occupancyRate: number };
+      const data = res.data as {
+        total: number;
+        occupied: number;
+        available: number;
+        occupancyRate: number;
+      };
       paragraphs.push(
         `🏠 **Taux d'occupation** : Votre patrimoine compte **${data.total} logement(s)** au total. **${data.occupied}** sont actuellement occupés (**${data.occupancyRate}%** de taux d'occupation) et **${data.available}** sont disponibles à la location.`,
       );
       if (data.available > 0) {
-        suggestions.push(`Vous avez ${data.available} logement(s) vacant(s). Activez la diffusion d’annonces pour minimiser la vacance locative.`);
+        suggestions.push(
+          `Vous avez ${data.available} logement(s) vacant(s). Activez la diffusion d’annonces pour minimiser la vacance locative.`,
+        );
       }
     }
 
     if (res.name === 'getMostProfitableProperty') {
-      const data = res.data as { topProperty?: { name: string; city: string; netProfitMinor: number } };
+      const data = res.data as {
+        topProperty?: { name: string; city: string; netProfitMinor: number };
+      };
       if (data.topProperty) {
         paragraphs.push(
           `🏆 **Propriété la plus rentable** : Votre bien le plus performant est **${data.topProperty.name}** (${data.topProperty.city}) avec un bénéfice net cumulé de **${data.topProperty.netProfitMinor.toLocaleString('fr-FR')} FCFA**.`,
         );
       } else {
-        paragraphs.push(`ℹ️ **Rentabilité** : Les données actuelles de charges et recettes sont insuffisantes pour établir un classement définitif des biens.`);
+        paragraphs.push(
+          `ℹ️ **Rentabilité** : Les données actuelles de charges et recettes sont insuffisantes pour établir un classement définitif des biens.`,
+        );
       }
     }
 
     if (res.name === 'getVacantProperties') {
-      const data = res.data as { vacantCount: number; totalPotentialRentLossMinor: number; units: { unitName: string; propertyName: string; rentAmountMinor: number }[] };
+      const data = res.data as {
+        vacantCount: number;
+        totalPotentialRentLossMinor: number;
+        units: { unitName: string; propertyName: string; rentAmountMinor: number }[];
+      };
       if (data.vacantCount === 0) {
-        paragraphs.push(`🎉 **Vacance locative** : Tous vos logements sont actuellement occupés. Aucune perte de loyer par vacance constatée.`);
+        paragraphs.push(
+          `🎉 **Vacance locative** : Tous vos logements sont actuellement occupés. Aucune perte de loyer par vacance constatée.`,
+        );
       } else {
         paragraphs.push(
-          `🔍 **Logements vacants** : Vous avez actuellement **${data.vacantCount} logement(s) vacant(s)**, représentant un manque à gagner mensuel de **${data.totalPotentialRentLossMinor.toLocaleString('fr-FR')} FCFA**.\nExemple : ${data.units.slice(0, 2).map((u) => `${u.unitName} (${u.propertyName}) à ${u.rentAmountMinor?.toLocaleString('fr-FR')} FCFA`).join(', ')}.`,
+          `🔍 **Logements vacants** : Vous avez actuellement **${data.vacantCount} logement(s) vacant(s)**, représentant un manque à gagner mensuel de **${data.totalPotentialRentLossMinor.toLocaleString('fr-FR')} FCFA**.\nExemple : ${data.units
+            .slice(0, 2)
+            .map(
+              (u) =>
+                `${u.unitName} (${u.propertyName}) à ${u.rentAmountMinor?.toLocaleString('fr-FR')} FCFA`,
+            )
+            .join(', ')}.`,
         );
       }
     }
@@ -330,18 +432,27 @@ function generateNaturalAnswer(question: string, results: ToolResult[]): { answe
     }
 
     if (res.name === 'getLeaseExpirations') {
-      const data = res.data as { expiringCount: number; leases: { tenantName: string; unitName: string; daysRemaining: number }[] };
+      const data = res.data as {
+        expiringCount: number;
+        leases: { tenantName: string; unitName: string; daysRemaining: number }[];
+      };
       if (data.expiringCount === 0) {
-        paragraphs.push(`📅 **Contrats de bail** : Aucun contrat n'arrive à expiration dans les 90 prochains jours.`);
+        paragraphs.push(
+          `📅 **Contrats de bail** : Aucun contrat n'arrive à expiration dans les 90 prochains jours.`,
+        );
       } else {
         const leaseList = data.leases
           .slice(0, 3)
-          .map((l) => `• **${l.tenantName}** (${l.unitName}) : expire dans ${l.daysRemaining} jour(s)`)
+          .map(
+            (l) => `• **${l.tenantName}** (${l.unitName}) : expire dans ${l.daysRemaining} jour(s)`,
+          )
           .join('\n');
         paragraphs.push(
           `⏳ **Baux arrivant à expiration** : **${data.expiringCount} contrat(s)** arrivent à échéance dans les 3 prochains mois :\n${leaseList}`,
         );
-        suggestions.push('Proposez dès maintenant un avenant de renouvellement pour sécuriser la continuité d’occupation.');
+        suggestions.push(
+          'Proposez dès maintenant un avenant de renouvellement pour sécuriser la continuité d’occupation.',
+        );
       }
     }
 
@@ -383,7 +494,11 @@ export async function ask(config: AppConfig, req: Request, res: Response): Promi
     ],
   });
 
-  await AIUsage.create({ organizationId: org(req), model: config.ai?.model || 'domora-ai-v1', tokens: 1 });
+  await AIUsage.create({
+    organizationId: org(req),
+    model: config.ai?.model || 'domora-ai-v1',
+    tokens: 1,
+  });
 
   res.locals.data = {
     answer,

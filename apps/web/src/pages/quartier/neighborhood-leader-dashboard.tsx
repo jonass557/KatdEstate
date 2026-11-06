@@ -1,13 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import {
-  Building,
-  Flame,
-  Home,
-  Send,
-  Sparkles,
-  Users,
-} from 'lucide-react';
+import { Building, Flame, Home, Send, Sparkles, Users } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -22,11 +15,12 @@ export function NeighborhoodLeaderDashboard() {
 
   const { data: dashboard } = useOrgQuery<any>(
     ['neighborhood-leader-dashboard'],
-    '/quartier/dashboard/neighborhood-leader'
+    '/quartier/dashboard/neighborhood-leader',
   );
 
   const broadcastMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/quartier/announcements`, { method: 'POST', body }),
+    mutationFn: (body: unknown) =>
+      apiRequest(`${base}/quartier/announcements`, { method: 'POST', body }),
     onSuccess: () => {
       toast({ title: 'Communication diffusée à l’ensemble du quartier', variant: 'success' });
       setTab('overview');
@@ -64,7 +58,9 @@ export function NeighborhoodLeaderDashboard() {
           type="button"
           onClick={() => setTab('overview')}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-            tab === 'overview' ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            tab === 'overview'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <Home className="h-4 w-4" /> Synthèse & Couverture
@@ -73,7 +69,9 @@ export function NeighborhoodLeaderDashboard() {
           type="button"
           onClick={() => setTab('blocks')}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-            tab === 'blocks' ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            tab === 'blocks'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <Building className="h-4 w-4" /> Comparatif des Blocs ({blocks.length})
@@ -82,7 +80,9 @@ export function NeighborhoodLeaderDashboard() {
           type="button"
           onClick={() => setTab('broadcast')}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-            tab === 'broadcast' ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            tab === 'broadcast'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <Send className="h-4 w-4" /> Message au Quartier
@@ -91,7 +91,9 @@ export function NeighborhoodLeaderDashboard() {
           type="button"
           onClick={() => setTab('alerts')}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-            tab === 'alerts' ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            tab === 'alerts'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <Flame className="h-4 w-4" /> Alertes Sécurité ({alerts.length})
@@ -104,45 +106,63 @@ export function NeighborhoodLeaderDashboard() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Blocs du Quartier</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Blocs du Quartier
+                </CardTitle>
                 <Building className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{kpis?.totalBlocks || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">{kpis?.activeLeadersCount || 0} chefs de bloc actifs</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {kpis?.activeLeadersCount || 0} chefs de bloc actifs
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Résidences Recensées</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Résidences Recensées
+                </CardTitle>
                 <Home className="h-4 w-4 text-emerald-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-emerald-600">{kpis?.totalResidences || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">{kpis?.totalHouseholds || 0} foyers déclarés</p>
+                <div className="text-2xl font-bold text-emerald-600">
+                  {kpis?.totalResidences || 0}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {kpis?.totalHouseholds || 0} foyers déclarés
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Population Estimée</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Population Estimée
+                </CardTitle>
                 <Users className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{kpis?.totalResidents || 0} hab.</div>
-                <p className="text-xs text-muted-foreground mt-1">Données démographiques agrégées</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Données démographiques agrégées
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Couverture Globale</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Couverture Globale
+                </CardTitle>
                 <Sparkles className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-primary">{kpis?.coverageRate || 0}%</div>
-                <p className="text-xs text-muted-foreground mt-1">{kpis?.unstartedBlocksCount || 0} bloc(s) sans recensement</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {kpis?.unstartedBlocksCount || 0} bloc(s) sans recensement
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -169,7 +189,10 @@ export function NeighborhoodLeaderDashboard() {
                 {blocks.map((b: any) => (
                   <tr key={b._id} className="hover:bg-muted/30">
                     <td className="p-3 font-semibold">
-                      {b.name} <span className="text-[11px] font-mono text-muted-foreground">({b.code})</span>
+                      {b.name}{' '}
+                      <span className="text-[11px] font-mono text-muted-foreground">
+                        ({b.code})
+                      </span>
                     </td>
                     <td className="p-3">{b.leaderName}</td>
                     <td className="p-3 font-bold text-primary">{b.totalResidences}</td>
@@ -177,7 +200,10 @@ export function NeighborhoodLeaderDashboard() {
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-24 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, b.coverageRate)}%` }} />
+                          <div
+                            className="h-full bg-primary rounded-full"
+                            style={{ width: `${Math.min(100, b.coverageRate)}%` }}
+                          />
                         </div>
                         <span className="font-bold">{b.coverageRate}%</span>
                       </div>
@@ -203,7 +229,9 @@ export function NeighborhoodLeaderDashboard() {
       {tab === 'broadcast' && (
         <Card className="max-w-xl mx-auto">
           <CardHeader>
-            <CardTitle className="text-base">Diffuser une annonce à l'ensemble du quartier</CardTitle>
+            <CardTitle className="text-base">
+              Diffuser une annonce à l'ensemble du quartier
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form
@@ -223,7 +251,11 @@ export function NeighborhoodLeaderDashboard() {
             >
               <div>
                 <label className="font-semibold block mb-1">Type de communication *</label>
-                <select name="type" className="w-full rounded-md border border-input bg-background p-2 text-xs" defaultValue="INFO">
+                <select
+                  name="type"
+                  className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                  defaultValue="INFO"
+                >
                   <option value="INFO">Information générale</option>
                   <option value="MEETING">Assemblée générale de quartier</option>
                   <option value="WORKS">Travaux communaux</option>
@@ -233,11 +265,17 @@ export function NeighborhoodLeaderDashboard() {
 
               <div>
                 <label className="font-semibold block mb-1">Titre de l'annonce *</label>
-                <Input name="title" placeholder="Ex: Campagne de salubrité et sécurisation des axes principaux" required />
+                <Input
+                  name="title"
+                  placeholder="Ex: Campagne de salubrité et sécurisation des axes principaux"
+                  required
+                />
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Message à la population du quartier *</label>
+                <label className="font-semibold block mb-1">
+                  Message à la population du quartier *
+                </label>
                 <textarea
                   name="message"
                   rows={4}
@@ -252,8 +290,14 @@ export function NeighborhoodLeaderDashboard() {
                 <Input name="eventDate" type="datetime-local" />
               </div>
 
-              <Button type="submit" disabled={broadcastMutation.isPending} className="w-full font-bold">
-                {broadcastMutation.isPending ? 'Diffusion en cours...' : 'Diffuser à tout le quartier'}
+              <Button
+                type="submit"
+                disabled={broadcastMutation.isPending}
+                className="w-full font-bold"
+              >
+                {broadcastMutation.isPending
+                  ? 'Diffusion en cours...'
+                  : 'Diffuser à tout le quartier'}
               </Button>
             </form>
           </CardContent>
@@ -266,7 +310,10 @@ export function NeighborhoodLeaderDashboard() {
           <h2 className="text-base font-bold">Incidents et alertes signalés dans le quartier</h2>
           <div className="space-y-3">
             {alerts.map((al: any) => (
-              <Card key={al._id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs border-border">
+              <Card
+                key={al._id}
+                className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs border-border"
+              >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold text-primary">{al.incidentNumber}</span>
@@ -279,7 +326,8 @@ export function NeighborhoodLeaderDashboard() {
                   </div>
                   <p className="text-foreground mt-1 font-medium">{al.description}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    Lieu : {al.locationText || 'Quartier'} • Gravité : <strong>{al.severity}</strong>
+                    Lieu : {al.locationText || 'Quartier'} • Gravité :{' '}
+                    <strong>{al.severity}</strong>
                   </p>
                 </div>
               </Card>

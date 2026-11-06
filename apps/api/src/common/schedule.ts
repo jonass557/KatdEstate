@@ -23,7 +23,14 @@ export function buildSchedule(
   dueDay: number,
   frequency: LeaseFrequency,
 ): SchedulePeriod[] {
-  const step = frequency === 'YEARLY' ? 12 : frequency === 'SEMI_ANNUAL' ? 6 : frequency === 'QUARTERLY' ? 3 : 1;
+  const step =
+    frequency === 'YEARLY'
+      ? 12
+      : frequency === 'SEMI_ANNUAL'
+        ? 6
+        : frequency === 'QUARTERLY'
+          ? 3
+          : 1;
   const periods: SchedulePeriod[] = [];
 
   let cursor = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));

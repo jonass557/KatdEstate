@@ -63,13 +63,22 @@ export function AgentPage() {
   const client = useQueryClient();
   const { toast } = useToast();
   const [tab, setTab] = useState<
-    'dashboard' | 'listings' | 'new-listing' | 'mandates' | 'crm' | 'viewings' | 'offers' | 'commissions' | 'profile' | 'subscription'
+    | 'dashboard'
+    | 'listings'
+    | 'new-listing'
+    | 'mandates'
+    | 'crm'
+    | 'viewings'
+    | 'offers'
+    | 'commissions'
+    | 'profile'
+    | 'subscription'
   >('dashboard');
 
   // Load dashboard overview
   const { data: dashboard } = useOrgQuery<AgentDashboardData>(
     ['agent-dashboard'],
-    '/agent/dashboard'
+    '/agent/dashboard',
   );
 
   // Load listings
@@ -85,7 +94,10 @@ export function AgentPage() {
   // Load Mandates
   const { data: mandates } = useOrgQuery<any[]>(['agent-mandates'], '/agent/mandates');
   // Load Subscription plans
-  const { data: subscriptionData } = useOrgQuery<any>(['agent-subscription'], '/agent/subscription');
+  const { data: subscriptionData } = useOrgQuery<any>(
+    ['agent-subscription'],
+    '/agent/subscription',
+  );
 
   // Form states for dynamic listing creation
   const [category, setCategory] = useState('RESIDENTIAL');
@@ -99,7 +111,11 @@ export function AgentPage() {
   const createListingMutation = useMutation({
     mutationFn: (body: unknown) => apiRequest(`${base}/agent/listings`, { method: 'POST', body }),
     onSuccess: () => {
-      toast({ title: 'Annonce soumise !', description: 'Votre annonce a été transmise pour modération.', variant: 'success' });
+      toast({
+        title: 'Annonce soumise !',
+        description: 'Votre annonce a été transmise pour modération.',
+        variant: 'success',
+      });
       void client.invalidateQueries({ queryKey: ['agent-listings'] });
       void client.invalidateQueries({ queryKey: ['agent-dashboard'] });
       setTab('listings');
@@ -109,7 +125,15 @@ export function AgentPage() {
 
   // Mutation: Mandate Accept / Reject
   const mandateDecisionMutation = useMutation({
-    mutationFn: ({ id, action, reason }: { id: string; action: 'accept' | 'reject'; reason?: string }) =>
+    mutationFn: ({
+      id,
+      action,
+      reason,
+    }: {
+      id: string;
+      action: 'accept' | 'reject';
+      reason?: string;
+    }) =>
       apiRequest(`${base}/agent/mandates/${id}/${action}`, { method: 'POST', body: { reason } }),
     onSuccess: () => {
       toast({ title: 'Mandat mis à jour', variant: 'success' });
@@ -145,7 +169,10 @@ export function AgentPage() {
   // Mutation: Offer Decision
   const offerDecisionMutation = useMutation({
     mutationFn: ({ id, status, counterOfferAmountMinor, ownerDecisionNote }: any) =>
-      apiRequest(`${base}/agent/offers/${id}`, { method: 'PATCH', body: { status, counterOfferAmountMinor, ownerDecisionNote } }),
+      apiRequest(`${base}/agent/offers/${id}`, {
+        method: 'PATCH',
+        body: { status, counterOfferAmountMinor, ownerDecisionNote },
+      }),
     onSuccess: () => {
       toast({ title: 'Négociation enregistrée', variant: 'success' });
       void client.invalidateQueries({ queryKey: ['agent-offers'] });
@@ -156,7 +183,8 @@ export function AgentPage() {
 
   // Mutation: Change Subscription Plan
   const changePlanMutation = useMutation({
-    mutationFn: (planCode: string) => apiRequest(`${base}/agent/subscription/change`, { method: 'POST', body: { planCode } }),
+    mutationFn: (planCode: string) =>
+      apiRequest(`${base}/agent/subscription/change`, { method: 'POST', body: { planCode } }),
     onSuccess: (res: any) => {
       toast({ title: 'Formule mise à jour', description: res?.message, variant: 'success' });
       void client.invalidateQueries({ queryKey: ['agent-subscription'] });
@@ -176,7 +204,9 @@ export function AgentPage() {
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-foreground">Espace Agent Immobilier</h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              Espace Agent Immobilier
+            </h1>
             {profile?.verificationStatus === 'VERIFIED' ? (
               <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 <ShieldCheck className="h-3.5 w-3.5" /> Agent Vérifié
@@ -189,7 +219,8 @@ export function AgentPage() {
           </div>
           <p className="text-xs text-muted-foreground">
             {profile?.agencyName ? `${profile.agencyName} • ` : ''}
-            {profile?.city || 'Afrique de l’Ouest'} • Formule : <strong className="text-foreground">{plan?.name || 'Agent Gratuit'}</strong>
+            {profile?.city || 'Afrique de l’Ouest'} • Formule :{' '}
+            <strong className="text-foreground">{plan?.name || 'Agent Gratuit'}</strong>
           </p>
         </div>
 
@@ -248,18 +279,24 @@ export function AgentPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Annonces actives</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Annonces actives
+                </CardTitle>
                 <Building className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{kpis?.activeListings || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">{kpis?.pendingListings || 0} en attente de modération</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {kpis?.pendingListings || 0} en attente de modération
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Biens Conclus (Vente / Loc.)</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Biens Conclus (Vente / Loc.)
+                </CardTitle>
                 <CheckCircle className="h-4 w-4 text-emerald-500" />
               </CardHeader>
               <CardContent>
@@ -274,23 +311,30 @@ export function AgentPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Prospects Actifs</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Prospects Actifs
+                </CardTitle>
                 <Users className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{kpis?.totalLeads || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">{kpis?.newLeads || 0} nouveaux prospects</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {kpis?.newLeads || 0} nouveaux prospects
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Commissions Encaissées</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Commissions Encaissées
+                </CardTitle>
                 <DollarSign className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-amber-600">
-                  {(kpis?.earnedCommissionsMinor || 0).toLocaleString('fr-FR')} {kpis?.currency || 'XOF'}
+                  {(kpis?.earnedCommissionsMinor || 0).toLocaleString('fr-FR')}{' '}
+                  {kpis?.currency || 'XOF'}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {(kpis?.estimatedCommissionsMinor || 0).toLocaleString('fr-FR')} XOF en cours
@@ -306,23 +350,44 @@ export function AgentPage() {
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary" /> Prochaines visites programmées
                 </CardTitle>
-                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setTab('viewings')}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => setTab('viewings')}
+                >
                   Voir tout
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3">
-                {(!dashboard?.upcomingViewings || dashboard.upcomingViewings.length === 0) ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center">Aucune visite programmée pour l'instant.</p>
+                {!dashboard?.upcomingViewings || dashboard.upcomingViewings.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">
+                    Aucune visite programmée pour l'instant.
+                  </p>
                 ) : (
                   dashboard.upcomingViewings.map((v) => (
-                    <div key={v._id} className="flex items-center justify-between rounded-lg border border-border p-3 text-xs">
+                    <div
+                      key={v._id}
+                      className="flex items-center justify-between rounded-lg border border-border p-3 text-xs"
+                    >
                       <div>
-                        <p className="font-semibold">{v.prospectName} ({v.prospectPhone})</p>
-                        <p className="text-muted-foreground truncate max-w-[200px]">{v.listingId?.title}</p>
+                        <p className="font-semibold">
+                          {v.prospectName} ({v.prospectPhone})
+                        </p>
+                        <p className="text-muted-foreground truncate max-w-[200px]">
+                          {v.listingId?.title}
+                        </p>
                       </div>
                       <div className="text-right">
-                        <span className="font-bold text-primary block">{new Date(v.date).toLocaleDateString('fr-FR')}</span>
-                        <span className="text-muted-foreground">{new Date(v.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="font-bold text-primary block">
+                          {new Date(v.date).toLocaleDateString('fr-FR')}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {new Date(v.date).toLocaleTimeString('fr-FR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
                       </div>
                     </div>
                   ))
@@ -335,19 +400,31 @@ export function AgentPage() {
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" /> Derniers prospects captés
                 </CardTitle>
-                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setTab('crm')}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => setTab('crm')}
+                >
                   Pipeline CRM
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3">
-                {(!dashboard?.recentLeads || dashboard.recentLeads.length === 0) ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center">Aucun prospect enregistré.</p>
+                {!dashboard?.recentLeads || dashboard.recentLeads.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">
+                    Aucun prospect enregistré.
+                  </p>
                 ) : (
                   dashboard.recentLeads.map((l) => (
-                    <div key={l._id} className="flex items-center justify-between rounded-lg border border-border p-3 text-xs">
+                    <div
+                      key={l._id}
+                      className="flex items-center justify-between rounded-lg border border-border p-3 text-xs"
+                    >
                       <div>
                         <p className="font-semibold">{l.fullName}</p>
-                        <p className="text-muted-foreground">{l.phone} • {l.targetCity || 'Ville non spécifiée'}</p>
+                        <p className="text-muted-foreground">
+                          {l.phone} • {l.targetCity || 'Ville non spécifiée'}
+                        </p>
                       </div>
                       <span className="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">
                         {l.status}
@@ -376,7 +453,11 @@ export function AgentPage() {
               <Card key={item._id} className="overflow-hidden border-border">
                 <div className="h-36 bg-muted relative">
                   {item.photos?.[0]?.url ? (
-                    <img src={item.photos[0].url} alt={item.title} className="h-full w-full object-cover" />
+                    <img
+                      src={item.photos[0].url}
+                      alt={item.title}
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <div className="flex h-full items-center justify-center text-muted-foreground">
                       <Home className="h-8 w-8 opacity-30" />
@@ -386,9 +467,15 @@ export function AgentPage() {
                     <span className="rounded bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white">
                       {item.transactionType === 'SALE' ? 'Vente' : 'Location'}
                     </span>
-                    <span className={`rounded px-2 py-0.5 text-[10px] font-bold text-white ${
-                      item.status === 'PUBLISHED' ? 'bg-emerald-600' : item.status === 'PENDING_REVIEW' ? 'bg-amber-600' : 'bg-red-600'
-                    }`}>
+                    <span
+                      className={`rounded px-2 py-0.5 text-[10px] font-bold text-white ${
+                        item.status === 'PUBLISHED'
+                          ? 'bg-emerald-600'
+                          : item.status === 'PENDING_REVIEW'
+                            ? 'bg-amber-600'
+                            : 'bg-red-600'
+                      }`}
+                    >
                       {item.status}
                     </span>
                   </div>
@@ -398,11 +485,18 @@ export function AgentPage() {
                   <p className="font-bold text-primary">
                     {item.priceMinor?.toLocaleString('fr-FR')} {item.currency}
                   </p>
-                  <p className="text-muted-foreground truncate">{item.location?.city} {item.location?.district ? `(${item.location.district})` : ''}</p>
+                  <p className="text-muted-foreground truncate">
+                    {item.location?.city}{' '}
+                    {item.location?.district ? `(${item.location.district})` : ''}
+                  </p>
                   <div className="flex items-center justify-between pt-2 border-t border-border text-[11px] text-muted-foreground">
                     <span>{item.viewsCount || 0} vues</span>
                     <span>{item.inquiriesCount || 0} demandes</span>
-                    {item.isTitled ? <span className="font-medium text-amber-600">TF Titré</span> : <span>Non titré</span>}
+                    {item.isTitled ? (
+                      <span className="font-medium text-amber-600">TF Titré</span>
+                    ) : (
+                      <span>Non titré</span>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -417,7 +511,8 @@ export function AgentPage() {
           <CardHeader>
             <CardTitle className="text-lg">Nouvelle annonce immobilière</CardTitle>
             <p className="text-xs text-muted-foreground">
-              Formulaire dynamique adapté aux spécificités foncières ou bâtis (Sénégal, Côte d’Ivoire, Cameroun...).
+              Formulaire dynamique adapté aux spécificités foncières ou bâtis (Sénégal, Côte
+              d’Ivoire, Cameroun...).
             </p>
           </CardHeader>
           <CardContent>
@@ -518,9 +613,7 @@ export function AgentPage() {
                         <option value="LAND_AGRICULTURAL">Terrain agricole</option>
                       </>
                     )}
-                    {category === 'OTHER' && (
-                      <option value="OTHER">Autre bien</option>
-                    )}
+                    {category === 'OTHER' && <option value="OTHER">Autre bien</option>}
                   </select>
                 </div>
               </div>
@@ -528,7 +621,11 @@ export function AgentPage() {
               {/* Title & Description */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold block">Titre de l'annonce *</label>
-                <Input name="title" placeholder="Ex: Superbe Villa 5 pièces avec piscine aux Almadies" required />
+                <Input
+                  name="title"
+                  placeholder="Ex: Superbe Villa 5 pièces avec piscine aux Almadies"
+                  required
+                />
               </div>
 
               <div className="space-y-2">
@@ -545,12 +642,24 @@ export function AgentPage() {
               {/* Price & Currency */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="text-xs font-semibold block mb-1">Prix ({transactionType === 'RENT' ? 'Loyer mensuel' : 'Prix de vente'}) *</label>
-                  <Input name="priceMinor" type="number" min="1" placeholder="Ex: 850000" required />
+                  <label className="text-xs font-semibold block mb-1">
+                    Prix ({transactionType === 'RENT' ? 'Loyer mensuel' : 'Prix de vente'}) *
+                  </label>
+                  <Input
+                    name="priceMinor"
+                    type="number"
+                    min="1"
+                    placeholder="Ex: 850000"
+                    required
+                  />
                 </div>
                 <div>
                   <label className="text-xs font-semibold block mb-1">Devise</label>
-                  <select name="currency" className="w-full rounded-md border border-input bg-background p-2 text-sm" defaultValue="XOF">
+                  <select
+                    name="currency"
+                    className="w-full rounded-md border border-input bg-background p-2 text-sm"
+                    defaultValue="XOF"
+                  >
                     <option value="XOF">XOF (Franc CFA UEMOA)</option>
                     <option value="XAF">XAF (Franc CFA CEMAC)</option>
                     <option value="EUR">EUR (€)</option>
@@ -614,7 +723,9 @@ export function AgentPage() {
 
                 {isTitled && (
                   <div>
-                    <label className="text-xs font-semibold block mb-1">Numéro du Titre Foncier (TF)</label>
+                    <label className="text-xs font-semibold block mb-1">
+                      Numéro du Titre Foncier (TF)
+                    </label>
                     <Input name="landTitleNumber" placeholder="Ex: TF 14.521 / GRD" />
                   </div>
                 )}
@@ -623,7 +734,8 @@ export function AgentPage() {
               {/* Photos & Videos URLs */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold block">
-                  Photos du bien (URLs directes, une par ligne — max {plan?.maxPhotosPerListing || 5})
+                  Photos du bien (URLs directes, une par ligne — max{' '}
+                  {plan?.maxPhotosPerListing || 5})
                 </label>
                 <textarea
                   value={photosInput}
@@ -652,7 +764,9 @@ export function AgentPage() {
               </div>
 
               <Button type="submit" disabled={createListingMutation.isPending} className="w-full">
-                {createListingMutation.isPending ? 'Soumission...' : 'Soumettre l’annonce pour modération'}
+                {createListingMutation.isPending
+                  ? 'Soumission...'
+                  : 'Soumettre l’annonce pour modération'}
               </Button>
             </form>
           </CardContent>
@@ -662,29 +776,42 @@ export function AgentPage() {
       {/* TAB 4: MANDATS REÇUS */}
       {tab === 'mandates' && (
         <div className="space-y-4">
-          <h2 className="text-base font-bold">Mandats de commercialisation confiés par les propriétaires</h2>
-          {(!mandates || mandates.length === 0) ? (
+          <h2 className="text-base font-bold">
+            Mandats de commercialisation confiés par les propriétaires
+          </h2>
+          {!mandates || mandates.length === 0 ? (
             <p className="text-xs text-muted-foreground py-8 text-center border border-dashed rounded-xl">
               Aucun mandat confié par un propriétaire pour le moment.
             </p>
           ) : (
             <div className="space-y-3">
               {mandates.map((m) => (
-                <Card key={m._id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+                <Card
+                  key={m._id}
+                  className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs"
+                >
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm">Mandat : {m.mandateType}</span>
-                      <span className={`rounded px-2 py-0.5 font-bold ${
-                        m.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-600' : m.status === 'PENDING' ? 'bg-amber-500/20 text-amber-600' : 'bg-red-500/20 text-red-600'
-                      }`}>
+                      <span
+                        className={`rounded px-2 py-0.5 font-bold ${
+                          m.status === 'ACTIVE'
+                            ? 'bg-emerald-500/20 text-emerald-600'
+                            : m.status === 'PENDING'
+                              ? 'bg-amber-500/20 text-amber-600'
+                              : 'bg-red-500/20 text-red-600'
+                        }`}
+                      >
                         {m.status}
                       </span>
                     </div>
                     <p className="text-muted-foreground mt-1">
-                      Propriétaire : {m.ownerId?.name} ({m.ownerId?.email}) • Commission : <strong>{m.commissionRate}%</strong>
+                      Propriétaire : {m.ownerId?.name} ({m.ownerId?.email}) • Commission :{' '}
+                      <strong>{m.commissionRate}%</strong>
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Période : {new Date(m.startDate).toLocaleDateString('fr-FR')} au {new Date(m.endDate).toLocaleDateString('fr-FR')}
+                      Période : {new Date(m.startDate).toLocaleDateString('fr-FR')} au{' '}
+                      {new Date(m.endDate).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
 
@@ -693,7 +820,9 @@ export function AgentPage() {
                       <Button
                         size="sm"
                         className="bg-emerald-600 hover:bg-emerald-700 h-8"
-                        onClick={() => mandateDecisionMutation.mutate({ id: m._id, action: 'accept' })}
+                        onClick={() =>
+                          mandateDecisionMutation.mutate({ id: m._id, action: 'accept' })
+                        }
                       >
                         Accepter le mandat
                       </Button>
@@ -701,7 +830,13 @@ export function AgentPage() {
                         size="sm"
                         variant="outline"
                         className="h-8 text-red-600"
-                        onClick={() => mandateDecisionMutation.mutate({ id: m._id, action: 'reject', reason: 'Non disponible' })}
+                        onClick={() =>
+                          mandateDecisionMutation.mutate({
+                            id: m._id,
+                            action: 'reject',
+                            reason: 'Non disponible',
+                          })
+                        }
                       >
                         Refuser
                       </Button>
@@ -737,7 +872,9 @@ export function AgentPage() {
                     phone: form.get('phone'),
                     email: form.get('email') || undefined,
                     searchType: form.get('searchType'),
-                    budgetMinor: form.get('budgetMinor') ? Number(form.get('budgetMinor')) : undefined,
+                    budgetMinor: form.get('budgetMinor')
+                      ? Number(form.get('budgetMinor'))
+                      : undefined,
                     targetCity: form.get('targetCity'),
                     targetDistrict: form.get('targetDistrict'),
                     status: 'NEW',
@@ -755,7 +892,12 @@ export function AgentPage() {
                 <Input name="budgetMinor" type="number" placeholder="Budget estimé (XOF)" />
                 <Input name="targetCity" placeholder="Ville recherchée" />
                 <div className="sm:col-span-3 flex justify-end gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setNewLeadOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setNewLeadOpen(false)}
+                  >
                     Annuler
                   </Button>
                   <Button type="submit" size="sm" disabled={createLeadMutation.isPending}>
@@ -782,7 +924,9 @@ export function AgentPage() {
                   <tr key={l._id} className="hover:bg-muted/30">
                     <td className="p-3 font-semibold">
                       {l.fullName}
-                      <span className="block text-[11px] font-normal text-muted-foreground">{l.phone}</span>
+                      <span className="block text-[11px] font-normal text-muted-foreground">
+                        {l.phone}
+                      </span>
                     </td>
                     <td className="p-3">
                       <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-bold">
@@ -792,7 +936,9 @@ export function AgentPage() {
                     <td className="p-3 font-bold text-primary">
                       {l.budgetMinor ? `${l.budgetMinor.toLocaleString('fr-FR')} XOF` : '—'}
                     </td>
-                    <td className="p-3">{l.targetCity || '—'} {l.targetDistrict ? `(${l.targetDistrict})` : ''}</td>
+                    <td className="p-3">
+                      {l.targetCity || '—'} {l.targetDistrict ? `(${l.targetDistrict})` : ''}
+                    </td>
                     <td className="p-3">
                       <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                         {l.status}
@@ -815,9 +961,13 @@ export function AgentPage() {
               <Card key={v._id} className="p-4 space-y-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm text-foreground">{v.prospectName}</span>
-                  <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                    v.status === 'CONFIRMED' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'
-                  }`}>
+                  <span
+                    className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                      v.status === 'CONFIRMED'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-blue-600 text-white'
+                    }`}
+                  >
                     {v.status}
                   </span>
                 </div>
@@ -855,17 +1005,26 @@ export function AgentPage() {
           <h2 className="text-base font-bold">Offres d'achat et propositions de loyer</h2>
           <div className="space-y-3">
             {offers?.map((o) => (
-              <Card key={o._id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+              <Card
+                key={o._id}
+                className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs"
+              >
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm">{o.prospectName} ({o.prospectPhone})</span>
-                    <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary">{o.status}</span>
+                    <span className="font-bold text-sm">
+                      {o.prospectName} ({o.prospectPhone})
+                    </span>
+                    <span className="rounded bg-primary/10 px-2 py-0.5 font-bold text-primary">
+                      {o.status}
+                    </span>
                   </div>
                   <p className="text-muted-foreground mt-1">Annonce : {o.listingId?.title}</p>
                   <p className="text-base font-black text-primary mt-1">
                     Offre : {o.offeredAmountMinor.toLocaleString('fr-FR')} {o.currency}
                   </p>
-                  {o.message && <p className="text-muted-foreground italic mt-0.5">"{o.message}"</p>}
+                  {o.message && (
+                    <p className="text-muted-foreground italic mt-0.5">"{o.message}"</p>
+                  )}
                 </div>
 
                 {o.status === 'SUBMITTED' && (
@@ -873,7 +1032,9 @@ export function AgentPage() {
                     <Button
                       size="sm"
                       className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
-                      onClick={() => offerDecisionMutation.mutate({ id: o._id, status: 'ACCEPTED' })}
+                      onClick={() =>
+                        offerDecisionMutation.mutate({ id: o._id, status: 'ACCEPTED' })
+                      }
                     >
                       Accepter
                     </Button>
@@ -881,7 +1042,9 @@ export function AgentPage() {
                       size="sm"
                       variant="outline"
                       className="h-8 text-xs text-red-600"
-                      onClick={() => offerDecisionMutation.mutate({ id: o._id, status: 'REJECTED' })}
+                      onClick={() =>
+                        offerDecisionMutation.mutate({ id: o._id, status: 'REJECTED' })
+                      }
                     >
                       Refuser
                     </Button>
@@ -912,14 +1075,20 @@ export function AgentPage() {
                 {commissions?.map((c) => (
                   <tr key={c._id}>
                     <td className="p-3 font-semibold">{c.listingId?.title || 'Bien certifié'}</td>
-                    <td className="p-3">{c.transactionAmountMinor?.toLocaleString('fr-FR')} {c.currency}</td>
+                    <td className="p-3">
+                      {c.transactionAmountMinor?.toLocaleString('fr-FR')} {c.currency}
+                    </td>
                     <td className="p-3 font-bold text-primary">
                       {c.commissionAmountMinor?.toLocaleString('fr-FR')} {c.currency}
                     </td>
                     <td className="p-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        c.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-amber-500/20 text-amber-600'
-                      }`}>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          c.status === 'PAID'
+                            ? 'bg-emerald-500/20 text-emerald-600'
+                            : 'bg-amber-500/20 text-amber-600'
+                        }`}
+                      >
                         {c.status}
                       </span>
                     </td>
@@ -944,7 +1113,9 @@ export function AgentPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <span className="text-muted-foreground block">Nom & Prénom</span>
-                <span className="font-bold text-sm">{profile?.firstName} {profile?.lastName}</span>
+                <span className="font-bold text-sm">
+                  {profile?.firstName} {profile?.lastName}
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground block">Agence</span>
@@ -960,7 +1131,9 @@ export function AgentPage() {
               </div>
               <div>
                 <span className="text-muted-foreground block">Ville & Zone</span>
-                <span className="font-bold">{profile?.city} — {profile?.activityZone || 'Toute la région'}</span>
+                <span className="font-bold">
+                  {profile?.city} — {profile?.activityZone || 'Toute la région'}
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground block">Statut de vérification</span>
@@ -977,7 +1150,8 @@ export function AgentPage() {
           <div className="text-center max-w-xl mx-auto space-y-1">
             <h2 className="text-xl font-bold">Formules d'abonnements Agents Immobiliers</h2>
             <p className="text-xs text-muted-foreground">
-              Augmentez vos quotas d'annonces, ajoutez des vidéos immersives et accédez aux outils avancés de CRM & prospection.
+              Augmentez vos quotas d'annonces, ajoutez des vidéos immersives et accédez aux outils
+              avancés de CRM & prospection.
             </p>
           </div>
 
@@ -1001,8 +1175,12 @@ export function AgentPage() {
                       )}
                     </div>
                     <div className="text-2xl font-black text-foreground">
-                      {p.priceMinor === 0 ? 'Gratuit' : `${p.priceMinor.toLocaleString('fr-FR')} XOF`}
-                      {p.priceMinor > 0 && <span className="text-xs font-normal text-muted-foreground"> / mois</span>}
+                      {p.priceMinor === 0
+                        ? 'Gratuit'
+                        : `${p.priceMinor.toLocaleString('fr-FR')} XOF`}
+                      {p.priceMinor > 0 && (
+                        <span className="text-xs font-normal text-muted-foreground"> / mois</span>
+                      )}
                     </div>
 
                     <ul className="space-y-2 text-xs text-muted-foreground pt-2 border-t border-border">

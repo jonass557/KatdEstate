@@ -11,11 +11,7 @@ export class AppError extends Error {
 }
 
 export class HttpError extends AppError {
-  constructor(
-    statusCode: number,
-    message: string,
-    details?: unknown,
-  ) {
+  constructor(statusCode: number, message: string, details?: unknown) {
     const code =
       statusCode === 400
         ? 'BAD_REQUEST'

@@ -21,7 +21,10 @@ const marketingSettingsSchema = new Schema(
       whatsapp: { type: String, default: '+225 07 00 00 00 00' },
       address: { type: String, default: 'Abidjan, Cocody Riviera Palmeraie & Dakar, Plateau' },
       openingHours: { type: String, default: 'Lun - Sam : 08h00 - 18h30' },
-      supportNote: { type: String, default: 'Assistance 24/7 pour les urgences locatives et signalements de quartier.' },
+      supportNote: {
+        type: String,
+        default: 'Assistance 24/7 pour les urgences locatives et signalements de quartier.',
+      },
     },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
@@ -41,8 +44,12 @@ const contactMessageSchema = new Schema(
   { timestamps: true },
 );
 
-export type MarketingSettingsDocument = InferSchemaType<typeof marketingSettingsSchema> & { _id: mongoose.Types.ObjectId };
-export type ContactMessageDocument = InferSchemaType<typeof contactMessageSchema> & { _id: mongoose.Types.ObjectId };
+export type MarketingSettingsDocument = InferSchemaType<typeof marketingSettingsSchema> & {
+  _id: mongoose.Types.ObjectId;
+};
+export type ContactMessageDocument = InferSchemaType<typeof contactMessageSchema> & {
+  _id: mongoose.Types.ObjectId;
+};
 
 export const MarketingSettings =
   (mongoose.models.MarketingSettings as mongoose.Model<MarketingSettingsDocument>) ??

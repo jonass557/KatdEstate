@@ -3,8 +3,20 @@ import type { AuthSession, MembershipWithOrganization, Permission } from '@rentf
 import { resolvePermissions } from '@rentflow/shared';
 import { AppError } from '../../common/errors.js';
 import { dummyPasswordHash, hashPassword, verifyPassword } from '../../common/password.js';
-import { generateRefreshToken, hashRefreshToken, refreshTokenExpiry, signAccessToken } from '../../common/tokens.js';
-import { AuditLog, Membership, Organization, Session, User, VerificationToken } from '../../models/identity.js';
+import {
+  generateRefreshToken,
+  hashRefreshToken,
+  refreshTokenExpiry,
+  signAccessToken,
+} from '../../common/tokens.js';
+import {
+  AuditLog,
+  Membership,
+  Organization,
+  Session,
+  User,
+  VerificationToken,
+} from '../../models/identity.js';
 import type { AppConfig } from '../../config/index.js';
 import { createEmailDelivery } from './email-delivery.js';
 
@@ -15,7 +27,9 @@ function publicUser(user: { _id: unknown; emailNormalized: string; displayName: 
 export async function getSession(userId: string): Promise<AuthSession> {
   const user = await User.findById(userId).lean();
   if (!user) throw new AppError('UNAUTHENTICATED', 'Session invalide.', 401);
-  const memberships = await Membership.find({ userId, status: 'ACTIVE' }).populate('organizationId').lean();
+  const memberships = await Membership.find({ userId, status: 'ACTIVE' })
+    .populate('organizationId')
+    .lean();
   const result: MembershipWithOrganization[] = [];
   for (const membership of memberships) {
     const organization = membership.organizationId as unknown as Record<string, unknown>;
@@ -50,7 +64,11 @@ function hashOneTimeToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-async function createOneTimeToken(userId: string, purpose: 'EMAIL_VERIFICATION' | 'PASSWORD_RESET', ttlMs: number) {
+async function createOneTimeToken(
+  userId: string,
+  purpose: 'EMAIL_VERIFICATION' | 'PASSWORD_RESET',
+  ttlMs: number,
+) {
   const token = randomBytes(32).toString('base64url');
   await VerificationToken.create({
     userId,
@@ -61,7 +79,12 @@ async function createOneTimeToken(userId: string, purpose: 'EMAIL_VERIFICATION' 
   return token;
 }
 
-async function issueTokens(userId: string, config: AppConfig, metadata: { userAgent?: string | undefined; ip?: string | undefined }, familyId: string = randomUUID()) {
+async function issueTokens(
+  userId: string,
+  config: AppConfig,
+  metadata: { userAgent?: string | undefined; ip?: string | undefined },
+  familyId: string = randomUUID(),
+) {
   const refresh = generateRefreshToken();
   const session = await Session.create({
     userId,
@@ -72,7 +95,10 @@ async function issueTokens(userId: string, config: AppConfig, metadata: { userAg
     userAgent: metadata.userAgent?.slice(0, 512),
     ipHash: hashIp(metadata.ip),
   });
-  const access = signAccessToken({ userId, sessionId: String(session._id), jti: session.jti }, config.tokens);
+  const access = signAccessToken(
+    { userId, sessionId: String(session._id), jti: session.jti },
+    config.tokens,
+  );
   return {
     accessToken: access.token,
     expiresIn: access.expiresIn,
@@ -84,7 +110,7 @@ async function issueTokens(userId: string, config: AppConfig, metadata: { userAg
 export async function register(
   input: { email: string; password: string; displayName: string; role?: string; phone?: string },
   config: AppConfig,
-  metadata: { userAgent?: string | undefined; ip?: string | undefined; requestId?: string }
+  metadata: { userAgent?: string | undefined; ip?: string | undefined; requestId?: string },
 ) {
   const user = await User.create({
     emailNormalized: input.email.trim().toLowerCase(),
@@ -92,7 +118,12 @@ export async function register(
     passwordHash: await hashPassword(input.password),
     phone: input.phone,
   });
-  const slug = `${input.displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'organisation'}-${String(user._id).slice(-6)}`;
+  const slug = `${
+    input.displayName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'organisation'
+  }-${String(user._id).slice(-6)}`;
   const organization = await Organization.create({
     name: `${input.displayName} — Espace KatdEstate`,
     slug,
@@ -104,8 +135,20 @@ export async function register(
     email: input.email,
   });
   const roleToAssign = input.role || 'OWNER';
-  await Membership.create({ userId: user._id, organizationId: organization._id, role: roleToAssign, status: 'ACTIVE' });
-  await AuditLog.create({ actorId: user._id, action: 'auth.register', resourceType: 'User', resourceId: String(user._id), result: 'SUCCESS', requestId: metadata.requestId ?? 'system' });
+  await Membership.create({
+    userId: user._id,
+    organizationId: organization._id,
+    role: roleToAssign,
+    status: 'ACTIVE',
+  });
+  await AuditLog.create({
+    actorId: user._id,
+    action: 'auth.register',
+    resourceType: 'User',
+    resourceId: String(user._id),
+    result: 'SUCCESS',
+    requestId: metadata.requestId ?? 'system',
+  });
   const verificationToken = await createOneTimeToken(
     String(user._id),
     'EMAIL_VERIFICATION',
@@ -115,18 +158,37 @@ export async function register(
   return issueTokens(String(user._id), config, metadata);
 }
 
-export async function login(input: { email: string; password: string }, config: AppConfig, metadata: { userAgent?: string | undefined; ip?: string | undefined }) {
-  const user = await User.findOne({ emailNormalized: input.email.trim().toLowerCase() }).select('+passwordHash').exec();
-  const valid = await verifyPassword(user?.passwordHash ?? (await dummyPasswordHash()), input.password);
-  if (!user || !valid || user.status !== 'ACTIVE') throw new AppError('UNAUTHENTICATED', 'Identifiants invalides.', 401);
+export async function login(
+  input: { email: string; password: string },
+  config: AppConfig,
+  metadata: { userAgent?: string | undefined; ip?: string | undefined },
+) {
+  const user = await User.findOne({ emailNormalized: input.email.trim().toLowerCase() })
+    .select('+passwordHash')
+    .exec();
+  const valid = await verifyPassword(
+    user?.passwordHash ?? (await dummyPasswordHash()),
+    input.password,
+  );
+  if (!user || !valid || user.status !== 'ACTIVE')
+    throw new AppError('UNAUTHENTICATED', 'Identifiants invalides.', 401);
   return issueTokens(String(user._id), config, metadata);
 }
 
-export async function refresh(token: string, config: AppConfig, metadata: { userAgent?: string | undefined; ip?: string | undefined }) {
-  const session = await Session.findOne({ tokenHash: hashRefreshToken(token) }).select('+tokenHash').exec();
+export async function refresh(
+  token: string,
+  config: AppConfig,
+  metadata: { userAgent?: string | undefined; ip?: string | undefined },
+) {
+  const session = await Session.findOne({ tokenHash: hashRefreshToken(token) })
+    .select('+tokenHash')
+    .exec();
   if (!session) throw new AppError('UNAUTHENTICATED', 'Session invalide ou expirée.', 401);
   if (session.revokedAt || session.expiresAt <= new Date()) {
-    await Session.updateMany({ familyId: session.familyId, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
+    await Session.updateMany(
+      { familyId: session.familyId, revokedAt: { $exists: false } },
+      { $set: { revokedAt: new Date() } },
+    );
     throw new AppError('UNAUTHENTICATED', 'Session invalide ou expirée.', 401);
   }
   session.revokedAt = new Date();
@@ -136,11 +198,16 @@ export async function refresh(token: string, config: AppConfig, metadata: { user
 }
 
 export async function logout(sessionId: string) {
-  await Session.updateOne({ _id: sessionId, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
+  await Session.updateOne(
+    { _id: sessionId, revokedAt: { $exists: false } },
+    { $set: { revokedAt: new Date() } },
+  );
 }
 
 export async function requestPasswordReset(email: string, config: AppConfig): Promise<void> {
-  const user = await User.findOne({ emailNormalized: email.trim().toLowerCase(), status: 'ACTIVE' }).select('_id emailNormalized').lean();
+  const user = await User.findOne({ emailNormalized: email.trim().toLowerCase(), status: 'ACTIVE' })
+    .select('_id emailNormalized')
+    .lean();
   if (!user) return;
 
   const resetToken = await createOneTimeToken(String(user._id), 'PASSWORD_RESET', 60 * 60 * 1_000);
@@ -149,28 +216,52 @@ export async function requestPasswordReset(email: string, config: AppConfig): Pr
 
 export async function resetPassword(token: string, password: string): Promise<void> {
   const tokenRecord = await VerificationToken.findOneAndUpdate(
-    { tokenHash: hashOneTimeToken(token), purpose: 'PASSWORD_RESET', consumedAt: { $exists: false }, expiresAt: { $gt: new Date() } },
+    {
+      tokenHash: hashOneTimeToken(token),
+      purpose: 'PASSWORD_RESET',
+      consumedAt: { $exists: false },
+      expiresAt: { $gt: new Date() },
+    },
     { $set: { consumedAt: new Date() } },
     { new: true },
   ).lean();
   if (!tokenRecord) throw new AppError('UNAUTHENTICATED', 'Jeton invalide ou expiré.', 401);
-  await User.updateOne({ _id: tokenRecord.userId, status: 'ACTIVE' }, { $set: { passwordHash: await hashPassword(password) } });
-  await Session.updateMany({ userId: tokenRecord.userId, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
+  await User.updateOne(
+    { _id: tokenRecord.userId, status: 'ACTIVE' },
+    { $set: { passwordHash: await hashPassword(password) } },
+  );
+  await Session.updateMany(
+    { userId: tokenRecord.userId, revokedAt: { $exists: false } },
+    { $set: { revokedAt: new Date() } },
+  );
 }
 
 export async function verifyEmail(token: string): Promise<void> {
   const tokenRecord = await VerificationToken.findOneAndUpdate(
-    { tokenHash: hashOneTimeToken(token), purpose: 'EMAIL_VERIFICATION', consumedAt: { $exists: false }, expiresAt: { $gt: new Date() } },
+    {
+      tokenHash: hashOneTimeToken(token),
+      purpose: 'EMAIL_VERIFICATION',
+      consumedAt: { $exists: false },
+      expiresAt: { $gt: new Date() },
+    },
     { $set: { consumedAt: new Date() } },
     { new: true },
   ).lean();
   if (!tokenRecord) throw new AppError('UNAUTHENTICATED', 'Jeton invalide ou expiré.', 401);
-  await User.updateOne({ _id: tokenRecord.userId, status: 'ACTIVE' }, { $set: { emailVerifiedAt: new Date() } });
+  await User.updateOne(
+    { _id: tokenRecord.userId, status: 'ACTIVE' },
+    { $set: { emailVerifiedAt: new Date() } },
+  );
 }
 
-export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
   const user = await User.findById(userId).select('+passwordHash').exec();
-  if (!user || user.status !== 'ACTIVE') throw new AppError('UNAUTHENTICATED', 'Compte introuvable ou inactif.', 401);
+  if (!user || user.status !== 'ACTIVE')
+    throw new AppError('UNAUTHENTICATED', 'Compte introuvable ou inactif.', 401);
   const valid = await verifyPassword(user.passwordHash, currentPassword);
   if (!valid) throw new AppError('UNAUTHENTICATED', 'Mot de passe actuel incorrect.', 401);
   user.passwordHash = await hashPassword(newPassword);

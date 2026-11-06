@@ -85,7 +85,9 @@ async function start(): Promise<void> {
       if (mongoose.connection.readyState !== 1) return;
       void scheduleDailyAutomations()
         .then(() => processJobs(config))
-        .catch((error: unknown) => logger.error({ err: error }, 'Échec du worker de notifications'));
+        .catch((error: unknown) =>
+          logger.error({ err: error }, 'Échec du worker de notifications'),
+        );
     };
     const worker = setInterval(runWorker, 60 * 60 * 1000);
     worker.unref();

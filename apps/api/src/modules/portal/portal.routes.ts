@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { messageInputSchema, messageReplySchema, objectIdSchema, tenantUpdateSchema } from '@rentflow/shared';
+import {
+  messageInputSchema,
+  messageReplySchema,
+  objectIdSchema,
+  tenantUpdateSchema,
+} from '@rentflow/shared';
 import { z } from 'zod';
 import type { AppConfig } from '../../config/index.js';
 import { sendSuccess } from '../../common/http.js';
@@ -25,8 +30,14 @@ const profileSchema = tenantUpdateSchema.pick({
   emergencyContactPhone: true,
 });
 
-function respond(handler: (req: import('express').Request, res: import('express').Response) => Promise<void>) {
-  return (req: import('express').Request, res: import('express').Response, next: (error: unknown) => void) => {
+function respond(
+  handler: (req: import('express').Request, res: import('express').Response) => Promise<void>,
+) {
+  return (
+    req: import('express').Request,
+    res: import('express').Response,
+    next: (error: unknown) => void,
+  ) => {
     handler(req, res)
       .then(() => {
         if (!res.headersSent) sendSuccess(res, res.locals.data);
@@ -44,20 +55,40 @@ export function createPortalRouter(config: AppConfig) {
   router.get('/portal/rents', requirePermission('leases.view'), respond(portal.rents));
   router.get('/portal/payments', requirePermission('payments.view'), respond(portal.payments));
   router.get('/portal/receipts', requirePermission('receipts.view'), respond(portal.receipts));
-  router.get('/portal/receipts/:id/pdf', requirePermission('receipts.view'), validateRequest(idParams, 'params'), (req, res, next) => {
-    portal.receiptPdf(req, res).catch(next);
-  });
+  router.get(
+    '/portal/receipts/:id/pdf',
+    requirePermission('receipts.view'),
+    validateRequest(idParams, 'params'),
+    (req, res, next) => {
+      portal.receiptPdf(req, res).catch(next);
+    },
+  );
   router.get('/portal/invoices', requirePermission('invoices.view'), respond(portal.invoices));
-  router.get('/portal/invoices/:id/pdf', requirePermission('invoices.view'), validateRequest(idParams, 'params'), (req, res, next) => {
-    portal.invoicePdf(req, res).catch(next);
-  });
+  router.get(
+    '/portal/invoices/:id/pdf',
+    requirePermission('invoices.view'),
+    validateRequest(idParams, 'params'),
+    (req, res, next) => {
+      portal.invoicePdf(req, res).catch(next);
+    },
+  );
   router.get('/portal/lease', requirePermission('leases.view'), respond(portal.lease));
-  router.get('/portal/lease/:id/pdf', requirePermission('leases.view'), validateRequest(idParams, 'params'), (req, res, next) => {
-    portal.leasePdf(req, res).catch(next);
-  });
+  router.get(
+    '/portal/lease/:id/pdf',
+    requirePermission('leases.view'),
+    validateRequest(idParams, 'params'),
+    (req, res, next) => {
+      portal.leasePdf(req, res).catch(next);
+    },
+  );
   router.get('/portal/documents', requirePermission('documents.view'), respond(portal.documents));
   router.get('/portal/profile', requirePermission('leases.view'), respond(portal.profile));
-  router.patch('/portal/profile', requirePermission('leases.view'), validateRequest(profileSchema), respond(portal.updateProfile));
+  router.patch(
+    '/portal/profile',
+    requirePermission('leases.view'),
+    validateRequest(profileSchema),
+    respond(portal.updateProfile),
+  );
 
   // --- Portail Propriétaire ---
   router.get('/owner/overview', requirePermission('properties.view'), respond(owner.ownerOverview));
@@ -67,10 +98,31 @@ export function createPortalRouter(config: AppConfig) {
 
   // --- Messagerie interne & Communication ---
   router.get('/messages', requirePermission('messages.view'), respond(messages.listMessages));
-  router.get('/messages/:id', requirePermission('messages.view'), validateRequest(idParams, 'params'), respond(messages.getMessage));
-  router.post('/messages', requirePermission('messages.send'), validateRequest(messageInputSchema), respond(messages.sendMessage));
-  router.post('/messages/:id/reply', requirePermission('messages.send'), validateRequest(idParams, 'params'), validateRequest(messageReplySchema), respond(messages.replyMessage));
-  router.post('/messages/:id/read', requirePermission('messages.view'), validateRequest(idParams, 'params'), respond(messages.markRead));
+  router.get(
+    '/messages/:id',
+    requirePermission('messages.view'),
+    validateRequest(idParams, 'params'),
+    respond(messages.getMessage),
+  );
+  router.post(
+    '/messages',
+    requirePermission('messages.send'),
+    validateRequest(messageInputSchema),
+    respond(messages.sendMessage),
+  );
+  router.post(
+    '/messages/:id/reply',
+    requirePermission('messages.send'),
+    validateRequest(idParams, 'params'),
+    validateRequest(messageReplySchema),
+    respond(messages.replyMessage),
+  );
+  router.post(
+    '/messages/:id/read',
+    requirePermission('messages.view'),
+    validateRequest(idParams, 'params'),
+    respond(messages.markRead),
+  );
 
   return router;
 }

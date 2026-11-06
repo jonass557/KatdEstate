@@ -4,7 +4,12 @@ import type { AppConfig } from '../../config/index.js';
 import { recordAudit } from '../../common/audit.js';
 import { AppError } from '../../common/errors.js';
 import { notFound, paginate } from '../../common/pagination.js';
-import { MaintenanceEvent, MaintenanceTask, MaintenanceTicket, Vendor } from '../../models/operations.js';
+import {
+  MaintenanceEvent,
+  MaintenanceTask,
+  MaintenanceTicket,
+  Vendor,
+} from '../../models/operations.js';
 import { Lease, Tenant } from '../../models/lease.js';
 import { Unit } from '../../models/property.js';
 import { notify } from '../notifications/notifications.service.js';
@@ -14,7 +19,12 @@ function org(req: Request): string {
 }
 const active = (organizationId: string) => ({ organizationId, deletedAt: null });
 
-async function history(req: Request, ticketId: string, type: string, message: string): Promise<void> {
+async function history(
+  req: Request,
+  ticketId: string,
+  type: string,
+  message: string,
+): Promise<void> {
   await MaintenanceEvent.create({
     organizationId: org(req),
     ticketId,
@@ -37,7 +47,11 @@ export function createMaintenanceHandlers(config: AppConfig) {
 
         // Un locataire ne signale un problème que sur le logement de son contrat.
         if (req.organizationContext!.role === 'TENANT') {
-          const tenant = await Tenant.findOne({ organizationId: org(req), userId: req.user!.id, deletedAt: null });
+          const tenant = await Tenant.findOne({
+            organizationId: org(req),
+            userId: req.user!.id,
+            deletedAt: null,
+          });
           const lease = await Lease.findOne({
             organizationId: org(req),
             tenantId: tenant?._id,
@@ -45,7 +59,12 @@ export function createMaintenanceHandlers(config: AppConfig) {
             status: { $in: ['ACTIVE', 'EXPIRING'] },
             deletedAt: null,
           });
-          if (!lease) throw new AppError('FORBIDDEN', 'Vous ne pouvez signaler un problème que sur votre logement.', 403);
+          if (!lease)
+            throw new AppError(
+              'FORBIDDEN',
+              'Vous ne pouvez signaler un problème que sur votre logement.',
+              403,
+            );
           tenantId = tenant?._id;
         }
       }
@@ -57,11 +76,25 @@ export function createMaintenanceHandlers(config: AppConfig) {
         ...(tenantId ? { tenantId } : {}),
       });
       await history(req, String(ticket._id), 'CREATED', 'Ticket ouvert');
-      await recordAudit({ organizationId: org(req), ...(req.user?.id ? { actorId: req.user.id } : {}), action: 'maintenance.create', resourceType: 'MaintenanceTicket', resourceId: String(ticket._id), requestId: req.requestId });
+      await recordAudit({
+        organizationId: org(req),
+        ...(req.user?.id ? { actorId: req.user.id } : {}),
+        action: 'maintenance.create',
+        resourceType: 'MaintenanceTicket',
+        resourceId: String(ticket._id),
+        requestId: req.requestId,
+      });
       await notify(config, {
         organizationId: org(req),
         event: 'MAINTENANCE_CREATED',
-        variables: { tenantName: '', rentAmount: '', dueDate: '', propertyName: '', unitName: '', paymentLink: '' },
+        variables: {
+          tenantName: '',
+          rentAmount: '',
+          dueDate: '',
+          propertyName: '',
+          unitName: '',
+          paymentLink: '',
+        },
         idempotencyKey: `maintenance-created:${String(ticket._id)}`,
       });
       res.status(201);
@@ -69,7 +102,12 @@ export function createMaintenanceHandlers(config: AppConfig) {
     },
 
     async list(req: Request, res: Response): Promise<void> {
-      const query = req.query as unknown as Record<string, unknown> & { page: number; pageSize: number; order: 'asc' | 'desc'; sort?: string };
+      const query = req.query as unknown as Record<string, unknown> & {
+        page: number;
+        pageSize: number;
+        order: 'asc' | 'desc';
+        sort?: string;
+      };
       const filter: Record<string, unknown> = { ...active(org(req)) };
       for (const key of ['status', 'priority', 'propertyId', 'unitId'] as const) {
         if (query[key]) filter[key] = query[key];
@@ -95,13 +133,18 @@ export function createMaintenanceHandlers(config: AppConfig) {
         if (!vendor) throw notFound('Fournisseur');
         if (!req.body.status) req.body.status = 'ASSIGNED';
       }
-      if (req.body.status === 'RESOLVED' && !req.body.completedAt) req.body.completedAt = new Date();
+      if (req.body.status === 'RESOLVED' && !req.body.completedAt)
+        req.body.completedAt = new Date();
 
       Object.assign(ticket, req.body);
       await ticket.save();
 
       // Relier les dépenses de maintenance au module financier
-      if ((ticket.status === 'RESOLVED' || req.body.validateExpense) && ticket.actualCostMinor && ticket.actualCostMinor > 0) {
+      if (
+        (ticket.status === 'RESOLVED' || req.body.validateExpense) &&
+        ticket.actualCostMinor &&
+        ticket.actualCostMinor > 0
+      ) {
         const vendor = ticket.vendorId ? await Vendor.findById(ticket.vendorId) : null;
         const existingTx = await Transaction.findOne({
           organizationId: org(req),
@@ -133,7 +176,14 @@ export function createMaintenanceHandlers(config: AppConfig) {
         organizationId: org(req),
         event: 'MAINTENANCE_UPDATED',
         ...(ticket.tenantId ? {} : {}),
-        variables: { tenantName: '', rentAmount: '', dueDate: '', propertyName: '', unitName: '', paymentLink: '' },
+        variables: {
+          tenantName: '',
+          rentAmount: '',
+          dueDate: '',
+          propertyName: '',
+          unitName: '',
+          paymentLink: '',
+        },
         idempotencyKey: `maintenance-updated:${String(ticket._id)}:${ticket.status}:${ticket.updatedAt.toISOString()}`,
       });
       res.locals.data = ticket;
@@ -142,25 +192,44 @@ export function createMaintenanceHandlers(config: AppConfig) {
     async history(req: Request, res: Response): Promise<void> {
       const ticket = await MaintenanceTicket.findOne({ _id: req.params.id, ...active(org(req)) });
       if (!ticket) throw notFound('Ticket');
-      res.locals.data = await MaintenanceEvent.find({ ticketId: ticket._id }).sort({ createdAt: 1 });
+      res.locals.data = await MaintenanceEvent.find({ ticketId: ticket._id }).sort({
+        createdAt: 1,
+      });
     },
 
     async stats(req: Request, res: Response): Promise<void> {
       const base = active(org(req));
-      const open = await MaintenanceTicket.countDocuments({ ...base, status: { $nin: ['RESOLVED', 'CLOSED'] } });
-      const urgent = await MaintenanceTicket.countDocuments({ ...base, priority: 'URGENT', status: { $nin: ['RESOLVED', 'CLOSED'] } });
+      const open = await MaintenanceTicket.countDocuments({
+        ...base,
+        status: { $nin: ['RESOLVED', 'CLOSED'] },
+      });
+      const urgent = await MaintenanceTicket.countDocuments({
+        ...base,
+        priority: 'URGENT',
+        status: { $nin: ['RESOLVED', 'CLOSED'] },
+      });
       const [cost] = await MaintenanceTicket.aggregate<{ total: number }>([
         { $match: { organizationId: new Types.ObjectId(org(req)), deletedAt: null } },
         { $group: { _id: null, total: { $sum: '$actualCostMinor' } } },
       ]);
-      const resolved = await MaintenanceTicket.find({ ...base, completedAt: { $ne: null } }).select('createdAt completedAt');
-      const averageResolutionDays = resolved.length === 0
-        ? 0
-        : Math.round(
-            (resolved.reduce((sum, ticket) => sum + (new Date(ticket.completedAt as Date).getTime() - new Date(ticket.createdAt).getTime()), 0) /
-              resolved.length /
-              (24 * 60 * 60 * 1000)) * 10,
-          ) / 10;
+      const resolved = await MaintenanceTicket.find({ ...base, completedAt: { $ne: null } }).select(
+        'createdAt completedAt',
+      );
+      const averageResolutionDays =
+        resolved.length === 0
+          ? 0
+          : Math.round(
+              (resolved.reduce(
+                (sum, ticket) =>
+                  sum +
+                  (new Date(ticket.completedAt as Date).getTime() -
+                    new Date(ticket.createdAt).getTime()),
+                0,
+              ) /
+                resolved.length /
+                (24 * 60 * 60 * 1000)) *
+                10,
+            ) / 10;
       res.locals.data = { open, urgent, costMinor: cost?.total ?? 0, averageResolutionDays };
     },
   };

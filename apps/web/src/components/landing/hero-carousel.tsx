@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Trash2, Edit2, Image as ImageIcon, Settings, Check, X } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+  Edit2,
+  Image as ImageIcon,
+  Settings,
+  Check,
+  X,
+} from 'lucide-react';
 import { useSession } from '../../app/session';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -16,33 +25,41 @@ export interface CarouselSlide {
 const DEFAULT_SLIDES: CarouselSlide[] = [
   {
     id: 'slide-1',
-    imageUrl: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1600&q=80',
+    imageUrl:
+      'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1600&q=80',
     title: 'Résidences de Prestige & Villas Modernes',
-    subtitle: 'Découvrez des biens d’exception vérifiés, baux juridiques certifiés et quittances infalsifiables.',
+    subtitle:
+      'Découvrez des biens d’exception vérifiés, baux juridiques certifiés et quittances infalsifiables.',
     badge: 'IMMOBILIER D’EXCEPTION',
     badgeColor: 'bg-emerald-500 text-slate-950',
   },
   {
     id: 'slide-2',
-    imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80',
+    imageUrl:
+      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80',
     title: 'Chefferie Coutumière & Sécurité Urbaine',
-    subtitle: 'Enrôlement citoyen, actes fonciers authentifiés par QR Code et veille communautaire de bloc.',
+    subtitle:
+      'Enrôlement citoyen, actes fonciers authentifiés par QR Code et veille communautaire de bloc.',
     badge: 'AUTORITÉ & SÉCURITÉ',
     badgeColor: 'bg-purple-500 text-white',
   },
   {
     id: 'slide-3',
-    imageUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1600&q=80',
+    imageUrl:
+      'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1600&q=80',
     title: 'Paiements Instantanés Ikeepay H2H',
-    subtitle: 'Réglez vos loyers et encaissez vos commissions en un clic via Orange Money, MTN, Wave et Moov.',
+    subtitle:
+      'Réglez vos loyers et encaissez vos commissions en un clic via Orange Money, MTN, Wave et Moov.',
     badge: 'MOBILE MONEY EN DIRECT',
     badgeColor: 'bg-amber-400 text-slate-950',
   },
   {
     id: 'slide-4',
-    imageUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1600&q=80',
+    imageUrl:
+      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1600&q=80',
     title: 'Studios & Appartements Meublés',
-    subtitle: 'Locations journalières, mensuelles et chambres modernes adaptées à tous vos séjours.',
+    subtitle:
+      'Locations journalières, mensuelles et chambres modernes adaptées à tous vos séjours.',
     badge: 'LOCATION JOURNALIÈRE & MENSUELLE',
     badgeColor: 'bg-cyan-400 text-slate-950',
   },
@@ -95,7 +112,6 @@ export function HeroCarousel() {
 
   return (
     <div className="relative w-full max-w-5xl mx-auto my-6">
-      
       {/* Super Admin Manage Button */}
       {isSuperAdmin && (
         <div className="absolute -top-10 right-0 z-20">
@@ -111,13 +127,13 @@ export function HeroCarousel() {
       )}
 
       {/* Main Carousel Screen */}
-      <div 
+      <div
         className="relative h-[340px] sm:h-[420px] md:h-[480px] w-full rounded-3xl overflow-hidden border border-purple-500/30 shadow-2xl shadow-purple-950/80 group"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
         {/* Background Image with Smooth Fade */}
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center transition-all duration-700 transform scale-100 group-hover:scale-105"
           style={{ backgroundImage: `url(${currentSlide.imageUrl})` }}
         />
@@ -128,11 +144,12 @@ export function HeroCarousel() {
 
         {/* Slide Content Overlay */}
         <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 md:p-12 text-left space-y-3 sm:space-y-4">
-          
           {/* Badge */}
           {currentSlide.badge && (
             <div className="flex items-center gap-2">
-              <span className={`text-[10px] sm:text-xs font-black uppercase px-3 py-1 rounded-full shadow-md tracking-wider ${currentSlide.badgeColor || 'bg-[#00e676] text-slate-950'}`}>
+              <span
+                className={`text-[10px] sm:text-xs font-black uppercase px-3 py-1 rounded-full shadow-md tracking-wider ${currentSlide.badgeColor || 'bg-[#00e676] text-slate-950'}`}
+              >
                 {currentSlide.badge}
               </span>
             </div>
@@ -241,9 +258,7 @@ function CarouselManagerModal({
 
     if (editingId) {
       const updated = list.map((s) =>
-        s.id === editingId
-          ? { ...s, imageUrl, title, subtitle, badge }
-          : s
+        s.id === editingId ? { ...s, imageUrl, title, subtitle, badge } : s,
       );
       setList(updated);
       onSave(updated);
@@ -284,7 +299,6 @@ function CarouselManagerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
       <div className="bg-[#180533] border border-purple-500/40 rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl text-white">
-        
         <div className="flex items-center justify-between border-b border-purple-800/60 pb-4">
           <div className="flex items-center gap-2.5">
             <div className="size-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
@@ -292,7 +306,9 @@ function CarouselManagerModal({
             </div>
             <div>
               <h3 className="text-lg font-black">Gestion du Carrousel d'Accueil</h3>
-              <p className="text-xs text-purple-300">Ajoutez, modifiez ou retirez les visuels défilants en direct.</p>
+              <p className="text-xs text-purple-300">
+                Ajoutez, modifiez ou retirez les visuels défilants en direct.
+              </p>
             </div>
           </div>
           <button
@@ -304,13 +320,18 @@ function CarouselManagerModal({
         </div>
 
         {/* Formulaire d'ajout / modification */}
-        <form onSubmit={handleSaveItem} className="p-4 rounded-2xl bg-purple-950/50 border border-purple-800/60 space-y-3">
+        <form
+          onSubmit={handleSaveItem}
+          className="p-4 rounded-2xl bg-purple-950/50 border border-purple-800/60 space-y-3"
+        >
           <h4 className="text-xs font-bold uppercase tracking-wider text-[#00e676]">
             {editingId ? 'Modifier cette diapositive' : 'Ajouter une nouvelle image'}
           </h4>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-purple-200">URL de l'image (haute résolution)</label>
+            <label className="text-xs font-semibold text-purple-200">
+              URL de l'image (haute résolution)
+            </label>
             <Input
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
@@ -343,7 +364,9 @@ function CarouselManagerModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-purple-200">Sous-titre / Description</label>
+            <label className="text-xs font-semibold text-purple-200">
+              Sous-titre / Description
+            </label>
             <Input
               value={subtitle}
               onChange={(e) => setSubtitle(e.target.value)}
@@ -354,11 +377,21 @@ function CarouselManagerModal({
 
           <div className="flex items-center justify-end gap-2 pt-2">
             {editingId && (
-              <Button type="button" variant="outline" size="sm" onClick={cancelEdit} className="text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={cancelEdit}
+                className="text-xs"
+              >
                 Annuler
               </Button>
             )}
-            <Button type="submit" size="sm" className="bg-[#00e676] hover:bg-[#00c853] text-slate-950 font-bold text-xs">
+            <Button
+              type="submit"
+              size="sm"
+              className="bg-[#00e676] hover:bg-[#00c853] text-slate-950 font-bold text-xs"
+            >
               <Check className="size-3.5 mr-1" />
               {editingId ? 'Mettre à jour' : 'Ajouter au Carrousel'}
             </Button>
@@ -399,7 +432,9 @@ function CarouselManagerModal({
                       </span>
                       <p className="text-xs font-bold truncate text-white">{slide.title}</p>
                     </div>
-                    <p className="text-[11px] text-purple-300/80 truncate mt-0.5">{slide.subtitle}</p>
+                    <p className="text-[11px] text-purple-300/80 truncate mt-0.5">
+                      {slide.subtitle}
+                    </p>
                   </div>
                 </div>
 
@@ -429,11 +464,13 @@ function CarouselManagerModal({
         </div>
 
         <div className="flex justify-end pt-2 border-t border-purple-800/60">
-          <Button onClick={onClose} className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-6">
+          <Button
+            onClick={onClose}
+            className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-6"
+          >
             Terminer
           </Button>
         </div>
-
       </div>
     </div>
   );

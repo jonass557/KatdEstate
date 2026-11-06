@@ -29,7 +29,10 @@ describe('immobilier', () => {
     expect(list.body.meta.total).toBe(1);
 
     const id = list.body.data[0]._id as string;
-    const updated = await api().patch(`${base}/properties/${id}`).set(authed(manager)).send({ city: 'Thiès' });
+    const updated = await api()
+      .patch(`${base}/properties/${id}`)
+      .set(authed(manager))
+      .send({ city: 'Thiès' });
     expect(updated.body.data.city).toBe('Thiès');
 
     const removed = await api().delete(`${base}/properties/${id}`).set(authed(manager));
@@ -67,43 +70,59 @@ describe('immobilier', () => {
       .send({ propertyId, name: 'Bâtiment A', floors: 4 });
     expect(building.status).toBe(201);
 
-    const unit = await api().post(`${base}/units`).set(authed(manager)).send({
-      propertyId,
-      buildingId: building.body.data._id,
-      name: 'Appartement 12',
-      number: 'A12',
-      floor: 2,
-      type: 'APARTMENT',
-      surfaceM2: 65,
-      bedrooms: 2,
-      bathrooms: 1,
-      rentAmountMinor: 250_000,
-      chargesAmountMinor: 15_000,
-      depositAmountMinor: 500_000,
-      amenities: ['climatisation', 'balcon'],
-    });
+    const unit = await api()
+      .post(`${base}/units`)
+      .set(authed(manager))
+      .send({
+        propertyId,
+        buildingId: building.body.data._id,
+        name: 'Appartement 12',
+        number: 'A12',
+        floor: 2,
+        type: 'APARTMENT',
+        surfaceM2: 65,
+        bedrooms: 2,
+        bathrooms: 1,
+        rentAmountMinor: 250_000,
+        chargesAmountMinor: 15_000,
+        depositAmountMinor: 500_000,
+        amenities: ['climatisation', 'balcon'],
+      });
     expect(unit.status).toBe(201);
     expect(unit.body.data.status).toBe('AVAILABLE');
 
-    const filtered = await api().get(`${base}/units?propertyId=${propertyId}&type=APARTMENT`).set(authed(manager));
+    const filtered = await api()
+      .get(`${base}/units?propertyId=${propertyId}&type=APARTMENT`)
+      .set(authed(manager));
     expect(filtered.body.data).toHaveLength(1);
 
     const stats = await api().get(`${base}/properties/${propertyId}/stats`).set(authed(manager));
-    expect(stats.body.data).toMatchObject({ units: 1, available: 1, occupied: 0, occupancyRate: 0 });
+    expect(stats.body.data).toMatchObject({
+      units: 1,
+      available: 1,
+      occupied: 0,
+      occupancyRate: 0,
+    });
   });
 
   it('refuse un logement rattaché au bâtiment d’une autre propriété', async () => {
     const { manager, base, propertyId } = await seed();
-    const other = await api().post(`${base}/properties`).set(authed(manager)).send({ ...propertyPayload, name: 'Autre' });
+    const other = await api()
+      .post(`${base}/properties`)
+      .set(authed(manager))
+      .send({ ...propertyPayload, name: 'Autre' });
     const building = await api()
       .post(`${base}/buildings`)
       .set(authed(manager))
       .send({ propertyId: other.body.data._id, name: 'Bâtiment B' });
 
-    const response = await api()
-      .post(`${base}/units`)
-      .set(authed(manager))
-      .send({ propertyId, buildingId: building.body.data._id, name: 'Studio', type: 'STUDIO', rentAmountMinor: 100_000 });
+    const response = await api().post(`${base}/units`).set(authed(manager)).send({
+      propertyId,
+      buildingId: building.body.data._id,
+      name: 'Studio',
+      type: 'STUDIO',
+      rentAmountMinor: 100_000,
+    });
     expect(response.status).toBe(422);
   });
 

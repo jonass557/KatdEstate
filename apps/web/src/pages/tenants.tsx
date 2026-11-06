@@ -32,7 +32,10 @@ import {
   Building2,
   UserMinus,
 } from 'lucide-react';
-import { LeaseContractModal, type LeaseContractData } from '../components/leases/lease-contract-modal';
+import {
+  LeaseContractModal,
+  type LeaseContractData,
+} from '../components/leases/lease-contract-modal';
 import { getLocalProperties, getLocalUnits, saveLocalUnits } from './properties';
 
 export const STORAGE_TENANTS_KEY = 'katdestate_custom_tenants';
@@ -161,10 +164,13 @@ export function TenantsPage() {
 
   const { data: tenantsData, isLoading } = useOrgList<Tenant>(
     ['tenants', search],
-    `/tenants?pageSize=100${search ? `&search=${encodeURIComponent(search)}` : ''}`
+    `/tenants?pageSize=100${search ? `&search=${encodeURIComponent(search)}` : ''}`,
   );
 
-  const { data: propertiesData } = useOrgList<PropertyItem>(['properties-all'], '/properties?pageSize=100');
+  const { data: propertiesData } = useOrgList<PropertyItem>(
+    ['properties-all'],
+    '/properties?pageSize=100',
+  );
   const { data: unitsData } = useOrgList<UnitItem>(['units-all'], '/units?pageSize=100');
   const { data: leasesData } = useOrgList<LeaseItem>(['leases-all'], '/leases?pageSize=100');
 
@@ -212,7 +218,9 @@ export function TenantsPage() {
     for (const t of apiTenants) map.set(t._id, t);
     for (const lt of localTenants) map.set(lt._id, lt);
 
-    let list = Array.from(map.values()).filter((t) => t.status !== 'TERMINATED' && t.status !== 'REMOVED');
+    let list = Array.from(map.values()).filter(
+      (t) => t.status !== 'TERMINATED' && t.status !== 'REMOVED',
+    );
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -222,7 +230,7 @@ export function TenantsPage() {
           t.phone?.toLowerCase().includes(q) ||
           t.email?.toLowerCase().includes(q) ||
           t.propertyName?.toLowerCase().includes(q) ||
-          t.unitName?.toLowerCase().includes(q)
+          t.unitName?.toLowerCase().includes(q),
       );
     }
 
@@ -273,7 +281,10 @@ export function TenantsPage() {
         });
         return res as { message?: string; dispatchedCount?: number };
       } catch {
-        return { message: 'Alertes transmises aux locataires par email.', dispatchedCount: allTenants.length };
+        return {
+          message: 'Alertes transmises aux locataires par email.',
+          dispatchedCount: allTenants.length,
+        };
       }
     },
     onSuccess: (data: { message?: string; dispatchedCount?: number }) => {
@@ -289,7 +300,8 @@ export function TenantsPage() {
     onError: () => {
       toast({
         title: 'Vérification effectuée avec succès',
-        description: 'Les échéances de loyers et expirations de baux ont été vérifiées et notifiées par email.',
+        description:
+          'Les échéances de loyers et expirations de baux ont été vérifiées et notifiées par email.',
         variant: 'success',
       });
     },
@@ -314,7 +326,7 @@ export function TenantsPage() {
 
   const handleShareWhatsApp = (card: TenantAccessCard) => {
     const text = encodeURIComponent(
-      `Bonjour ${card.fullName},\nVoici vos identifiants d'accès à votre espace locataire KatdEstate :\n\n🌐 Lien de connexion : https://katdestate.vercel.app/sign-in\n👤 Identifiant : ${card.email}\n🔑 Mot de passe : ${card.password}\n🏠 Propriété : ${card.propertyName || 'Votre résidence'}\n🚪 Porte / Chambre : ${card.unitNumber || 'Votre unité'}\n📅 Échéance loyer : Le ${card.dueDay || 5} de chaque mois\n\nDepuis votre espace, consultez votre contrat de bail certifié et réglez vos loyers en toute sécurité par Mobile Money.`
+      `Bonjour ${card.fullName},\nVoici vos identifiants d'accès à votre espace locataire KatdEstate :\n\n🌐 Lien de connexion : https://katdestate.vercel.app/sign-in\n👤 Identifiant : ${card.email}\n🔑 Mot de passe : ${card.password}\n🏠 Propriété : ${card.propertyName || 'Votre résidence'}\n🚪 Porte / Chambre : ${card.unitNumber || 'Votre unité'}\n📅 Échéance loyer : Le ${card.dueDay || 5} de chaque mois\n\nDepuis votre espace, consultez votre contrat de bail certifié et réglez vos loyers en toute sécurité par Mobile Money.`,
     );
     const cleanPhone = (card.phone || '').replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
@@ -325,7 +337,7 @@ export function TenantsPage() {
     _propName?: string,
     _unitNum?: string,
     _dueDay: number = 5,
-    _rentAmount: number = 100000
+    _rentAmount: number = 100000,
   ) => {
     toast({
       title: 'Alerte email d’échéance envoyée',
@@ -351,7 +363,7 @@ export function TenantsPage() {
     if (targetUnitId) {
       const allUnitsLocal = getLocalUnits();
       const updatedUnits = allUnitsLocal.map((u) =>
-        u._id === targetUnitId ? { ...u, status: 'AVAILABLE' } : u
+        u._id === targetUnitId ? { ...u, status: 'AVAILABLE' } : u,
       );
       saveLocalUnits(updatedUnits);
       try {
@@ -382,7 +394,7 @@ export function TenantsPage() {
     } catch {}
 
     const updated = localTenants.map((t) =>
-      t._id === editingTenant._id ? { ...t, ...updatedData } : t
+      t._id === editingTenant._id ? { ...t, ...updatedData } : t,
     );
     setLocalTenants(updated);
     saveLocalTenants(updated);
@@ -452,7 +464,9 @@ export function TenantsPage() {
               <Building2 className="size-4 text-emerald-500" />
               Nombre de locataires par propriété
             </span>
-            <span className="text-[10px] text-muted-foreground">Cliquez sur une propriété pour filtrer</span>
+            <span className="text-[10px] text-muted-foreground">
+              Cliquez sur une propriété pour filtrer
+            </span>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -487,7 +501,9 @@ export function TenantsPage() {
                 <span className="truncate max-w-[150px]">{info.name}</span>
                 <span
                   className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                    info.count > 0 ? 'bg-emerald-500 text-slate-950' : 'bg-muted text-muted-foreground'
+                    info.count > 0
+                      ? 'bg-emerald-500 text-slate-950'
+                      : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {info.count} locataire{info.count > 1 ? 's' : ''}
@@ -527,7 +543,8 @@ export function TenantsPage() {
 
             toast({
               title: 'Locataire & Bail enregistrés avec succès',
-              description: 'Le contrat de bail a été établi et transmis directement dans le dashboard du locataire.',
+              description:
+                'Le contrat de bail a été établi et transmis directement dans le dashboard du locataire.',
               variant: 'success',
             });
           }}
@@ -553,7 +570,9 @@ export function TenantsPage() {
         )}
       </div>
 
-      {isLoading && allTenants.length === 0 ? <p className="text-sm text-muted-foreground">Chargement…</p> : null}
+      {isLoading && allTenants.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Chargement…</p>
+      ) : null}
       {!isLoading && allTenants.length === 0 ? (
         <EmptyState
           title="Aucun locataire enregistré"
@@ -571,14 +590,19 @@ export function TenantsPage() {
             (tenantLease ? units.find((u) => String(u._id) === String(tenantLease.unitId)) : null);
           const property =
             properties.find((p) => String(p._id) === String(tenant.propertyId)) ||
-            (tenantLease ? properties.find((p) => String(p._id) === String(tenantLease.propertyId)) : null);
+            (tenantLease
+              ? properties.find((p) => String(p._id) === String(tenantLease.propertyId))
+              : null);
 
           const dueDay = tenant.dueDay || tenantLease?.dueDay || 5;
           const rentAmount = tenant.rentAmount || tenantLease?.rentAmountMinor || 150000;
           const unitDoorNumber = tenant.unitNumber || unit?.number || unit?.name || 'Porte N/A';
 
           return (
-            <Card key={tenant._id} className="border-border hover:shadow-md transition-all flex flex-col justify-between">
+            <Card
+              key={tenant._id}
+              className="border-border hover:shadow-md transition-all flex flex-col justify-between"
+            >
               <CardContent className="space-y-3.5 p-4 sm:p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
@@ -587,7 +611,9 @@ export function TenantsPage() {
                     </div>
                     <div>
                       <h3 className="font-bold text-sm text-foreground">{tenant.fullName}</h3>
-                      <p className="text-[11px] text-muted-foreground">{tenant.profession || 'Locataire'}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {tenant.profession || 'Locataire'}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -627,7 +653,9 @@ export function TenantsPage() {
                     </span>
                     <strong className="text-foreground">
                       {rentAmount.toLocaleString('fr-FR')} FCFA ·{' '}
-                      <span className="text-amber-600 dark:text-amber-400 font-black">Le {dueDay} du mois</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-black">
+                        Le {dueDay} du mois
+                      </span>
                     </strong>
                   </div>
 
@@ -652,7 +680,9 @@ export function TenantsPage() {
                   </p>
                   <p className="flex items-center justify-between">
                     <span>Email de connexion :</span>
-                    <strong className="text-foreground truncate max-w-[150px]">{tenant.email ?? 'Non renseigné'}</strong>
+                    <strong className="text-foreground truncate max-w-[150px]">
+                      {tenant.email ?? 'Non renseigné'}
+                    </strong>
                   </p>
                 </div>
 
@@ -667,7 +697,8 @@ export function TenantsPage() {
                       onClick={() => {
                         setActiveContract({
                           leaseNumber:
-                            tenantLease?.number || `BAIL-${new Date().getFullYear()}-${tenant._id.slice(-4).toUpperCase()}`,
+                            tenantLease?.number ||
+                            `BAIL-${new Date().getFullYear()}-${tenant._id.slice(-4).toUpperCase()}`,
                           propertyName: property?.name || tenant.propertyName || 'Résidence Katd',
                           propertyAddress: property?.address || 'Abidjan',
                           propertyZone: property?.zone || 'Zone Résidentielle',
@@ -685,7 +716,8 @@ export function TenantsPage() {
                           ownerPhone: '+225 07 10 20 30 40',
                           startDate: tenantLease?.startDate || new Date().toISOString(),
                           endDate:
-                            tenantLease?.endDate || new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
+                            tenantLease?.endDate ||
+                            new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
                           dueDay,
                           rentAmountMinor: rentAmount,
                           chargesAmountMinor: tenantLease?.chargesAmountMinor || 5000,
@@ -727,7 +759,13 @@ export function TenantsPage() {
                       className="text-[11px] font-semibold border-border hover:bg-amber-500/10 hover:text-amber-500 flex items-center justify-center gap-1 h-8 px-1 text-amber-600 dark:text-amber-400"
                       title="Envoyer une notification email d'échéance de loyer"
                       onClick={() =>
-                        handleSendSingleReminder(tenant, property?.name, unitDoorNumber, dueDay, rentAmount)
+                        handleSendSingleReminder(
+                          tenant,
+                          property?.name,
+                          unitDoorNumber,
+                          dueDay,
+                          rentAmount,
+                        )
                       }
                     >
                       <Mail className="size-3.5" />
@@ -767,10 +805,7 @@ export function TenantsPage() {
 
       {/* Modal Visualisation Contrat de Bail */}
       {activeContract && (
-        <LeaseContractModal
-          contract={activeContract}
-          onClose={() => setActiveContract(null)}
-        />
+        <LeaseContractModal contract={activeContract} onClose={() => setActiveContract(null)} />
       )}
 
       {/* Modal Fiche d'Accès Locataire */}
@@ -800,29 +835,43 @@ export function TenantsPage() {
                 <span className="text-[10px] font-bold text-muted-foreground uppercase">
                   Portail de Connexion Locataire
                 </span>
-                <p className="text-xs font-mono font-bold text-primary">https://katdestate.vercel.app/sign-in</p>
+                <p className="text-xs font-mono font-bold text-primary">
+                  https://katdestate.vercel.app/sign-in
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/60">
                 <div>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase">Logement assigné</span>
-                  <p className="font-bold text-foreground">{accessCard.unitNumber || 'Porte attribuée'}</p>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Logement assigné
+                  </span>
+                  <p className="font-bold text-foreground">
+                    {accessCard.unitNumber || 'Porte attribuée'}
+                  </p>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase">Date d'échéance</span>
-                  <p className="font-bold text-amber-600 dark:text-amber-400">Le {accessCard.dueDay || 5} du mois</p>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Date d'échéance
+                  </span>
+                  <p className="font-bold text-amber-600 dark:text-amber-400">
+                    Le {accessCard.dueDay || 5} du mois
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-1 pt-2 border-t border-border/60">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase">Identifiant (Email)</span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                  Identifiant (Email)
+                </span>
                 <p className="text-sm font-mono font-bold text-foreground bg-background p-2 rounded-xl border border-border select-all">
                   {accessCard.email}
                 </p>
               </div>
 
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase">Mot de Passe</span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                  Mot de Passe
+                </span>
                 <p className="text-sm font-mono font-bold text-emerald-500 bg-background p-2 rounded-xl border border-border select-all">
                   {accessCard.password}
                 </p>
@@ -830,7 +879,8 @@ export function TenantsPage() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Transmettez ces identifiants à votre locataire. Son contrat de bail officiel est déjà disponible dans son espace personnel et il pourra payer son loyer par Mobile Money.
+              Transmettez ces identifiants à votre locataire. Son contrat de bail officiel est déjà
+              disponible dans son espace personnel et il pourra payer son loyer par Mobile Money.
             </p>
 
             <div className="grid grid-cols-2 gap-2 pt-2">
@@ -840,7 +890,11 @@ export function TenantsPage() {
                 onClick={() => handleCopyCredentials(accessCard)}
                 className="text-xs font-bold flex items-center justify-center gap-1.5 h-10"
               >
-                {copied ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
+                {copied ? (
+                  <Check className="size-4 text-emerald-500" />
+                ) : (
+                  <Copy className="size-4" />
+                )}
                 <span>{copied ? 'Copié !' : 'Copier'}</span>
               </Button>
 
@@ -878,17 +932,14 @@ export function TenantsPage() {
               Confirmez-vous le départ définitif de <strong>{deletingTenant.fullName}</strong> ?
             </p>
             <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
-              ✓ Le logement attribué redeviendra immédiatement <strong>Disponible</strong> pour un nouveau locataire.
+              ✓ Le logement attribué redeviendra immédiatement <strong>Disponible</strong> pour un
+              nouveau locataire.
             </div>
             <div className="flex items-center justify-end gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={() => setDeletingTenant(null)}>
                 Annuler
               </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => handleDeleteTenant(deletingTenant)}
-              >
+              <Button variant="danger" size="sm" onClick={() => handleDeleteTenant(deletingTenant)}>
                 Confirmer le départ
               </Button>
             </div>
@@ -997,7 +1048,11 @@ function EditTenantModal({
             <Button variant="outline" size="sm" type="button" onClick={onClose}>
               Annuler
             </Button>
-            <Button size="sm" type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold">
+            <Button
+              size="sm"
+              type="submit"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+            >
               Enregistrer les modifications
             </Button>
           </div>
@@ -1043,7 +1098,7 @@ function CompleteTenantEnrollmentForm({
   const [dueDay, setDueDay] = useState(5);
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(
-    new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().slice(0, 10)
+    new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
   );
 
   const handleGeneratePassword = () => {
@@ -1069,7 +1124,8 @@ function CompleteTenantEnrollmentForm({
 
     setSubmitting(true);
     try {
-      const tenantEmail = email.trim() || `${fullName.toLowerCase().replace(/\s+/g, '.')}@katdestate.immo`;
+      const tenantEmail =
+        email.trim() || `${fullName.toLowerCase().replace(/\s+/g, '.')}@katdestate.immo`;
 
       // 1. Création du locataire
       const parsedTenant = tenantInputSchema.parse({
@@ -1240,7 +1296,9 @@ function CompleteTenantEnrollmentForm({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold">Téléphone WhatsApp (pour envoi des accès) *</label>
+                <label className="text-xs font-semibold">
+                  Téléphone WhatsApp (pour envoi des accès) *
+                </label>
                 <Input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -1294,7 +1352,9 @@ function CompleteTenantEnrollmentForm({
                 <span className="text-[11px] font-bold text-emerald-400 block">
                   Mot de passe d'accès généré pour le locataire
                 </span>
-                <span className="font-mono text-sm font-black text-foreground">{generatedPassword}</span>
+                <span className="font-mono text-sm font-black text-foreground">
+                  {generatedPassword}
+                </span>
               </div>
               <Button
                 type="button"
@@ -1318,7 +1378,9 @@ function CompleteTenantEnrollmentForm({
             </h3>
             <div className="grid sm:grid-cols-2 gap-3.5">
               <div className="space-y-1">
-                <label className="text-xs font-semibold">Propriété / Immeuble de rattachement *</label>
+                <label className="text-xs font-semibold">
+                  Propriété / Immeuble de rattachement *
+                </label>
                 <select
                   value={selectedPropertyId}
                   onChange={(e) => setSelectedPropertyId(e.target.value)}
@@ -1430,12 +1492,22 @@ function CompleteTenantEnrollmentForm({
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold">Date de début du bail</label>
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold">Date de fin du bail</label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  required
+                />
               </div>
             </div>
           </div>

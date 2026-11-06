@@ -48,7 +48,9 @@ export function AddUnitModal({
       return;
     }
 
-    const calculatedName = unitName.trim() || `${unitType === 'ROOM' ? 'Chambre' : unitType === 'STUDIO' ? 'Studio' : 'Appartement'} ${unitNumber.trim()}`;
+    const calculatedName =
+      unitName.trim() ||
+      `${unitType === 'ROOM' ? 'Chambre' : unitType === 'STUDIO' ? 'Studio' : 'Appartement'} ${unitNumber.trim()}`;
 
     onSave({
       propertyId,
@@ -77,7 +79,10 @@ export function AddUnitModal({
               <p className="text-xs text-muted-foreground">{propertyName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted"
+          >
             <X className="size-4" />
           </button>
         </div>
@@ -107,7 +112,9 @@ export function AddUnitModal({
                 onChange={(e) => {
                   setUnitNumber(e.target.value);
                   if (!unitName) {
-                    setUnitName(`${unitType === 'ROOM' ? 'Chambre' : unitType === 'STUDIO' ? 'Studio' : 'Appt'} ${e.target.value}`);
+                    setUnitName(
+                      `${unitType === 'ROOM' ? 'Chambre' : unitType === 'STUDIO' ? 'Studio' : 'Appt'} ${e.target.value}`,
+                    );
                   }
                 }}
                 placeholder="Ex: Porte 3, Ch. B2..."
@@ -117,7 +124,9 @@ export function AddUnitModal({
           </div>
 
           <label className="block space-y-1">
-            <span className="text-muted-foreground font-medium">Désignation complète du logement</span>
+            <span className="text-muted-foreground font-medium">
+              Désignation complète du logement
+            </span>
             <Input
               value={unitName}
               onChange={(e) => setUnitName(e.target.value)}

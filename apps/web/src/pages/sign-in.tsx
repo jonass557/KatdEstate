@@ -4,18 +4,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { loginSchema } from '@rentflow/shared';
-import { 
-  Building2, 
-  AlertCircle, 
-  ArrowLeft, 
-  Crown, 
-  ShieldCheck, 
-  Users, 
-  Briefcase, 
-  Home, 
-  Lock, 
-  Mail, 
-  Key 
+import {
+  Building2,
+  AlertCircle,
+  ArrowLeft,
+  Crown,
+  ShieldCheck,
+  Users,
+  Briefcase,
+  Home,
+  Lock,
+  Mail,
+  Key,
 } from 'lucide-react';
 import { useSession } from '../app/session';
 import { Button } from '../components/ui/button';
@@ -25,13 +25,55 @@ import { ApiError } from '../lib/api-client';
 type SignInValues = z.input<typeof loginSchema>;
 
 const TEST_ACCOUNTS = [
-  { role: 'SUPER_ADMIN', label: 'Super Admin', email: 'admin@kadtestate.immo', icon: Crown, color: 'text-amber-400 bg-amber-400/10' },
-  { role: 'OWNER', label: 'Propriétaire', email: 'proprietaire@kadtestate.immo', icon: Building2, color: 'text-blue-400 bg-blue-400/10' },
-  { role: 'TENANT', label: 'Locataire', email: 'locataire@kadtestate.immo', icon: Home, color: 'text-emerald-400 bg-emerald-400/10' },
-  { role: 'AGENT', label: 'Agent Immobilier', email: 'agent@kadtestate.immo', icon: Briefcase, color: 'text-orange-400 bg-orange-400/10' },
-  { role: 'NEIGHBORHOOD_LEADER', label: 'Chef de Quartier', email: 'chef.quartier@kadtestate.immo', icon: Crown, color: 'text-purple-400 bg-purple-400/10' },
-  { role: 'BLOCK_LEADER', label: 'Chef de Bloc', email: 'chef.bloc@kadtestate.immo', icon: ShieldCheck, color: 'text-cyan-400 bg-cyan-400/10' },
-  { role: 'RESIDENT', label: 'Résident', email: 'resident@kadtestate.immo', icon: Users, color: 'text-rose-400 bg-rose-400/10' },
+  {
+    role: 'SUPER_ADMIN',
+    label: 'Super Admin',
+    email: 'admin@kadtestate.immo',
+    icon: Crown,
+    color: 'text-amber-400 bg-amber-400/10',
+  },
+  {
+    role: 'OWNER',
+    label: 'Propriétaire',
+    email: 'proprietaire@kadtestate.immo',
+    icon: Building2,
+    color: 'text-blue-400 bg-blue-400/10',
+  },
+  {
+    role: 'TENANT',
+    label: 'Locataire',
+    email: 'locataire@kadtestate.immo',
+    icon: Home,
+    color: 'text-emerald-400 bg-emerald-400/10',
+  },
+  {
+    role: 'AGENT',
+    label: 'Agent Immobilier',
+    email: 'agent@kadtestate.immo',
+    icon: Briefcase,
+    color: 'text-orange-400 bg-orange-400/10',
+  },
+  {
+    role: 'NEIGHBORHOOD_LEADER',
+    label: 'Chef de Quartier',
+    email: 'chef.quartier@kadtestate.immo',
+    icon: Crown,
+    color: 'text-purple-400 bg-purple-400/10',
+  },
+  {
+    role: 'BLOCK_LEADER',
+    label: 'Chef de Bloc',
+    email: 'chef.bloc@kadtestate.immo',
+    icon: ShieldCheck,
+    color: 'text-cyan-400 bg-cyan-400/10',
+  },
+  {
+    role: 'RESIDENT',
+    label: 'Résident',
+    email: 'resident@kadtestate.immo',
+    icon: Users,
+    color: 'text-rose-400 bg-rose-400/10',
+  },
 ];
 
 export function SignInPage() {
@@ -53,7 +95,7 @@ export function SignInPage() {
 
       const isTenant = memberships.some((m) => m.role === 'TENANT');
       const isSuperAdmin = memberships.some((m) => (m as any).role === 'SUPER_ADMIN');
-      
+
       let destination = '/dashboard';
       if (isTenant) destination = '/portal';
       else if (isSuperAdmin) destination = '/dashboard';
@@ -93,7 +135,6 @@ export function SignInPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full mx-auto space-y-6">
-        
         {/* Navigation & Brand */}
         <div className="flex items-center justify-between">
           <Link
@@ -212,9 +253,7 @@ export function SignInPage() {
               })}
             </div>
           </div>
-
         </div>
-
       </div>
     </div>
   );

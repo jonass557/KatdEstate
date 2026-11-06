@@ -13,7 +13,14 @@ describe('notifications', () => {
       organizationId: manager.organizationId,
       event: 'RENT_DUE_SOON' as const,
       recipientUserId: manager.userId,
-      variables: { tenantName: 'Awa', rentAmount: '100000', dueDate: '2026-02-01', propertyName: 'Immeuble', unitName: 'Studio', paymentLink: '' },
+      variables: {
+        tenantName: 'Awa',
+        rentAmount: '100000',
+        dueDate: '2026-02-01',
+        propertyName: 'Immeuble',
+        unitName: 'Studio',
+        paymentLink: '',
+      },
       idempotencyKey: 'rappel-unique-001',
     };
     await notify(testConfig, input);
@@ -28,7 +35,14 @@ describe('notifications', () => {
     await notify(testConfig, {
       organizationId: manager.organizationId,
       event: 'PAYMENT_RECEIVED',
-      variables: { tenantName: 'Awa', rentAmount: '100000', dueDate: '', propertyName: '', unitName: '', paymentLink: '' },
+      variables: {
+        tenantName: 'Awa',
+        rentAmount: '100000',
+        dueDate: '',
+        propertyName: '',
+        unitName: '',
+        paymentLink: '',
+      },
       idempotencyKey: 'canaux-externes-001',
       channels: ['SMS', 'WHATSAPP'],
     });

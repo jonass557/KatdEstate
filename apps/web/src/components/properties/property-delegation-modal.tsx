@@ -41,13 +41,17 @@ export function PropertyDelegationModal({
   const [agencyName, setAgencyName] = useState(initial?.agencyName || '');
   const [scope, setScope] = useState<'ALL_PORTFOLIO' | 'PROPERTY'>(initial?.scope || 'PROPERTY');
   const [commissionRate, setCommissionRate] = useState(initial?.commissionRate ?? 8);
-  const [startDate, setStartDate] = useState(initial?.startDate?.slice(0, 10) || new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(
+    initial?.startDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+  );
   const [endDate, setEndDate] = useState(initial?.endDate?.slice(0, 10) || '');
-  const [status, setStatus] = useState<'ACTIVE' | 'SUSPENDED' | 'REVOKED'>(initial?.status || 'ACTIVE');
+  const [status, setStatus] = useState<'ACTIVE' | 'SUSPENDED' | 'REVOKED'>(
+    initial?.status || 'ACTIVE',
+  );
   const [notes, setNotes] = useState(initial?.notes || '');
 
   const [permissions, setPermissions] = useState<string[]>(
-    initial?.permissions || ['COLLECTION', 'LEASES', 'MAINTENANCE', 'VISITS']
+    initial?.permissions || ['COLLECTION', 'LEASES', 'MAINTENANCE', 'VISITS'],
   );
 
   const togglePermission = (perm: string) => {
@@ -65,7 +69,10 @@ export function PropertyDelegationModal({
       return;
     }
     if (!managerPhone.trim() && !managerEmail.trim()) {
-      toast({ title: 'Veuillez renseigner au moins un téléphone ou un email pour le mandataire', variant: 'error' });
+      toast({
+        title: 'Veuillez renseigner au moins un téléphone ou un email pour le mandataire',
+        variant: 'error',
+      });
       return;
     }
 
@@ -87,7 +94,6 @@ export function PropertyDelegationModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
       <div className="bg-card text-foreground border border-border rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-7 space-y-5">
-        
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2.5">
@@ -99,7 +105,10 @@ export function PropertyDelegationModal({
               <p className="text-xs text-muted-foreground">{propertyName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted"
+          >
             <X className="size-4" />
           </button>
         </div>
@@ -107,7 +116,9 @@ export function PropertyDelegationModal({
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           {/* Périmètre */}
           <div className="space-y-1.5">
-            <span className="font-semibold text-muted-foreground uppercase text-[11px]">Périmètre de la délégation</span>
+            <span className="font-semibold text-muted-foreground uppercase text-[11px]">
+              Périmètre de la délégation
+            </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -144,7 +155,9 @@ export function PropertyDelegationModal({
             </div>
 
             <label className="block space-y-1">
-              <span className="text-muted-foreground font-medium">Nom complet de la personne déléguée *</span>
+              <span className="text-muted-foreground font-medium">
+                Nom complet de la personne déléguée *
+              </span>
               <Input
                 value={managerName}
                 onChange={(e) => setManagerName(e.target.value)}
@@ -175,7 +188,9 @@ export function PropertyDelegationModal({
             </div>
 
             <label className="block space-y-1">
-              <span className="text-muted-foreground font-medium">Agence ou Entreprise (optionnel)</span>
+              <span className="text-muted-foreground font-medium">
+                Agence ou Entreprise (optionnel)
+              </span>
               <Input
                 value={agencyName}
                 onChange={(e) => setAgencyName(e.target.value)}
@@ -186,7 +201,9 @@ export function PropertyDelegationModal({
 
           {/* Droits & Permissions délégués */}
           <div className="space-y-2">
-            <span className="font-semibold text-muted-foreground uppercase text-[11px]">Droits & Missions délégués</span>
+            <span className="font-semibold text-muted-foreground uppercase text-[11px]">
+              Droits & Missions délégués
+            </span>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { id: 'COLLECTION', label: 'Encaissement des loyers' },
@@ -205,7 +222,9 @@ export function PropertyDelegationModal({
                   }`}
                 >
                   <span>{item.label}</span>
-                  {permissions.includes(item.id) && <CheckCircle2 className="size-3.5 text-emerald-500" />}
+                  {permissions.includes(item.id) && (
+                    <CheckCircle2 className="size-3.5 text-emerald-500" />
+                  )}
                 </button>
               ))}
             </div>
@@ -226,20 +245,12 @@ export function PropertyDelegationModal({
 
             <label className="block space-y-1">
               <span className="text-muted-foreground font-medium">Début mandat</span>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </label>
 
             <label className="block space-y-1">
               <span className="text-muted-foreground font-medium">Fin mandat (optionnel)</span>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </label>
           </div>
 
@@ -258,7 +269,9 @@ export function PropertyDelegationModal({
           </div>
 
           <label className="block space-y-1">
-            <span className="text-muted-foreground font-medium">Instructions & Notes confidentielles</span>
+            <span className="text-muted-foreground font-medium">
+              Instructions & Notes confidentielles
+            </span>
             <textarea
               rows={2}
               value={notes}
@@ -271,7 +284,8 @@ export function PropertyDelegationModal({
           <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2 text-[11px] text-muted-foreground">
             <ShieldCheck className="size-4 text-emerald-500 shrink-0 mt-0.5" />
             <span>
-              Le mandataire désigné sera habilité à représenter le propriétaire dans la limite des missions conférées et conformément au droit OHADA.
+              Le mandataire désigné sera habilité à représenter le propriétaire dans la limite des
+              missions conférées et conformément au droit OHADA.
             </span>
           </div>
 

@@ -1,4 +1,14 @@
-import { Building2, Download, FileText, Home, ShieldAlert, TrendingUp, Users, Wallet, Wrench } from 'lucide-react';
+import {
+  Building2,
+  Download,
+  FileText,
+  Home,
+  ShieldAlert,
+  TrendingUp,
+  Users,
+  Wallet,
+  Wrench,
+} from 'lucide-react';
 import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
 import { Badge } from '../components/ui/badge';
@@ -188,7 +198,8 @@ export function OwnerPortalPage() {
           <div>
             <h2 className="text-base font-semibold">Répartition par Propriété</h2>
             <p className="text-xs text-muted-foreground">
-              Performances et occupation détaillée pour chacun de vos biens ({propertiesBreakdown.length} propriétés).
+              Performances et occupation détaillée pour chacun de vos biens (
+              {propertiesBreakdown.length} propriétés).
             </p>
           </div>
         </div>
@@ -210,7 +221,13 @@ export function OwnerPortalPage() {
                         {prop.type} · {prop.city}
                       </p>
                     </div>
-                    <Badge className={prop.occupancyRate >= 80 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground border border-border'}>
+                    <Badge
+                      className={
+                        prop.occupancyRate >= 80
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground border border-border'
+                      }
+                    >
                       {prop.occupancyRate}% occupé
                     </Badge>
                   </div>
@@ -240,7 +257,13 @@ export function OwnerPortalPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Arriérés :</span>
-                      <span className={prop.arrearsMinor > 0 ? 'font-medium text-destructive' : 'text-muted-foreground'}>
+                      <span
+                        className={
+                          prop.arrearsMinor > 0
+                            ? 'font-medium text-destructive'
+                            : 'text-muted-foreground'
+                        }
+                      >
                         {money(prop.arrearsMinor, currency)}
                       </span>
                     </div>
@@ -275,7 +298,13 @@ export function OwnerPortalPage() {
                 <FileText className="size-4 text-amber-500" />
                 <span className="text-sm">Baux arrivant à expiration (60 jours)</span>
               </div>
-              <Badge className={portfolio.expiringLeases > 0 ? 'bg-amber-500/10 text-amber-600 border border-amber-500/30' : 'bg-muted text-muted-foreground'}>
+              <Badge
+                className={
+                  portfolio.expiringLeases > 0
+                    ? 'bg-amber-500/10 text-amber-600 border border-amber-500/30'
+                    : 'bg-muted text-muted-foreground'
+                }
+              >
                 {portfolio.expiringLeases}
               </Badge>
             </div>
@@ -284,7 +313,13 @@ export function OwnerPortalPage() {
                 <Wrench className="size-4 text-muted-foreground" />
                 <span className="text-sm">Interventions de maintenance ouvertes</span>
               </div>
-              <Badge className={portfolio.openMaintenanceCount > 0 ? 'bg-amber-500/10 text-amber-600 border border-amber-500/30' : 'bg-muted text-muted-foreground'}>
+              <Badge
+                className={
+                  portfolio.openMaintenanceCount > 0
+                    ? 'bg-amber-500/10 text-amber-600 border border-amber-500/30'
+                    : 'bg-muted text-muted-foreground'
+                }
+              >
                 {portfolio.openMaintenanceCount}
               </Badge>
             </div>
@@ -313,7 +348,8 @@ export function OwnerPortalPage() {
                   >
                     <div>
                       <p className="font-medium text-foreground">
-                        {act.action} · <span className="text-muted-foreground">{act.entityType}</span>
+                        {act.action} ·{' '}
+                        <span className="text-muted-foreground">{act.entityType}</span>
                       </p>
                       <p className="text-[11px] text-muted-foreground">Par {act.performedBy}</p>
                     </div>

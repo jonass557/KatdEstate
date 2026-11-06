@@ -27,9 +27,19 @@ const documentSchema = z.object({
   tenantId: objectIdSchema.optional(),
 });
 
-function respond(handler: (req: import('express').Request, res: import('express').Response) => Promise<void>) {
-  return (req: import('express').Request, res: import('express').Response, next: (error: unknown) => void) => {
-    handler(req, res).then(() => { if (!res.headersSent) sendSuccess(res, res.locals.data, { statusCode: res.statusCode }); }).catch(next);
+function respond(
+  handler: (req: import('express').Request, res: import('express').Response) => Promise<void>,
+) {
+  return (
+    req: import('express').Request,
+    res: import('express').Response,
+    next: (error: unknown) => void,
+  ) => {
+    handler(req, res)
+      .then(() => {
+        if (!res.headersSent) sendSuccess(res, res.locals.data, { statusCode: res.statusCode });
+      })
+      .catch(next);
   };
 }
 
@@ -37,20 +47,85 @@ export function createDocumentRouter(config: AppConfig) {
   const router = Router({ mergeParams: true });
   router.use(createAuthenticate(config), requireOrganizationMembership);
 
-  router.get('/document-folders', requirePermission('documents.view'), respond(service.listFolders));
-  router.post('/document-folders', requirePermission('documents.upload'), validateRequest(folderSchema), respond(service.createFolder));
+  router.get(
+    '/document-folders',
+    requirePermission('documents.view'),
+    respond(service.listFolders),
+  );
+  router.post(
+    '/document-folders',
+    requirePermission('documents.upload'),
+    validateRequest(folderSchema),
+    respond(service.createFolder),
+  );
   router.get('/documents', requirePermission('documents.view'), respond(service.listDocuments));
-  router.get('/documents/storage-usage', requirePermission('documents.view'), respond(service.storageUsage));
-  router.get('/documents/expiring', requirePermission('documents.view'), respond(service.expiringDocuments));
-  router.post('/documents', requirePermission('documents.upload'), validateRequest(documentSchema), respond(service.createDocument));
-  router.post('/documents/:id/versions', requirePermission('documents.upload'), validateRequest(idParams, 'params'), validateRequest(z.object({ fileId: objectIdSchema })), respond(service.addVersion));
-  router.get('/documents/:id/versions', requirePermission('documents.view'), validateRequest(idParams, 'params'), respond(service.listVersions));
-  router.get('/documents/:id/download', requirePermission('documents.view'), validateRequest(idParams, 'params'), (req, res, next) => { service.downloadDocument(req, res).catch(next); });
-  router.post('/documents/:id/archive', requirePermission('documents.upload'), validateRequest(idParams, 'params'), respond(service.archiveDocument));
-  router.post('/documents/:id/restore', requirePermission('documents.upload'), validateRequest(idParams, 'params'), respond(service.restoreDocument));
-  router.delete('/documents/:id', requirePermission('documents.delete'), validateRequest(idParams, 'params'), respond(service.deleteDocument));
-  router.post('/documents/:id/share', requirePermission('documents.view'), validateRequest(idParams, 'params'), respond(service.shareDocument));
-  router.post('/documents/:id/signature', requirePermission('documents.upload'), validateRequest(idParams, 'params'), respond(service.requestSignature));
+  router.get(
+    '/documents/storage-usage',
+    requirePermission('documents.view'),
+    respond(service.storageUsage),
+  );
+  router.get(
+    '/documents/expiring',
+    requirePermission('documents.view'),
+    respond(service.expiringDocuments),
+  );
+  router.post(
+    '/documents',
+    requirePermission('documents.upload'),
+    validateRequest(documentSchema),
+    respond(service.createDocument),
+  );
+  router.post(
+    '/documents/:id/versions',
+    requirePermission('documents.upload'),
+    validateRequest(idParams, 'params'),
+    validateRequest(z.object({ fileId: objectIdSchema })),
+    respond(service.addVersion),
+  );
+  router.get(
+    '/documents/:id/versions',
+    requirePermission('documents.view'),
+    validateRequest(idParams, 'params'),
+    respond(service.listVersions),
+  );
+  router.get(
+    '/documents/:id/download',
+    requirePermission('documents.view'),
+    validateRequest(idParams, 'params'),
+    (req, res, next) => {
+      service.downloadDocument(req, res).catch(next);
+    },
+  );
+  router.post(
+    '/documents/:id/archive',
+    requirePermission('documents.upload'),
+    validateRequest(idParams, 'params'),
+    respond(service.archiveDocument),
+  );
+  router.post(
+    '/documents/:id/restore',
+    requirePermission('documents.upload'),
+    validateRequest(idParams, 'params'),
+    respond(service.restoreDocument),
+  );
+  router.delete(
+    '/documents/:id',
+    requirePermission('documents.delete'),
+    validateRequest(idParams, 'params'),
+    respond(service.deleteDocument),
+  );
+  router.post(
+    '/documents/:id/share',
+    requirePermission('documents.view'),
+    validateRequest(idParams, 'params'),
+    respond(service.shareDocument),
+  );
+  router.post(
+    '/documents/:id/signature',
+    requirePermission('documents.upload'),
+    validateRequest(idParams, 'params'),
+    respond(service.requestSignature),
+  );
 
   return router;
 }

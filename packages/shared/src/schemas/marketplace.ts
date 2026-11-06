@@ -30,7 +30,10 @@ export const listingInputSchema = z.object({
   unitId: z.string().optional(),
   mandateId: z.string().optional(),
   title: z.string().min(3, 'Le titre doit comporter au moins 3 caractères').max(200),
-  description: z.string().min(10, 'La description doit comporter au moins 10 caractères').max(10_000),
+  description: z
+    .string()
+    .min(10, 'La description doit comporter au moins 10 caractères')
+    .max(10_000),
   category: z.enum(MARKETPLACE_PROPERTY_CATEGORIES),
   propertyType: z.enum(MARKETPLACE_PROPERTY_TYPES),
   transactionType: z.enum(LISTING_TRANSACTION_TYPES),

@@ -24,14 +24,20 @@ export async function runAutomations(config: AppConfig, now: Date = new Date()):
 }
 
 async function flagOverdue(config: AppConfig, now: Date): Promise<void> {
-  const overdue = await RentSchedule.find({ status: { $in: ['PENDING', 'PARTIAL'] }, dueDate: { $lt: now } });
+  const overdue = await RentSchedule.find({
+    status: { $in: ['PENDING', 'PARTIAL'] },
+    dueDate: { $lt: now },
+  });
   for (const schedule of overdue) {
     const lease = await Lease.findById(schedule.leaseId);
     if (!lease) continue;
 
     const grace = (lease.penalty?.graceDays ?? 0) * DAY;
     if (now.getTime() - schedule.dueDate.getTime() >= grace && schedule.penaltyMinor === 0) {
-      schedule.penaltyMinor = computePenalty(schedule.amountDueMinor, lease.penalty ?? { type: 'NONE', value: 0 });
+      schedule.penaltyMinor = computePenalty(
+        schedule.amountDueMinor,
+        lease.penalty ?? { type: 'NONE', value: 0 },
+      );
     }
     schedule.status = 'OVERDUE';
     await schedule.save();
@@ -41,13 +47,18 @@ async function flagOverdue(config: AppConfig, now: Date): Promise<void> {
     const property = schedule.propertyId ? await Property.findById(schedule.propertyId) : null;
     const ownerUser = lease?.ownerId
       ? await User.findById(lease.ownerId)
-      : await User.findOne({ organizationId: schedule.organizationId, role: { $in: ['OWNER', 'SUPER_ADMIN'] } });
+      : await User.findOne({
+          organizationId: schedule.organizationId,
+          role: { $in: ['OWNER', 'SUPER_ADMIN'] },
+        });
 
     const tenantName = tenant?.fullName ?? 'Locataire';
     const rentAmount = `${schedule.amountDueMinor.toLocaleString('fr-FR')} ${schedule.currency || 'XOF'}`;
     const dueDateStr = schedule.dueDate.toLocaleDateString('fr-FR');
     const propertyName = property?.name ?? 'Propriété KatdEstate';
-    const unitName = unit ? `${unit.name} (${unit.number ? 'Porte ' + unit.number : unit.type})` : 'Logement';
+    const unitName = unit
+      ? `${unit.name} (${unit.number ? 'Porte ' + unit.number : unit.type})`
+      : 'Logement';
 
     // Notification au Propriétaire (Loyer en retard)
     const ownerEmail = ownerUser?.email ?? 'proprietaire@katdestate.immo';
@@ -104,13 +115,18 @@ async function sendDueReminders(config: AppConfig, now: Date): Promise<void> {
     const property = schedule.propertyId ? await Property.findById(schedule.propertyId) : null;
     const ownerUser = lease?.ownerId
       ? await User.findById(lease.ownerId)
-      : await User.findOne({ organizationId: schedule.organizationId, role: { $in: ['OWNER', 'SUPER_ADMIN'] } });
+      : await User.findOne({
+          organizationId: schedule.organizationId,
+          role: { $in: ['OWNER', 'SUPER_ADMIN'] },
+        });
 
     const tenantName = tenant?.fullName ?? 'Locataire';
     const rentAmount = `${schedule.amountDueMinor.toLocaleString('fr-FR')} ${schedule.currency || 'XOF'}`;
     const dueDateStr = schedule.dueDate.toLocaleDateString('fr-FR');
     const propertyName = property?.name ?? 'Propriété KatdEstate';
-    const unitName = unit ? `${unit.name} (${unit.number ? 'Porte ' + unit.number : unit.type})` : 'Logement';
+    const unitName = unit
+      ? `${unit.name} (${unit.number ? 'Porte ' + unit.number : unit.type})`
+      : 'Logement';
 
     // 1. Notification au Locataire
     if (tenant?.email) {
@@ -170,13 +186,18 @@ async function flagExpiringLeases(config: AppConfig, now: Date): Promise<void> {
     const property = lease.propertyId ? await Property.findById(lease.propertyId) : null;
     const ownerUser = lease?.ownerId
       ? await User.findById(lease.ownerId)
-      : await User.findOne({ organizationId: lease.organizationId, role: { $in: ['OWNER', 'SUPER_ADMIN'] } });
+      : await User.findOne({
+          organizationId: lease.organizationId,
+          role: { $in: ['OWNER', 'SUPER_ADMIN'] },
+        });
 
     const tenantName = tenant?.fullName ?? 'Locataire';
     const rentAmount = `${lease.rentAmountMinor.toLocaleString('fr-FR')} ${lease.currency || 'XOF'}`;
     const dueDateStr = lease.endDate.toLocaleDateString('fr-FR');
     const propertyName = property?.name ?? 'Propriété KatdEstate';
-    const unitName = unit ? `${unit.name} (${unit.number ? 'Porte ' + unit.number : unit.type})` : 'Logement';
+    const unitName = unit
+      ? `${unit.name} (${unit.number ? 'Porte ' + unit.number : unit.type})`
+      : 'Logement';
 
     for (const threshold of [60, 30, 7] as const) {
       if (daysLeft <= threshold && daysLeft > threshold - 1) {
@@ -233,7 +254,14 @@ async function flagMissingReadings(config: AppConfig, now: Date): Promise<void> 
     await notify(config, {
       organizationId: String(meter.organizationId),
       event: 'DOCUMENT_EXPIRING',
-      variables: { tenantName: '', rentAmount: '', dueDate: '', propertyName: '', unitName: meter.label, paymentLink: '' },
+      variables: {
+        tenantName: '',
+        rentAmount: '',
+        dueDate: '',
+        propertyName: '',
+        unitName: meter.label,
+        paymentLink: '',
+      },
       idempotencyKey: `meter-missing:${String(meter._id)}:${now.getUTCFullYear()}-${now.getUTCMonth()}`,
     });
   }
@@ -259,7 +287,11 @@ export async function processJobs(config: AppConfig, now: Date = new Date()): Pr
   let processed = 0;
   for (;;) {
     const job = await Job.findOneAndUpdate(
-      { finishedAt: { $exists: false }, runAt: { $lte: now }, $or: [{ lockedUntil: { $exists: false } }, { lockedUntil: { $lte: now } }] },
+      {
+        finishedAt: { $exists: false },
+        runAt: { $lte: now },
+        $or: [{ lockedUntil: { $exists: false } }, { lockedUntil: { $lte: now } }],
+      },
       { lockedUntil: new Date(now.getTime() + 5 * 60 * 1000), $inc: { attempts: 1 } },
       { new: true },
     );
@@ -272,7 +304,10 @@ export async function processJobs(config: AppConfig, now: Date = new Date()): Pr
       processed += 1;
     } catch (error) {
       job.lastError = error instanceof Error ? error.message.slice(0, 500) : 'Erreur inconnue';
-      await Job.updateOne({ _id: job._id }, { $unset: { lockedUntil: 1 }, lastError: job.lastError });
+      await Job.updateOne(
+        { _id: job._id },
+        { $unset: { lockedUntil: 1 }, lastError: job.lastError },
+      );
       break;
     }
   }

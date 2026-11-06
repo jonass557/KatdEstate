@@ -26,10 +26,12 @@ interface ChatMessage {
   sender: 'user' | 'assistant';
   content: string;
   timestamp: string;
-  insights?: {
-    kind?: string | undefined;
-    data?: unknown;
-  } | undefined;
+  insights?:
+    | {
+        kind?: string | undefined;
+        data?: unknown;
+      }
+    | undefined;
 }
 
 const SUGGESTIONS = [
@@ -42,11 +44,31 @@ const SUGGESTIONS = [
 ];
 
 const DRAFT_TYPES = [
-  { value: 'RENT_REMINDER', label: 'Rappel amical d’échéance', desc: 'Courrier ou email prévenant le locataire avant l’échéance.' },
-  { value: 'LATE_NOTICE', label: 'Relance pour impayé', desc: 'Rappel ferme pour un loyer dépassé depuis quelques jours.' },
-  { value: 'FORMAL_NOTICE', label: 'Mise en demeure (8 jours)', desc: 'Lettre de mise en demeure formelle avant action judiciaire.' },
-  { value: 'RENEWAL_PROPOSAL', label: 'Proposition de renouvellement', desc: 'Offre de renouvellement de bail avec ajustement éventuel.' },
-  { value: 'MAINTENANCE_UPDATE', label: 'Point sur intervention de maintenance', desc: 'Information du locataire sur le passage d’un technicien.' },
+  {
+    value: 'RENT_REMINDER',
+    label: 'Rappel amical d’échéance',
+    desc: 'Courrier ou email prévenant le locataire avant l’échéance.',
+  },
+  {
+    value: 'LATE_NOTICE',
+    label: 'Relance pour impayé',
+    desc: 'Rappel ferme pour un loyer dépassé depuis quelques jours.',
+  },
+  {
+    value: 'FORMAL_NOTICE',
+    label: 'Mise en demeure (8 jours)',
+    desc: 'Lettre de mise en demeure formelle avant action judiciaire.',
+  },
+  {
+    value: 'RENEWAL_PROPOSAL',
+    label: 'Proposition de renouvellement',
+    desc: 'Offre de renouvellement de bail avec ajustement éventuel.',
+  },
+  {
+    value: 'MAINTENANCE_UPDATE',
+    label: 'Point sur intervention de maintenance',
+    desc: 'Information du locataire sur le passage d’un technicien.',
+  },
 ];
 
 export function AiAssistantPage() {
@@ -59,8 +81,7 @@ export function AiAssistantPage() {
     {
       id: 'welcome',
       sender: 'assistant',
-      content:
-        `Bonjour ! Je suis l’assistant intelligent DOMORA. J’analyse en direct les données de gestion de votre organisation (${activeOrganization.name}) pour répondre à vos questions financières, suivre vos impayés, détecter les vacances locatives ou générer vos communications officielles.`,
+      content: `Bonjour ! Je suis l’assistant intelligent DOMORA. J’analyse en direct les données de gestion de votre organisation (${activeOrganization.name}) pour répondre à vos questions financières, suivre vos impayés, détecter les vacances locatives ou générer vos communications officielles.`,
       timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -220,7 +241,9 @@ export function AiAssistantPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold">Conseiller Virtuel DOMORA</p>
-                  <p className="text-[11px] text-muted-foreground">Données en temps réel de {activeOrganization.name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Données en temps réel de {activeOrganization.name}
+                  </p>
                 </div>
               </div>
               <Badge className="text-[11px] border border-border bg-muted">
@@ -252,7 +275,9 @@ export function AiAssistantPage() {
                     {/* Affichage d'insights visuels si fournis */}
                     {msg.insights?.kind === 'RENT_SUMMARY' && (
                       <div className="mt-3 rounded-lg border border-border/50 bg-background/50 p-2 text-xs">
-                        <span className="font-semibold text-emerald-600">Rapport financier mensuel validé</span>
+                        <span className="font-semibold text-emerald-600">
+                          Rapport financier mensuel validé
+                        </span>
                       </div>
                     )}
                   </div>
@@ -327,10 +352,12 @@ export function AiAssistantPage() {
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground space-y-2 leading-relaxed">
                 <p>
-                  DOMORA AI interroge rigoureusement les données enregistrées dans votre organisation.
+                  DOMORA AI interroge rigoureusement les données enregistrées dans votre
+                  organisation.
                 </p>
                 <p>
-                  Aucune donnée n’est inventée ni hallucinée. Si un modèle de langage distant n’est pas configuré, le moteur déterministe interne produit la synthèse chiffrée exacte.
+                  Aucune donnée n’est inventée ni hallucinée. Si un modèle de langage distant n’est
+                  pas configuré, le moteur déterministe interne produit la synthèse chiffrée exacte.
                 </p>
               </CardContent>
             </Card>
@@ -347,13 +374,16 @@ export function AiAssistantPage() {
                 Paramètres du Courrier
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Sélectionnez le type de notification et complétez les informations pour générer un courrier juridique irréprochable.
+                Sélectionnez le type de notification et complétez les informations pour générer un
+                courrier juridique irréprochable.
               </p>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleGenerateDraft} className="space-y-4 text-sm">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">Type de notification</label>
+                  <label className="text-xs font-medium text-foreground">
+                    Type de notification
+                  </label>
                   <select
                     value={draftKind}
                     onChange={(e) => setDraftKind(e.target.value)}
@@ -369,7 +399,9 @@ export function AiAssistantPage() {
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Nom complet du locataire *</label>
+                    <label className="text-xs font-medium text-foreground">
+                      Nom complet du locataire *
+                    </label>
                     <Input
                       value={tenantName}
                       onChange={(e) => setTenantName(e.target.value)}
@@ -378,7 +410,9 @@ export function AiAssistantPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Désignation du logement</label>
+                    <label className="text-xs font-medium text-foreground">
+                      Désignation du logement
+                    </label>
                     <Input
                       value={unitName}
                       onChange={(e) => setUnitName(e.target.value)}
@@ -389,7 +423,9 @@ export function AiAssistantPage() {
 
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Montant ({activeOrganization.currency})</label>
+                    <label className="text-xs font-medium text-foreground">
+                      Montant ({activeOrganization.currency})
+                    </label>
                     <Input
                       type="number"
                       value={amountDue}
@@ -398,7 +434,9 @@ export function AiAssistantPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Date limite / Échéance</label>
+                    <label className="text-xs font-medium text-foreground">
+                      Date limite / Échéance
+                    </label>
                     <Input
                       type="date"
                       value={dueDate}
@@ -406,7 +444,9 @@ export function AiAssistantPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">N° Contrat de bail</label>
+                    <label className="text-xs font-medium text-foreground">
+                      N° Contrat de bail
+                    </label>
                     <Input
                       value={leaseNumber}
                       onChange={(e) => setLeaseNumber(e.target.value)}
@@ -416,7 +456,9 @@ export function AiAssistantPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-foreground">Précisions ou mentions particulières</label>
+                  <label className="text-xs font-medium text-foreground">
+                    Précisions ou mentions particulières
+                  </label>
                   <textarea
                     rows={3}
                     value={details}
@@ -448,7 +490,11 @@ export function AiAssistantPage() {
                   onClick={copyToClipboard}
                   className="h-8 px-2.5 text-xs inline-flex items-center gap-1.5"
                 >
-                  {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+                  {copied ? (
+                    <Check className="size-3.5 text-emerald-500" />
+                  ) : (
+                    <Copy className="size-3.5" />
+                  )}
                   {copied ? 'Copié !' : 'Copier le texte'}
                 </Button>
               )}
@@ -461,7 +507,8 @@ export function AiAssistantPage() {
               ) : (
                 <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
                   <FileText className="mb-2 size-8 text-muted-foreground/50" />
-                  Remplissez le formulaire et cliquez sur « Générer » pour obtenir votre lettre officielle personnalisée.
+                  Remplissez le formulaire et cliquez sur « Générer » pour obtenir votre lettre
+                  officielle personnalisée.
                 </div>
               )}
             </CardContent>

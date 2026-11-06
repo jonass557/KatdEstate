@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { 
-  Building2, 
-  MapPin, 
-  Phone, 
-  Plus, 
-  Trash2, 
-  Check, 
-  X, 
+import {
+  Building2,
+  MapPin,
+  Phone,
+  Plus,
+  Trash2,
+  Check,
+  X,
   Compass,
   Home,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -48,14 +48,39 @@ export interface NewListingPayload {
 
 const PROPERTY_CATEGORIES = [
   { id: 'CHAMBRE_SIMPLE', label: 'Chambre simple', icon: Home, defaultType: 'RENT' },
-  { id: 'CHAMBRE_MODERNE', label: 'Chambre moderne (avec douche interne)', icon: Home, defaultType: 'RENT' },
+  {
+    id: 'CHAMBRE_MODERNE',
+    label: 'Chambre moderne (avec douche interne)',
+    icon: Home,
+    defaultType: 'RENT',
+  },
   { id: 'STUDIO_MODERNE', label: 'Studio moderne', icon: Home, defaultType: 'RENT' },
-  { id: 'APPARTEMENT', label: 'Appartement standard (2, 3, 4+ pièces)', icon: Building2, defaultType: 'RENT' },
-  { id: 'APPARTEMENT_MEUBLE', label: 'Appartement meublé haut standing', icon: Sparkles, defaultType: 'RENT' },
-  { id: 'STUDIO_MEUBLE_JOURNALIER', label: 'Studio meublé (Location journalière / Nuitée)', icon: Sparkles, defaultType: 'RENT' },
+  {
+    id: 'APPARTEMENT',
+    label: 'Appartement standard (2, 3, 4+ pièces)',
+    icon: Building2,
+    defaultType: 'RENT',
+  },
+  {
+    id: 'APPARTEMENT_MEUBLE',
+    label: 'Appartement meublé haut standing',
+    icon: Sparkles,
+    defaultType: 'RENT',
+  },
+  {
+    id: 'STUDIO_MEUBLE_JOURNALIER',
+    label: 'Studio meublé (Location journalière / Nuitée)',
+    icon: Sparkles,
+    defaultType: 'RENT',
+  },
   { id: 'VILLA', label: 'Villa & Maison individuelle', icon: Building2, defaultType: 'SALE' },
   { id: 'LAND', label: 'Terrain foncier / Parcelle avec ACD', icon: MapPin, defaultType: 'SALE' },
-  { id: 'COMMERCIAL', label: 'Local commercial, Bureau ou Magasin', icon: Building2, defaultType: 'RENT' },
+  {
+    id: 'COMMERCIAL',
+    label: 'Local commercial, Bureau ou Magasin',
+    icon: Building2,
+    defaultType: 'RENT',
+  },
 ];
 
 export function PublishListingModal({
@@ -73,7 +98,9 @@ export function PublishListingModal({
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('STUDIO_MODERNE');
   const [transactionType, setTransactionType] = useState<'RENT' | 'SALE'>('RENT');
-  const [billingFrequency, setBillingFrequency] = useState<'DAILY' | 'MONTHLY' | 'TOTAL'>('MONTHLY');
+  const [billingFrequency, setBillingFrequency] = useState<'DAILY' | 'MONTHLY' | 'TOTAL'>(
+    'MONTHLY',
+  );
   const [priceMinor, setPriceMinor] = useState<number>(150000);
   const [currency, setCurrency] = useState('FCFA');
 
@@ -100,12 +127,14 @@ export function PublishListingModal({
   const [advanceMonths, setAdvanceMonths] = useState<number>(2);
 
   // Contact info
-  const [contactName, setContactName] = useState(user?.displayName || 'Propriétaire / Agent KatdEstate');
+  const [contactName, setContactName] = useState(
+    user?.displayName || 'Propriétaire / Agent KatdEstate',
+  );
   const [contactPhone, setContactPhone] = useState('+225 07 00 00 00 00');
   const [contactWhatsapp, setContactWhatsapp] = useState('+225 07 00 00 00 00');
   const [contactEmail, setContactEmail] = useState(user?.email || 'contact@katdestate.immo');
   const [description, setDescription] = useState(
-    'Très beau logement spacieux et lumineux dans un cadre paisible et sécurisé. Eau et électricité disponibles 24/7, gardiennage et parking disponible.'
+    'Très beau logement spacieux et lumineux dans un cadre paisible et sécurisé. Eau et électricité disponibles 24/7, gardiennage et parking disponible.',
   );
 
   if (!isOpen) return null;
@@ -131,7 +160,7 @@ export function PublishListingModal({
       () => {
         setGettingLocation(false);
         toast({ title: 'Impossible d’obtenir la position GPS', variant: 'error' });
-      }
+      },
     );
   };
 
@@ -148,7 +177,10 @@ export function PublishListingModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !priceMinor || photoUrls.length === 0) {
-      toast({ title: 'Veuillez remplir les champs obligatoires et au moins une photo.', variant: 'error' });
+      toast({
+        title: 'Veuillez remplir les champs obligatoires et au moins une photo.',
+        variant: 'error',
+      });
       return;
     }
 
@@ -198,7 +230,8 @@ export function PublishListingModal({
 
     toast({
       title: 'Annonce publiée avec succès !',
-      description: 'Votre bien est désormais visible sur la marketplace avec localisation GPS et contact direct.',
+      description:
+        'Votre bien est désormais visible sur la marketplace avec localisation GPS et contact direct.',
       variant: 'success',
     });
 
@@ -209,7 +242,6 @@ export function PublishListingModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
       <div className="bg-[#15042c] border border-purple-500/40 rounded-3xl p-6 sm:p-8 max-w-3xl w-full my-8 space-y-6 shadow-2xl text-white">
-        
         {/* Header */}
         <div className="flex items-center justify-between border-b border-purple-800/60 pb-4">
           <div className="flex items-center gap-3">
@@ -225,13 +257,15 @@ export function PublishListingModal({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-xl bg-purple-900/40 text-purple-300 hover:text-white">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-xl bg-purple-900/40 text-purple-300 hover:text-white"
+          >
             <X className="size-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          
           {/* 1. Catégorie & Type */}
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-[#00e676]">
@@ -415,7 +449,10 @@ export function PublishListingModal({
             {/* Thumbnails */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
               {photoUrls.map((url, idx) => (
-                <div key={idx} className="relative rounded-2xl overflow-hidden border border-purple-700/50 group h-24 bg-black/40">
+                <div
+                  key={idx}
+                  className="relative rounded-2xl overflow-hidden border border-purple-700/50 group h-24 bg-black/40"
+                >
                   <img src={url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                   {idx === 0 && (
                     <span className="absolute top-1 left-1 bg-[#00e676] text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded">
@@ -586,7 +623,9 @@ export function PublishListingModal({
 
           {/* Description */}
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-purple-200">Description détaillée du bien</label>
+            <label className="text-xs font-semibold text-purple-200">
+              Description détaillée du bien
+            </label>
             <textarea
               rows={3}
               value={description}
@@ -608,9 +647,7 @@ export function PublishListingModal({
               Publier l'Annonce en Ligne
             </Button>
           </div>
-
         </form>
-
       </div>
     </div>
   );

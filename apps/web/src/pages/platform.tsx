@@ -25,14 +25,39 @@ export function PlatformPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Plateforme" description="Organisations, abonnements et activité. Réservé au super administrateur." />
-      {error ? <p className="text-sm text-destructive">Accès refusé ou plateforme indisponible.</p> : null}
+      <PageHeader
+        title="Plateforme"
+        description="Organisations, abonnements et activité. Réservé au super administrateur."
+      />
+      {error ? (
+        <p className="text-sm text-destructive">Accès refusé ou plateforme indisponible.</p>
+      ) : null}
       {data ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Utilisateurs" value={String(data.users)} hint="Comptes" icon={Building2} />
-          <StatCard label="Organisations" value={String(data.organizations)} hint="Tous statuts" icon={Building2} />
-          <StatCard label="Essais en cours" value={String(data.trialing)} hint={`${data.subscriptions} abonnements`} icon={Building2} />
-          <StatCard label="MRR" value={data.mrrMinor.toLocaleString('fr-FR')} hint="Somme des plans actifs" icon={Building2} />
+          <StatCard
+            label="Utilisateurs"
+            value={String(data.users)}
+            hint="Comptes"
+            icon={Building2}
+          />
+          <StatCard
+            label="Organisations"
+            value={String(data.organizations)}
+            hint="Tous statuts"
+            icon={Building2}
+          />
+          <StatCard
+            label="Essais en cours"
+            value={String(data.trialing)}
+            hint={`${data.subscriptions} abonnements`}
+            icon={Building2}
+          />
+          <StatCard
+            label="MRR"
+            value={data.mrrMinor.toLocaleString('fr-FR')}
+            hint="Somme des plans actifs"
+            icon={Building2}
+          />
         </div>
       ) : null}
     </div>

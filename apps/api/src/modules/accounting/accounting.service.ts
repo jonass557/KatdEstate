@@ -30,13 +30,21 @@ export async function createTransaction(req: Request, res: Response): Promise<vo
 }
 
 export async function listTransactions(req: Request, res: Response): Promise<void> {
-  const query = req.query as unknown as Record<string, unknown> & { page: number; pageSize: number; order: 'asc' | 'desc'; sort?: string };
+  const query = req.query as unknown as Record<string, unknown> & {
+    page: number;
+    pageSize: number;
+    order: 'asc' | 'desc';
+    sort?: string;
+  };
   const filter: Record<string, unknown> = { organizationId: org(req), deletedAt: null };
   for (const key of ['direction', 'category', 'propertyId', 'status'] as const) {
     if (query[key]) filter[key] = query[key];
   }
   if (query.from || query.to) {
-    filter.date = { ...(query.from ? { $gte: query.from } : {}), ...(query.to ? { $lte: query.to } : {}) };
+    filter.date = {
+      ...(query.from ? { $gte: query.from } : {}),
+      ...(query.to ? { $lte: query.to } : {}),
+    };
   }
   const page = await paginate(Transaction, filter, query, 'transaction');
   res.locals.data = page.items;
@@ -62,7 +70,11 @@ export async function updateTransaction(req: Request, res: Response): Promise<vo
 }
 
 export async function approveExpense(req: Request, res: Response): Promise<void> {
-  const transaction = await Transaction.findOne({ _id: req.params.id, organizationId: org(req), deletedAt: null });
+  const transaction = await Transaction.findOne({
+    _id: req.params.id,
+    organizationId: org(req),
+    deletedAt: null,
+  });
   if (!transaction) throw notFound('Transaction');
   transaction.status = 'APPROVED';
   if (req.user?.id) transaction.approvedBy = new Types.ObjectId(req.user.id);
@@ -81,7 +93,11 @@ export async function approveExpense(req: Request, res: Response): Promise<void>
 }
 
 export async function rejectExpense(req: Request, res: Response): Promise<void> {
-  const transaction = await Transaction.findOne({ _id: req.params.id, organizationId: org(req), deletedAt: null });
+  const transaction = await Transaction.findOne({
+    _id: req.params.id,
+    organizationId: org(req),
+    deletedAt: null,
+  });
   if (!transaction) throw notFound('Transaction');
   transaction.status = 'REJECTED';
   transaction.rejectionReason = req.body.reason;
@@ -99,7 +115,11 @@ export async function rejectExpense(req: Request, res: Response): Promise<void> 
 }
 
 export async function payExpense(req: Request, res: Response): Promise<void> {
-  const transaction = await Transaction.findOne({ _id: req.params.id, organizationId: org(req), deletedAt: null });
+  const transaction = await Transaction.findOne({
+    _id: req.params.id,
+    organizationId: org(req),
+    deletedAt: null,
+  });
   if (!transaction) throw notFound('Transaction');
   transaction.status = 'PAID';
   await transaction.save();
@@ -152,11 +172,17 @@ async function computeReport(
     ...(query.propertyId ? { propertyId: new Types.ObjectId(query.propertyId) } : {}),
   };
 
-  const grouped = await Transaction.aggregate<{ _id: { direction: string; month: string }; total: number }>([
+  const grouped = await Transaction.aggregate<{
+    _id: { direction: string; month: string };
+    total: number;
+  }>([
     { $match: match },
     {
       $group: {
-        _id: { direction: '$direction', month: { $dateToString: { format: '%Y-%m', date: '$date' } } },
+        _id: {
+          direction: '$direction',
+          month: { $dateToString: { format: '%Y-%m', date: '$date' } },
+        },
         total: { $sum: '$amountMinor' },
       },
     },
@@ -172,28 +198,63 @@ async function computeReport(
     { $group: { _id: '$propertyId', total: { $sum: '$amountMinor' } } },
   ]);
 
-  const incomeMinor = grouped.filter((row) => row._id.direction === 'INCOME').reduce((sum, row) => sum + row.total, 0);
-  const expenseMinor = grouped.filter((row) => row._id.direction === 'EXPENSE').reduce((sum, row) => sum + row.total, 0);
+  const incomeMinor = grouped
+    .filter((row) => row._id.direction === 'INCOME')
+    .reduce((sum, row) => sum + row.total, 0);
+  const expenseMinor = grouped
+    .filter((row) => row._id.direction === 'EXPENSE')
+    .reduce((sum, row) => sum + row.total, 0);
 
-  const unitFilter = { organizationId, deletedAt: null, ...(query.propertyId ? { propertyId: query.propertyId } : {}) };
+  const unitFilter = {
+    organizationId,
+    deletedAt: null,
+    ...(query.propertyId ? { propertyId: query.propertyId } : {}),
+  };
   const units = await Unit.countDocuments(unitFilter);
   const occupied = await Unit.countDocuments({ ...unitFilter, status: 'OCCUPIED' });
 
   const schedules = await RentSchedule.aggregate<{ expected: number; overdue: number }>([
-    { $match: { organizationId: new Types.ObjectId(organizationId), dueDate: { $gte: query.from, $lte: query.to }, status: { $ne: 'CANCELLED' } } },
-    { $group: { _id: null, expected: { $sum: '$amountDueMinor' }, overdue: { $sum: { $cond: [{ $eq: ['$status', 'OVERDUE'] }, { $subtract: ['$amountDueMinor', '$amountPaidMinor'] }, 0] } } } },
+    {
+      $match: {
+        organizationId: new Types.ObjectId(organizationId),
+        dueDate: { $gte: query.from, $lte: query.to },
+        status: { $ne: 'CANCELLED' },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        expected: { $sum: '$amountDueMinor' },
+        overdue: {
+          $sum: {
+            $cond: [
+              { $eq: ['$status', 'OVERDUE'] },
+              { $subtract: ['$amountDueMinor', '$amountPaidMinor'] },
+              0,
+            ],
+          },
+        },
+      },
+    },
   ]);
 
   return {
     incomeMinor,
     expenseMinor,
     netMinor: incomeMinor - expenseMinor,
-    incomeByMonth: grouped.filter((row) => row._id.direction === 'INCOME').map((row) => ({ month: row._id.month, total: row.total })),
-    expenseByMonth: grouped.filter((row) => row._id.direction === 'EXPENSE').map((row) => ({ month: row._id.month, total: row.total })),
+    incomeByMonth: grouped
+      .filter((row) => row._id.direction === 'INCOME')
+      .map((row) => ({ month: row._id.month, total: row.total })),
+    expenseByMonth: grouped
+      .filter((row) => row._id.direction === 'EXPENSE')
+      .map((row) => ({ month: row._id.month, total: row.total })),
     expenseByCategory: byCategory.map((row) => ({ category: row._id, total: row.total })),
     incomeByProperty: byProperty.map((row) => ({ propertyId: String(row._id), total: row.total })),
     occupancyRate: units === 0 ? 0 : Math.round((occupied / units) * 1000) / 10,
-    arrearsRate: !schedules[0] || schedules[0].expected === 0 ? 0 : Math.round((schedules[0].overdue / schedules[0].expected) * 1000) / 10,
+    arrearsRate:
+      !schedules[0] || schedules[0].expected === 0
+        ? 0
+        : Math.round((schedules[0].overdue / schedules[0].expected) * 1000) / 10,
   };
 }
 
@@ -216,7 +277,9 @@ export async function forecast(req: Request, res: Response): Promise<void> {
     {
       $group: {
         _id: { $dateToString: { format: '%Y-%m', date: '$dueDate' } },
-        total: { $sum: { $subtract: [{ $add: ['$amountDueMinor', '$penaltyMinor'] }, '$amountPaidMinor'] } },
+        total: {
+          $sum: { $subtract: [{ $add: ['$amountDueMinor', '$penaltyMinor'] }, '$amountPaidMinor'] },
+        },
       },
     },
     { $sort: { _id: 1 } },
@@ -252,9 +315,17 @@ export async function reportPdf(req: Request, res: Response): Promise<void> {
 }
 
 export async function exportTransactions(req: Request, res: Response): Promise<void> {
-  const transactions = await Transaction.find({ organizationId: org(req), deletedAt: null }).sort({ date: -1 }).limit(5_000);
+  const transactions = await Transaction.find({ organizationId: org(req), deletedAt: null })
+    .sort({ date: -1 })
+    .limit(5_000);
   const rows = transactions.map((transaction) =>
-    [transaction.date.toISOString().slice(0, 10), transaction.direction, transaction.category, transaction.amountMinor, transaction.label.replace(/"/g, '""')].join(','),
+    [
+      transaction.date.toISOString().slice(0, 10),
+      transaction.direction,
+      transaction.category,
+      transaction.amountMinor,
+      transaction.label.replace(/"/g, '""'),
+    ].join(','),
   );
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.send(`\uFEFFdate,sens,categorie,montant,libelle\n${rows.join('\n')}`);

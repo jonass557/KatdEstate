@@ -6,7 +6,12 @@ const timestamps = true;
 // 1. Configuration Ikeepay
 const ikeepayConfigSchema = new Schema(
   {
-    organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
+      index: true,
+    },
     publicKey: { type: String, required: true, trim: true },
     secretKey: { type: String, required: true, trim: true },
     environment: { type: String, enum: ['SANDBOX', 'LIVE'], default: 'LIVE' },
@@ -22,7 +27,12 @@ ikeepayConfigSchema.index({ organizationId: 1 }, { unique: true });
 // 2. Journal des transactions Ikeepay
 const ikeepayTransactionSchema = new Schema(
   {
-    organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
+      index: true,
+    },
     external_reference: { type: String, required: true, unique: true, index: true },
     provider_reference: { type: String, index: true },
     type: { type: String, enum: ['payin', 'payout'], required: true },
@@ -31,10 +41,21 @@ const ikeepayTransactionSchema = new Schema(
     country: { type: String, required: true, default: 'CI' },
     phoneNumber: { type: String, required: true },
     operator: { type: String, required: true },
-    status: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending', index: true },
+    status: {
+      type: String,
+      enum: ['pending', 'completed', 'failed'],
+      default: 'pending',
+      index: true,
+    },
     purpose: {
       type: String,
-      enum: ['RENT_PAYMENT', 'CHEFFERIE_COMMISSION', 'SUBSCRIPTION_PAYMENT', 'MARKETPLACE_DEPOSIT', 'OTHER'],
+      enum: [
+        'RENT_PAYMENT',
+        'CHEFFERIE_COMMISSION',
+        'SUBSCRIPTION_PAYMENT',
+        'MARKETPLACE_DEPOSIT',
+        'OTHER',
+      ],
       required: true,
     },
     referenceId: { type: String },
@@ -49,8 +70,12 @@ const ikeepayTransactionSchema = new Schema(
 
 ikeepayTransactionSchema.index({ organizationId: 1, createdAt: -1 });
 
-export type IkeepayConfigDocument = InferSchemaType<typeof ikeepayConfigSchema> & { _id: mongoose.Types.ObjectId };
-export type IkeepayTransactionDocument = InferSchemaType<typeof ikeepayTransactionSchema> & { _id: mongoose.Types.ObjectId };
+export type IkeepayConfigDocument = InferSchemaType<typeof ikeepayConfigSchema> & {
+  _id: mongoose.Types.ObjectId;
+};
+export type IkeepayTransactionDocument = InferSchemaType<typeof ikeepayTransactionSchema> & {
+  _id: mongoose.Types.ObjectId;
+};
 
 export const IkeepayConfig =
   (mongoose.models.IkeepayConfig as mongoose.Model<IkeepayConfigDocument>) ??

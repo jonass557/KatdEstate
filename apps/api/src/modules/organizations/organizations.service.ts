@@ -43,14 +43,27 @@ export async function listUserOrganizations(req: Request, res: Response): Promis
 
 export async function createOrganization(req: Request, res: Response): Promise<void> {
   const userId = req.user!.id;
-  const { name, country, currency, timezone, locale, logo, address, phone, email, notificationSettings, billingSettings } = req.body;
+  const {
+    name,
+    country,
+    currency,
+    timezone,
+    locale,
+    logo,
+    address,
+    phone,
+    email,
+    notificationSettings,
+    billingSettings,
+  } = req.body;
 
-  const baseSlug = name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '') || 'organisation';
+  const baseSlug =
+    name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'organisation';
   const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 8)}`;
 
   const organization = await Organization.create({
@@ -168,7 +181,11 @@ export async function listMembers(req: Request, res: Response): Promise<void> {
     .lean();
 
   res.locals.data = members.map((m) => {
-    const user = m.userId as unknown as { _id?: unknown; displayName?: string; emailNormalized?: string };
+    const user = m.userId as unknown as {
+      _id?: unknown;
+      displayName?: string;
+      emailNormalized?: string;
+    };
     return {
       id: String(m._id),
       userId: user?._id ? String(user._id) : String(m.userId),

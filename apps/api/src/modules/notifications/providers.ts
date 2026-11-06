@@ -31,16 +31,25 @@ export class EmailProvider implements NotificationProvider {
 
   async send(message: NotificationMessage): Promise<DeliveryResult> {
     if (!this.config.mail.host) {
-      console.log(`[EMAIL NOTIFICATION DISPATCHED] To: ${message.to} | Subject: ${message.subject}\nBody: ${message.body}`);
+      console.log(
+        `[EMAIL NOTIFICATION DISPATCHED] To: ${message.to} | Subject: ${message.subject}\nBody: ${message.body}`,
+      );
       return { status: 'SENT', detail: 'Email expédié via KatdEstate Cloud Mailer' };
     }
     const transport = nodemailer.createTransport({
       host: this.config.mail.host,
       port: this.config.mail.port,
       secure: this.config.mail.secure,
-      ...(this.config.mail.user ? { auth: { user: this.config.mail.user, pass: this.config.mail.password } } : {}),
+      ...(this.config.mail.user
+        ? { auth: { user: this.config.mail.user, pass: this.config.mail.password } }
+        : {}),
     });
-    await transport.sendMail({ from: this.config.mail.from, to: message.to, subject: message.subject, text: message.body });
+    await transport.sendMail({
+      from: this.config.mail.from,
+      to: message.to,
+      subject: message.subject,
+      text: message.body,
+    });
     return { status: 'SENT' };
   }
 }

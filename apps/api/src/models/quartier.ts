@@ -22,7 +22,7 @@ const geoCitySchema = new Schema(
     country: { type: String, required: true, uppercase: true, length: 2, default: 'SN' },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps }
+  { timestamps },
 );
 geoCitySchema.index({ name: 1, country: 1 }, { unique: true });
 
@@ -32,7 +32,7 @@ const geoDistrictSchema = new Schema(
     name: { type: String, required: true, trim: true, maxlength: 120 },
     code: { type: String, trim: true, uppercase: true, maxlength: 20 },
   },
-  { timestamps }
+  { timestamps },
 );
 geoDistrictSchema.index({ cityId: 1, name: 1 }, { unique: true });
 
@@ -44,13 +44,18 @@ const geoNeighborhoodSchema = new Schema(
     code: { type: String, trim: true, uppercase: true, maxlength: 20 },
     leaderId: { type: Schema.Types.ObjectId, ref: 'User' },
   },
-  { timestamps }
+  { timestamps },
 );
 geoNeighborhoodSchema.index({ cityId: 1, name: 1 });
 
 const geoBlockSchema = new Schema(
   {
-    neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', required: true, index: true },
+    neighborhoodId: {
+      type: Schema.Types.ObjectId,
+      ref: 'GeoNeighborhood',
+      required: true,
+      index: true,
+    },
     name: { type: String, required: true, trim: true, maxlength: 120 },
     code: { type: String, required: true, trim: true, uppercase: true, maxlength: 30 },
     blockLeaderId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
@@ -69,7 +74,7 @@ const geoBlockSchema = new Schema(
       pendingValidations: { type: Number, default: 0 },
     },
   },
-  { timestamps }
+  { timestamps },
 );
 geoBlockSchema.index({ neighborhoodId: 1, code: 1 }, { unique: true });
 
@@ -82,7 +87,12 @@ const sectorAssignmentSchema = new Schema(
     districtId: { type: Schema.Types.ObjectId, ref: 'GeoDistrict' },
     neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', required: true },
     blockId: { type: Schema.Types.ObjectId, ref: 'GeoBlock' },
-    status: { type: String, enum: ['ACTIVE', 'SUSPENDED', 'TRANSFERRED'], default: 'ACTIVE', index: true },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'SUSPENDED', 'TRANSFERRED'],
+      default: 'ACTIVE',
+      index: true,
+    },
     assignedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     startDate: { type: Date, default: Date.now },
     endDate: { type: Date },
@@ -99,7 +109,7 @@ const sectorAssignmentSchema = new Schema(
       default: [],
     },
   },
-  { timestamps }
+  { timestamps },
 );
 sectorAssignmentSchema.index({ userId: 1, status: 1 });
 
@@ -109,7 +119,12 @@ const quartierResidenceSchema = new Schema(
     residenceDomoraId: { type: String, required: true, unique: true, uppercase: true, index: true },
     cityId: { type: Schema.Types.ObjectId, ref: 'GeoCity', required: true, index: true },
     districtId: { type: Schema.Types.ObjectId, ref: 'GeoDistrict' },
-    neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', required: true, index: true },
+    neighborhoodId: {
+      type: Schema.Types.ObjectId,
+      ref: 'GeoNeighborhood',
+      required: true,
+      index: true,
+    },
     blockId: { type: Schema.Types.ObjectId, ref: 'GeoBlock', required: true, index: true },
     buildingType: { type: String, enum: RESIDENCE_TYPES, required: true },
     address: { type: String, required: true, trim: true, maxlength: 240 },
@@ -132,7 +147,11 @@ const quartierResidenceSchema = new Schema(
       index: true,
     },
     registeredBy: { type: Schema.Types.ObjectId, ref: 'User', index: true },
-    registeredRole: { type: String, enum: ['BLOCK_LEADER', 'RESIDENT', 'SUPER_ADMIN'], required: true },
+    registeredRole: {
+      type: String,
+      enum: ['BLOCK_LEADER', 'RESIDENT', 'SUPER_ADMIN'],
+      required: true,
+    },
     validatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     validatedAt: { type: Date },
     rejectionReason: { type: String, maxlength: 1_000 },
@@ -141,7 +160,7 @@ const quartierResidenceSchema = new Schema(
     notes: { type: String, maxlength: 2_000 },
     deletedAt: { type: Date },
   },
-  { timestamps }
+  { timestamps },
 );
 quartierResidenceSchema.index({ blockId: 1, address: 1 });
 quartierResidenceSchema.index({ neighborhoodId: 1, censusStatus: 1 });
@@ -149,23 +168,38 @@ quartierResidenceSchema.index({ neighborhoodId: 1, censusStatus: 1 });
 // 4. Logements d'un immeuble (Dwelling)
 const quartierDwellingSchema = new Schema(
   {
-    residenceId: { type: Schema.Types.ObjectId, ref: 'QuartierResidence', required: true, index: true },
+    residenceId: {
+      type: Schema.Types.ObjectId,
+      ref: 'QuartierResidence',
+      required: true,
+      index: true,
+    },
     dwellingNumber: { type: String, required: true, trim: true, maxlength: 80 },
     floor: { type: Number },
     occupancyStatus: { type: String, enum: RESIDENCE_OCCUPANCY_STATUSES, default: 'OCCUPIED' },
     roomsCount: { type: Number, min: 1 },
   },
-  { timestamps }
+  { timestamps },
 );
 quartierDwellingSchema.index({ residenceId: 1, dwellingNumber: 1 }, { unique: true });
 
 // 5. Foyer & Habitant (Déclaration Privacy-first)
 const residentHouseholdSchema = new Schema(
   {
-    residenceId: { type: Schema.Types.ObjectId, ref: 'QuartierResidence', required: true, index: true },
+    residenceId: {
+      type: Schema.Types.ObjectId,
+      ref: 'QuartierResidence',
+      required: true,
+      index: true,
+    },
     dwellingId: { type: Schema.Types.ObjectId, ref: 'QuartierDwelling', index: true },
     blockId: { type: Schema.Types.ObjectId, ref: 'GeoBlock', required: true, index: true },
-    neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', required: true, index: true },
+    neighborhoodId: {
+      type: Schema.Types.ObjectId,
+      ref: 'GeoNeighborhood',
+      required: true,
+      index: true,
+    },
     headOfHouseholdId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     fullName: { type: String, required: true, trim: true, maxlength: 160 },
     phone: { type: String, required: true, trim: true, maxlength: 32 },
@@ -181,24 +215,38 @@ const residentHouseholdSchema = new Schema(
     isMovedOut: { type: Boolean, default: false, index: true },
     movedOutDate: { type: Date },
   },
-  { timestamps }
+  { timestamps },
 );
 residentHouseholdSchema.index({ blockId: 1, isMovedOut: 1 });
 
 // 6. Demandes de Recensement & Workflow
 const censusSubmissionSchema = new Schema(
   {
-    residenceId: { type: Schema.Types.ObjectId, ref: 'QuartierResidence', required: true, index: true },
+    residenceId: {
+      type: Schema.Types.ObjectId,
+      ref: 'QuartierResidence',
+      required: true,
+      index: true,
+    },
     householdId: { type: Schema.Types.ObjectId, ref: 'ResidentHousehold', index: true },
     blockId: { type: Schema.Types.ObjectId, ref: 'GeoBlock', required: true, index: true },
     submittedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    submissionType: { type: String, enum: ['SELF_REGISTRATION', 'CHEF_REGISTRATION'], default: 'SELF_REGISTRATION' },
-    status: { type: String, enum: ['PENDING', 'VALIDATED', 'REJECTED', 'DISPUTED'], default: 'PENDING', index: true },
+    submissionType: {
+      type: String,
+      enum: ['SELF_REGISTRATION', 'CHEF_REGISTRATION'],
+      default: 'SELF_REGISTRATION',
+    },
+    status: {
+      type: String,
+      enum: ['PENDING', 'VALIDATED', 'REJECTED', 'DISPUTED'],
+      default: 'PENDING',
+      index: true,
+    },
     decisionNote: { type: String, maxlength: 1_000 },
     reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     reviewedAt: { type: Date },
   },
-  { timestamps }
+  { timestamps },
 );
 censusSubmissionSchema.index({ blockId: 1, status: 1 });
 
@@ -209,7 +257,12 @@ const incidentReportSchema = new Schema(
     category: { type: String, enum: INCIDENT_CATEGORIES, required: true, index: true },
     description: { type: String, required: true, maxlength: 4_000 },
     severity: { type: String, enum: INCIDENT_SEVERITIES, default: 'MEDIUM', index: true },
-    neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', required: true, index: true },
+    neighborhoodId: {
+      type: Schema.Types.ObjectId,
+      ref: 'GeoNeighborhood',
+      required: true,
+      index: true,
+    },
     blockId: { type: Schema.Types.ObjectId, ref: 'GeoBlock', index: true },
     locationText: { type: String, trim: true, maxlength: 240 },
     photoUrl: { type: String, trim: true },
@@ -222,7 +275,7 @@ const incidentReportSchema = new Schema(
     handledBy: { type: Schema.Types.ObjectId, ref: 'User' },
     handledAt: { type: Date },
   },
-  { timestamps }
+  { timestamps },
 );
 incidentReportSchema.index({ neighborhoodId: 1, status: 1 });
 
@@ -233,13 +286,22 @@ const communityAnnouncementSchema = new Schema(
     type: { type: String, enum: ANNOUNCEMENT_TYPES, default: 'INFO', required: true },
     title: { type: String, required: true, trim: true, maxlength: 200 },
     message: { type: String, required: true, maxlength: 4_000 },
-    neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', required: true, index: true },
+    neighborhoodId: {
+      type: Schema.Types.ObjectId,
+      ref: 'GeoNeighborhood',
+      required: true,
+      index: true,
+    },
     blockId: { type: Schema.Types.ObjectId, ref: 'GeoBlock', index: true },
     authorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    authorRole: { type: String, enum: ['NEIGHBORHOOD_LEADER', 'BLOCK_LEADER', 'SUPER_ADMIN'], required: true },
+    authorRole: {
+      type: String,
+      enum: ['NEIGHBORHOOD_LEADER', 'BLOCK_LEADER', 'SUPER_ADMIN'],
+      required: true,
+    },
     eventDate: { type: Date },
   },
-  { timestamps }
+  { timestamps },
 );
 communityAnnouncementSchema.index({ neighborhoodId: 1, scope: 1, createdAt: -1 });
 
@@ -254,7 +316,7 @@ const emergencyContactSchema = new Schema(
     districtId: { type: Schema.Types.ObjectId, ref: 'GeoDistrict' },
     neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', index: true },
   },
-  { timestamps }
+  { timestamps },
 );
 
 // 10. Formules d'Abonnement Chefs de Secteur
@@ -273,7 +335,7 @@ const quartierPlanSchema = new Schema(
     interactiveMap: { type: Boolean, required: true, default: true },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps }
+  { timestamps },
 );
 
 const quartierSubscriptionSchema = new Schema(
@@ -281,7 +343,12 @@ const quartierSubscriptionSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     role: { type: String, enum: ['NEIGHBORHOOD_LEADER', 'BLOCK_LEADER'], required: true },
     planCode: { type: String, enum: QUARTIER_PLAN_CODES, required: true },
-    status: { type: String, enum: ['ACTIVE', 'EXPIRED', 'SUSPENDED'], default: 'ACTIVE', index: true },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'EXPIRED', 'SUSPENDED'],
+      default: 'ACTIVE',
+      index: true,
+    },
     period: { type: String, enum: ['MONTHLY', 'QUARTERLY', 'YEARLY'], default: 'MONTHLY' },
     expiresAt: { type: Date, required: true },
     paymentsHistory: [
@@ -294,23 +361,47 @@ const quartierSubscriptionSchema = new Schema(
       },
     ],
   },
-  { timestamps }
+  { timestamps },
 );
 
 export type GeoCityDocument = InferSchemaType<typeof geoCitySchema> & { _id: Types.ObjectId };
-export type GeoDistrictDocument = InferSchemaType<typeof geoDistrictSchema> & { _id: Types.ObjectId };
-export type GeoNeighborhoodDocument = InferSchemaType<typeof geoNeighborhoodSchema> & { _id: Types.ObjectId };
+export type GeoDistrictDocument = InferSchemaType<typeof geoDistrictSchema> & {
+  _id: Types.ObjectId;
+};
+export type GeoNeighborhoodDocument = InferSchemaType<typeof geoNeighborhoodSchema> & {
+  _id: Types.ObjectId;
+};
 export type GeoBlockDocument = InferSchemaType<typeof geoBlockSchema> & { _id: Types.ObjectId };
-export type SectorAssignmentDocument = InferSchemaType<typeof sectorAssignmentSchema> & { _id: Types.ObjectId };
-export type QuartierResidenceDocument = InferSchemaType<typeof quartierResidenceSchema> & { _id: Types.ObjectId };
-export type QuartierDwellingDocument = InferSchemaType<typeof quartierDwellingSchema> & { _id: Types.ObjectId };
-export type ResidentHouseholdDocument = InferSchemaType<typeof residentHouseholdSchema> & { _id: Types.ObjectId };
-export type CensusSubmissionDocument = InferSchemaType<typeof censusSubmissionSchema> & { _id: Types.ObjectId };
-export type IncidentReportDocument = InferSchemaType<typeof incidentReportSchema> & { _id: Types.ObjectId };
-export type CommunityAnnouncementDocument = InferSchemaType<typeof communityAnnouncementSchema> & { _id: Types.ObjectId };
-export type EmergencyContactDocument = InferSchemaType<typeof emergencyContactSchema> & { _id: Types.ObjectId };
-export type QuartierPlanDocument = InferSchemaType<typeof quartierPlanSchema> & { _id: Types.ObjectId };
-export type QuartierSubscriptionDocument = InferSchemaType<typeof quartierSubscriptionSchema> & { _id: Types.ObjectId };
+export type SectorAssignmentDocument = InferSchemaType<typeof sectorAssignmentSchema> & {
+  _id: Types.ObjectId;
+};
+export type QuartierResidenceDocument = InferSchemaType<typeof quartierResidenceSchema> & {
+  _id: Types.ObjectId;
+};
+export type QuartierDwellingDocument = InferSchemaType<typeof quartierDwellingSchema> & {
+  _id: Types.ObjectId;
+};
+export type ResidentHouseholdDocument = InferSchemaType<typeof residentHouseholdSchema> & {
+  _id: Types.ObjectId;
+};
+export type CensusSubmissionDocument = InferSchemaType<typeof censusSubmissionSchema> & {
+  _id: Types.ObjectId;
+};
+export type IncidentReportDocument = InferSchemaType<typeof incidentReportSchema> & {
+  _id: Types.ObjectId;
+};
+export type CommunityAnnouncementDocument = InferSchemaType<typeof communityAnnouncementSchema> & {
+  _id: Types.ObjectId;
+};
+export type EmergencyContactDocument = InferSchemaType<typeof emergencyContactSchema> & {
+  _id: Types.ObjectId;
+};
+export type QuartierPlanDocument = InferSchemaType<typeof quartierPlanSchema> & {
+  _id: Types.ObjectId;
+};
+export type QuartierSubscriptionDocument = InferSchemaType<typeof quartierSubscriptionSchema> & {
+  _id: Types.ObjectId;
+};
 
 function modelOf<T>(name: string, schema: Schema): Model<T> {
   return (models[name] as Model<T> | undefined) ?? model<T>(name, schema);
@@ -318,15 +409,45 @@ function modelOf<T>(name: string, schema: Schema): Model<T> {
 
 export const GeoCity = modelOf<GeoCityDocument>('GeoCity', geoCitySchema);
 export const GeoDistrict = modelOf<GeoDistrictDocument>('GeoDistrict', geoDistrictSchema);
-export const GeoNeighborhood = modelOf<GeoNeighborhoodDocument>('GeoNeighborhood', geoNeighborhoodSchema);
+export const GeoNeighborhood = modelOf<GeoNeighborhoodDocument>(
+  'GeoNeighborhood',
+  geoNeighborhoodSchema,
+);
 export const GeoBlock = modelOf<GeoBlockDocument>('GeoBlock', geoBlockSchema);
-export const SectorAssignment = modelOf<SectorAssignmentDocument>('SectorAssignment', sectorAssignmentSchema);
-export const QuartierResidence = modelOf<QuartierResidenceDocument>('QuartierResidence', quartierResidenceSchema);
-export const QuartierDwelling = modelOf<QuartierDwellingDocument>('QuartierDwelling', quartierDwellingSchema);
-export const ResidentHousehold = modelOf<ResidentHouseholdDocument>('ResidentHousehold', residentHouseholdSchema);
-export const CensusSubmission = modelOf<CensusSubmissionDocument>('CensusSubmission', censusSubmissionSchema);
-export const IncidentReport = modelOf<IncidentReportDocument>('IncidentReport', incidentReportSchema);
-export const CommunityAnnouncement = modelOf<CommunityAnnouncementDocument>('CommunityAnnouncement', communityAnnouncementSchema);
-export const EmergencyContact = modelOf<EmergencyContactDocument>('EmergencyContact', emergencyContactSchema);
+export const SectorAssignment = modelOf<SectorAssignmentDocument>(
+  'SectorAssignment',
+  sectorAssignmentSchema,
+);
+export const QuartierResidence = modelOf<QuartierResidenceDocument>(
+  'QuartierResidence',
+  quartierResidenceSchema,
+);
+export const QuartierDwelling = modelOf<QuartierDwellingDocument>(
+  'QuartierDwelling',
+  quartierDwellingSchema,
+);
+export const ResidentHousehold = modelOf<ResidentHouseholdDocument>(
+  'ResidentHousehold',
+  residentHouseholdSchema,
+);
+export const CensusSubmission = modelOf<CensusSubmissionDocument>(
+  'CensusSubmission',
+  censusSubmissionSchema,
+);
+export const IncidentReport = modelOf<IncidentReportDocument>(
+  'IncidentReport',
+  incidentReportSchema,
+);
+export const CommunityAnnouncement = modelOf<CommunityAnnouncementDocument>(
+  'CommunityAnnouncement',
+  communityAnnouncementSchema,
+);
+export const EmergencyContact = modelOf<EmergencyContactDocument>(
+  'EmergencyContact',
+  emergencyContactSchema,
+);
 export const QuartierPlan = modelOf<QuartierPlanDocument>('QuartierPlan', quartierPlanSchema);
-export const QuartierSubscription = modelOf<QuartierSubscriptionDocument>('QuartierSubscription', quartierSubscriptionSchema);
+export const QuartierSubscription = modelOf<QuartierSubscriptionDocument>(
+  'QuartierSubscription',
+  quartierSubscriptionSchema,
+);

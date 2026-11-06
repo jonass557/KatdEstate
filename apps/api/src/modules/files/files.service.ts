@@ -18,12 +18,7 @@ import { sendSuccess } from '../../common/http.js';
  * n'est jamais dans le nom de fichier.
  */
 
-const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'application/pdf',
-]);
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
 const MAX_BYTES = 8 * 1024 * 1024;
 
 const fileSchema = new Schema(
@@ -41,7 +36,8 @@ fileSchema.index({ organizationId: 1, createdAt: -1 }, { name: 'files_org_date' 
 
 export type StoredFileDocument = InferSchemaType<typeof fileSchema> & { _id: Types.ObjectId };
 export const StoredFile =
-  (models.StoredFile as Model<StoredFileDocument>) ?? model<StoredFileDocument>('StoredFile', fileSchema);
+  (models.StoredFile as Model<StoredFileDocument>) ??
+  model<StoredFileDocument>('StoredFile', fileSchema);
 
 export const upload = multer({
   storage: multer.memoryStorage(),
@@ -84,7 +80,11 @@ export async function persistFiles(
 }
 
 /** N'envoie un fichier que s'il appartient à l'organisation de la requête. */
-export async function sendStoredFile(res: Response, organizationId: string, fileId: string): Promise<void> {
+export async function sendStoredFile(
+  res: Response,
+  organizationId: string,
+  fileId: string,
+): Promise<void> {
   const file = await StoredFile.findOne({ _id: fileId, organizationId });
   if (!file) throw new AppError('NOT_FOUND', 'Fichier introuvable.', 404);
 
@@ -101,14 +101,14 @@ export const uploadFiles: RequestHandler = (req, res, next) => {
     if (!files || files.length === 0) {
       throw new AppError('VALIDATION_ERROR', 'Aucun fichier reçu.', 422);
     }
-    const stored = await persistFiles(
-      req.organizationContext!.organizationId,
-      files,
-      req.user?.id,
-    );
+    const stored = await persistFiles(req.organizationContext!.organizationId, files, req.user?.id);
     sendSuccess(
       res,
-      stored.map((file) => ({ id: String(file._id), name: file.originalName, mimeType: file.mimeType })),
+      stored.map((file) => ({
+        id: String(file._id),
+        name: file.originalName,
+        mimeType: file.mimeType,
+      })),
       { statusCode: 201 },
     );
   })().catch(next);
