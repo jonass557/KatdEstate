@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
-  Bell,
   FileText,
   Home,
   MessageSquare,
@@ -17,6 +16,11 @@ import {
   Phone,
   Mail,
   MapPin,
+  Plus,
+  ArrowUpRight,
+  Building2,
+  DoorOpen,
+  X,
 } from 'lucide-react';
 import { maintenanceTicketInputSchema } from '@rentflow/shared';
 import { PageHeader } from '../components/page-header';
@@ -35,6 +39,20 @@ import {
   type LeaseContractData,
 } from '../components/leases/lease-contract-modal';
 import { getStoredQuittances, markQuittanceAsPaid, type QuittanceItem } from '../lib/quittances';
+import { getLocalTenants, type Tenant } from './tenants';
+import { getLocalProperties } from './properties';
+import {
+  createLocalChatThread,
+  depositToTenantWallet,
+  getRentValidations,
+  getStoredChatThreads,
+  getTenantWallet,
+  replyToLocalChatThread,
+  transferFromTenantWalletToOwner,
+  type ChatThread,
+  type WalletState,
+} from '../lib/katdestate-store';
+import { STORAGE_ACTIVE_TENANT_PROFILE_KEY } from '../lib/auth-api';
 
 interface PortalHome {
   tenant: { fullName: string };
@@ -107,7 +125,6 @@ function date(value: string | undefined): string {
   return value ? value.slice(0, 10) : '—';
 }
 
-/** Télécharge un PDF en portant le jeton, puis l'ouvre. Le lien brut ne suffit pas : l'API exige l'authentification. */
 async function openPdf(path: string): Promise<void> {
   const token = getAccessToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -137,111 +154,259 @@ function List({ rows, render }: { rows: Row[] | undefined; render: (row: Row) =>
   );
 }
 
+/**
+ * Récupère les informations complètes du locataire connecté et de sa propriété attribuée
+ */
+function useResolvedTenantProfile(userEmail?: string, userDisplayName?: string) {
+  return useMemo(() => {
+    const allTenants = getLocalTenants();
+    const allProps = getLocalProperties();
+    let matched: Tenant | undefined;
+
+    if (userEmail) {
+      matched = allTenants.find(
+        (t) => t.email && t.email.trim().toLowerCase() === userEmail.trim().toLowerCase(),
+      );
+    }
+    if (!matched && typeof window !== 'undefined') {
+      try {
+        const storedProfile = localStorage.getItem(STORAGE_ACTIVE_TENANT_PROFILE_KEY);
+        if (storedProfile) matched = JSON.parse(storedProfile) as Tenant;
+      } catch {}
+    }
+    if (!matched && allTenants.length > 0) {
+      matched = allTenants[0];
+    }
+
+    const prop = matched?.propertyId
+      ? allProps.find((p) => p._id === matched?.propertyId)
+      : allProps[0];
+
+    return {
+      tenantId: matched?._id || 'ten-default-1',
+      fullName: matched?.fullName || userDisplayName || 'Kouamé Jean-Marc',
+      email: matched?.email || userEmail || 'locataire@katdestate.immo',
+      phone: matched?.phone || '+225 07 12 34 56 78',
+      propertyId: matched?.propertyId || prop?._id || 'prop-default-1',
+      propertyName: matched?.propertyName || prop?.name || 'Résidence Katd Les Palmiers',
+      propertyZone: prop?.zone || 'Cocody Riviera Palmeraie',
+      propertyAddress: prop?.address || 'Boulevard de France, Lot 142',
+      propertyCity: prop?.city || 'Abidjan',
+      unitName: matched?.unitName || 'Appartement / Chambre Moderne',
+      unitNumber: matched?.unitNumber || 'Porte 3B',
+      unitType: matched?.unitType || 'Chambre moderne',
+      rentAmount: matched?.rentAmount || 150000,
+      dueDay: matched?.dueDay || 5,
+      paymentPeriod: matched?.paymentPeriod || 'Novembre 2026',
+      tenantCategory: matched?.tenantCategory || 'EXISTING',
+      leaseStartDate: matched?.leaseStartDate || '2026-01-01',
+      leaseEndDate: matched?.leaseEndDate || '2026-12-31',
+      advanceMonths: matched?.advanceMonths,
+      advanceAmount: matched?.advanceAmount,
+      monthlyPaymentStartPeriod: matched?.monthlyPaymentStartPeriod,
+    };
+  }, [userEmail, userDisplayName]);
+}
+
 export function PortalHomePage() {
   const { data } = useOrgQuery<PortalHome>(['portal'], '/portal');
   const { user } = useSession();
+  const { toast } = useToast();
+
+  const resolved = useResolvedTenantProfile(user?.email, user?.displayName);
+  const walletKey = resolved.email || resolved.tenantId;
+
+  const [wallet, setWallet] = useState<WalletState>(() => getTenantWallet(walletKey));
+  const [rentValidations, setRentValidations] = useState(() => getRentValidations());
   const [contractModalOpen, setContractModalOpen] = useState(false);
   const [payModalOpen, setPayModalOpen] = useState(false);
+  const [depositModalOpen, setDepositModalOpen] = useState(false);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferInitialCategory, setTransferInitialCategory] = useState<'RENT' | 'QUITTANCE'>(
+    'RENT',
+  );
 
-  const homeData: PortalHome = data ?? {
-    tenant: { fullName: user?.displayName || 'Locataire Résident' },
-    unit: {
-      name: 'Chambre Moderne Porte 3B - Résidence Katd Cocody',
-      type: 'Chambre moderne',
-      status: 'OCCUPIED',
-    },
-    lease: {
-      id: 'lease-01',
-      number: 'BAIL-2026-0042',
-      status: 'ACTIF',
-      startDate: '2026-01-01',
-      endDate: '2026-12-31',
-      rentAmountMinor: 150000,
-      currency: 'XOF',
-    },
-    nextRent: {
-      dueDate: '2026-12-05',
-      amountDueMinor: 150000,
-      amountPaidMinor: 0,
-      status: 'PENDING',
-      currency: 'XOF',
-    },
-    documents: 4,
-    openTickets: 0,
+  const reloadWalletAndStatus = () => {
+    setWallet(getTenantWallet(walletKey));
+    setRentValidations(getRentValidations());
   };
 
-  const amountToPay = homeData.nextRent
-    ? Math.max(0, homeData.nextRent.amountDueMinor - homeData.nextRent.amountPaidMinor)
-    : 150000;
+  useEffect(() => {
+    reloadWalletAndStatus();
+  }, [walletKey]);
+
+  const isRentPaid = Boolean(
+    rentValidations[resolved.tenantId]?.status === 'PAID' ||
+      (resolved.email && rentValidations[resolved.email.toLowerCase()]?.status === 'PAID'),
+  );
+
+  const amountToPay = isRentPaid ? 0 : resolved.rentAmount;
 
   const contractDetails: LeaseContractData = {
-    leaseNumber: homeData.lease?.number || 'BAIL-2026-0042',
-    propertyName: 'Résidence Katd Les Palmiers',
-    propertyAddress: 'Boulevard de France, Cocody',
-    propertyZone: 'Cocody Palmeraie',
-    propertyCity: 'Abidjan',
-    unitName: homeData.unit?.name || 'Chambre Moderne Porte 3B',
-    unitType: homeData.unit?.type || 'Chambre moderne',
-    unitNumber: 'Porte 3B',
+    leaseNumber: data?.lease?.number || 'BAIL-2026-0042',
+    propertyName: resolved.propertyName,
+    propertyAddress: resolved.propertyAddress,
+    propertyZone: resolved.propertyZone,
+    propertyCity: resolved.propertyCity,
+    unitName: resolved.unitName,
+    unitType: resolved.unitType,
+    unitNumber: resolved.unitNumber,
     floor: 1,
-    tenantName: homeData.tenant.fullName,
-    tenantPhone: '+225 07 00 00 00 00',
-    tenantEmail: user?.email || 'locataire@katdestate.immo',
-    ownerName: 'M. Amadou Diallo (Bailleur)',
+    tenantName: resolved.fullName,
+    tenantPhone: resolved.phone,
+    tenantEmail: resolved.email,
+    ownerName: 'M. Amadou Diallo (Propriétaire Bailleur)',
     ownerPhone: '+225 07 10 20 30 40',
     ownerEmail: 'proprietaire@katdestate.immo',
-    startDate: homeData.lease?.startDate || '2026-01-01',
-    endDate: homeData.lease?.endDate || '2026-12-31',
-    dueDay: 5,
-    rentAmountMinor: homeData.lease?.rentAmountMinor || 150000,
+    startDate: resolved.leaseStartDate,
+    endDate: resolved.leaseEndDate,
+    dueDay: resolved.dueDay,
+    rentAmountMinor: resolved.rentAmount,
     chargesAmountMinor: 5000,
-    depositAmountMinor: 300000,
-    currency: homeData.lease?.currency || 'FCFA',
+    depositAmountMinor: resolved.advanceAmount || resolved.rentAmount * 2,
+    currency: 'FCFA',
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Bonjour ${homeData.tenant.fullName}`}
-        description="Votre espace locataire KatdEstate : votre logement assigné, votre contrat de bail numérique et vos échéances de loyer."
+        title={`Bonjour ${resolved.fullName}`}
+        description="Votre dashboard locataire KatdEstate : informations complètes de votre propriété, votre Portefeuille Locataire (dépôts & transferts au propriétaire), vos quittances et votre messagerie."
         actions={
-          <div className="flex gap-2">
-            <Link to="/portal/invoices">
+          <div className="flex flex-wrap gap-2">
+            <Link to="/portal/receipts">
               <Button variant="secondary" className="h-9 text-xs inline-flex items-center gap-1.5">
                 <Receipt className="size-3.5" />
-                Mes factures
+                Gestion des Quittances & Factures
               </Button>
             </Link>
             <Link to="/portal/messages">
-              <Button className="h-9 text-xs inline-flex items-center gap-1.5">
+              <Button className="h-9 text-xs inline-flex items-center gap-1.5 bg-primary hover:bg-primary/90">
                 <MessageSquare className="size-3.5" />
-                Contacter mon bailleur
+                Discuter avec le Propriétaire
               </Button>
             </Link>
           </div>
         }
       />
 
-      {/* Carte mise en avant : Mon Contrat de Bail & Mon Logement */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-card to-background border border-emerald-500/30 shadow-sm space-y-4 text-foreground">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="size-12 rounded-2xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <ShieldCheck className="size-6" />
+      {/* ====================================================================
+          SECTION 1 : MON PORTEFEUILLE LOCATAIRE (DÉPÔT & TRANSFERT AU PROPRIÉTAIRE)
+         ==================================================================== */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-emerald-500/15 via-card to-background border border-emerald-500/30 shadow-md space-y-4 text-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="size-12 rounded-2xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
+              <Wallet className="size-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                  Contrat de Bail Officiel KatdEstate
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-500">
+                  Mon Portefeuille Locataire KatdEstate
                 </span>
-                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px]">
-                  {homeData.lease?.status || 'ACTIF'}
+                <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                  SOLDE DISPONIBLE
                 </Badge>
               </div>
-              <h2 className="text-lg font-black">{homeData.unit?.name || 'Votre Logement'}</h2>
+              <h2 className="text-2xl font-black text-foreground">
+                {wallet.balance.toLocaleString('fr-FR')} FCFA
+              </h2>
               <p className="text-xs text-muted-foreground">
-                Réf contrat : <strong>{homeData.lease?.number || 'BAIL-2026-0042'}</strong> · Valide
-                jusqu'au <strong>{date(homeData.lease?.endDate)}</strong>
+                Faites un dépôt puis transférez votre loyer ou votre facture d'eau/électricité vers
+                le portefeuille du propriétaire en mentionnant la nature du transfert.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => setDepositModalOpen(true)}
+              variant="outline"
+              className="text-xs font-bold border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 h-10 px-4"
+            >
+              <Plus className="size-4 mr-1.5" />
+              Faire un dépôt (Recharger)
+            </Button>
+            <Button
+              onClick={() => {
+                setTransferInitialCategory('RENT');
+                setTransferModalOpen(true);
+              }}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 px-4 shadow-md shadow-emerald-500/20"
+            >
+              <ArrowUpRight className="size-4 mr-1.5" />
+              Transférer au Propriétaire (Loyer / Facture)
+            </Button>
+          </div>
+        </div>
+
+        {/* Historique récent du portefeuille du locataire */}
+        {wallet.transactions.length > 0 && (
+          <div className="pt-3 border-t border-border/60 space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+              Historique de mon portefeuille (Dépôts & Transferts vers le Propriétaire) :
+            </span>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {wallet.transactions.slice(0, 4).map((tx) => (
+                <div
+                  key={tx._id}
+                  className="p-2.5 rounded-xl bg-background/80 border border-border flex items-center justify-between text-xs"
+                >
+                  <div>
+                    <p className="font-bold text-foreground">
+                      {tx.type === 'DEPOSIT'
+                        ? '📥 Dépôt sur mon portefeuille'
+                        : tx.type === 'TRANSFER_RENT'
+                          ? '🏠 Transfert Loyer → Propriétaire'
+                          : '💧 Transfert Quittance/Facture → Propriétaire'}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Nature : <strong className="text-foreground">{tx.nature}</strong>
+                    </p>
+                  </div>
+                  <span
+                    className={`font-black text-xs shrink-0 ${
+                      tx.type === 'DEPOSIT' ? 'text-emerald-500' : 'text-amber-500'
+                    }`}
+                  >
+                    {tx.type === 'DEPOSIT' ? '+' : '-'}
+                    {tx.amount.toLocaleString('fr-FR')} FCFA
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ====================================================================
+          SECTION 2 : TOUTES LES INFORMATIONS CONCERNANT MA PROPRIÉTÉ & MON LOGEMENT
+         ==================================================================== */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-card border border-border shadow-sm space-y-4 text-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
+          <div className="flex items-center gap-3">
+            <div className="size-11 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+              <Building2 className="size-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                  Informations Complètes sur ma Propriété & mon Logement
+                </span>
+                <Badge
+                  className={
+                    isRentPaid
+                      ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-[10px]'
+                      : 'bg-amber-500/15 text-amber-500 border border-amber-500/30 text-[10px]'
+                  }
+                >
+                  {isRentPaid ? '✓ LOYER À JOUR' : 'ÉCHÉANCE EN COURS'}
+                </Badge>
+              </div>
+              <h2 className="text-lg font-black">{resolved.propertyName}</h2>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <MapPin className="size-3.5 text-rose-500" />
+                {resolved.propertyZone} · {resolved.propertyAddress}, {resolved.propertyCity}
               </p>
             </div>
           </div>
@@ -253,96 +418,155 @@ export function PortalHomePage() {
               className="text-xs font-bold border-border hover:bg-muted"
             >
               <FileText className="size-4 mr-1.5 text-primary" />
-              Consulter mon Contrat de Bail
+              Mon Contrat de Bail
             </Button>
-            {amountToPay > 0 && (
-              <Button
-                onClick={() => setPayModalOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
-              >
-                <Smartphone className="size-4 mr-1.5" />
-                Régler mon loyer ({amountToPay.toLocaleString('fr-FR')} FCFA)
-              </Button>
-            )}
+            <Button
+              onClick={() => {
+                setTransferInitialCategory('QUITTANCE');
+                setTransferModalOpen(true);
+              }}
+              variant="outline"
+              className="text-xs font-bold border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+            >
+              <Receipt className="size-4 mr-1.5" />
+              Payer Facture / Quittance d'Eau
+            </Button>
           </div>
         </div>
 
-        {/* Détails du logement & de l'échéance */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
-          <div className="p-3 rounded-xl bg-background/80 border border-border">
+        {/* Grille détaillée de la propriété et du logement attribué */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="p-3 rounded-xl bg-muted/30 border border-border">
             <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-              Logement assigné
+              Propriété & Zone
             </span>
-            <strong className="text-foreground text-sm">{homeData.unit?.type || 'Chambre'}</strong>
-          </div>
-          <div className="p-3 rounded-xl bg-background/80 border border-border">
-            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-              N° Porte / Chambre
-            </span>
-            <strong className="text-emerald-600 dark:text-emerald-400 text-sm font-black">
-              Porte 3B
+            <strong className="text-foreground text-sm block truncate">
+              {resolved.propertyName}
             </strong>
+            <span className="text-[11px] text-muted-foreground">{resolved.propertyZone}</span>
           </div>
-          <div className="p-3 rounded-xl bg-background/80 border border-border">
+          <div className="p-3 rounded-xl bg-muted/30 border border-border">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              Logement & Numéro occupé
+            </span>
+            <strong className="text-emerald-500 text-sm font-black block">
+              {resolved.unitNumber}
+            </strong>
+            <span className="text-[11px] text-muted-foreground">{resolved.unitName}</span>
+          </div>
+          <div className="p-3 rounded-xl bg-muted/30 border border-border">
             <span className="text-[10px] uppercase font-bold text-muted-foreground block">
               Loyer mensuel
             </span>
-            <strong className="text-foreground text-sm">
-              {money(homeData.lease?.rentAmountMinor, homeData.lease?.currency)}
+            <strong className="text-foreground text-sm font-black block">
+              {resolved.rentAmount.toLocaleString('fr-FR')} FCFA
             </strong>
+            <span className="text-[11px] text-muted-foreground">
+              {isRentPaid ? 'Payé et validé' : 'À régler'}
+            </span>
           </div>
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-            <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 block">
-              Date d'échéance
+            <span className="text-[10px] uppercase font-bold text-amber-500 block">
+              Période / Échéance Loyer
             </span>
-            <strong className="text-amber-700 dark:text-amber-300 text-sm font-black">
-              Le 5 de chaque mois
+            <strong className="text-amber-500 text-sm font-black block">
+              Le {resolved.dueDay} du mois
             </strong>
+            <span className="text-[11px] text-muted-foreground">{resolved.paymentPeriod}</span>
           </div>
+        </div>
+
+        {/* Contact du Propriétaire + Bouton Messagerie */}
+        <div className="p-3.5 rounded-2xl bg-muted/40 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-bold uppercase text-muted-foreground">
+              Votre Propriétaire / Bailleur :
+            </span>
+            <p className="font-bold text-foreground">
+              M. Amadou Diallo · Tél : +225 07 10 20 30 40 · Email : proprietaire@katdestate.immo
+            </p>
+          </div>
+          <Link to="/portal/messages">
+            <Button size="sm" className="text-xs font-bold flex items-center gap-1.5">
+              <MessageSquare className="size-3.5" />
+              Discuter par message avec le propriétaire
+            </Button>
+          </Link>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/* Cartes de synthèse */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Logement"
-          value={homeData.unit?.name ?? 'Aucun'}
-          hint={homeData.unit ? homeData.unit.type : 'Pas de contrat actif'}
-          icon={Home}
-        />
-        <StatCard
-          label="Prochain loyer"
-          value={
-            homeData.nextRent
-              ? money(
-                  homeData.nextRent.amountDueMinor - homeData.nextRent.amountPaidMinor,
-                  homeData.nextRent.currency,
-                )
-              : 'À jour'
-          }
-          hint={
-            homeData.nextRent
-              ? `${date(homeData.nextRent.dueDate)} · ${RENT_STATUS[homeData.nextRent.status] ?? homeData.nextRent.status}`
-              : 'Aucune échéance ouverte'
-          }
+          label="Mon Portefeuille"
+          value={`${wallet.balance.toLocaleString('fr-FR')} FCFA`}
+          hint="Solde disponible pour transfert"
           icon={Wallet}
         />
         <StatCard
-          label="Contrat"
-          value={homeData.lease?.number ?? 'Aucun'}
-          hint={
-            homeData.lease
-              ? `${homeData.lease.status} · jusqu’au ${date(homeData.lease.endDate)}`
-              : 'Pas de contrat actif'
-          }
-          icon={FileText}
+          label="Logement occupé"
+          value={resolved.unitNumber}
+          hint={`${resolved.unitName} · ${resolved.propertyName}`}
+          icon={DoorOpen}
         />
         <StatCard
-          label="Suivi"
-          value={`${homeData.documents} document(s)`}
-          hint={`${homeData.openTickets} ticket(s) de maintenance ouvert(s)`}
-          icon={Bell}
+          label="Statut du Loyer"
+          value={isRentPaid ? 'Payé ✓' : `${amountToPay.toLocaleString('fr-FR')} FCFA`}
+          hint={
+            isRentPaid
+              ? 'Validé dans Gestion des Loyers'
+              : `Échéance : Le ${resolved.dueDay} du mois`
+          }
+          icon={Home}
+        />
+        <StatCard
+          label="Contrat de Bail"
+          value={contractDetails.leaseNumber}
+          hint={`Valide jusqu'au ${date(resolved.leaseEndDate)}`}
+          icon={FileText}
         />
       </div>
+
+      {/* Modal Dépôt sur le Portefeuille Locataire */}
+      {depositModalOpen && (
+        <TenantWalletDepositModal
+          walletKey={walletKey}
+          onClose={() => setDepositModalOpen(false)}
+          onSuccess={() => {
+            reloadWalletAndStatus();
+            setDepositModalOpen(false);
+            toast({
+              title: 'Dépôt effectué sur votre portefeuille !',
+              description:
+                'Votre solde a été crédité. Vous pouvez maintenant transférer vers le portefeuille du propriétaire.',
+              variant: 'success',
+            });
+          }}
+        />
+      )}
+
+      {/* Modal Transfert du Portefeuille Locataire vers le Portefeuille du Propriétaire */}
+      {transferModalOpen && (
+        <TenantWalletTransferModal
+          walletKey={walletKey}
+          walletBalance={wallet.balance}
+          tenantProfile={resolved}
+          initialCategory={transferInitialCategory}
+          onClose={() => setTransferModalOpen(false)}
+          onSuccess={(category, nature, amount) => {
+            reloadWalletAndStatus();
+            setTransferModalOpen(false);
+            toast({
+              title:
+                category === 'RENT'
+                  ? 'Loyer transféré & validé automatiquement !'
+                  : 'Facture / Quittance payée dans les délais !',
+              description: `Transfert de ${amount.toLocaleString('fr-FR')} FCFA (${nature}) reçu dans le portefeuille du propriétaire.`,
+              variant: 'success',
+            });
+          }}
+        />
+      )}
 
       {/* Modal Visualisation Contrat de Bail Certifié */}
       {contractModalOpen && (
@@ -352,7 +576,7 @@ export function PortalHomePage() {
         />
       )}
 
-      {/* Modal Paiement iKeepay */}
+      {/* Modal Paiement iKeepay direct */}
       {payModalOpen && (
         <IkeepayModal
           isOpen={payModalOpen}
@@ -360,12 +584,350 @@ export function PortalHomePage() {
           amount={amountToPay}
           purpose="RENT_PAYMENT"
           title="Règlement de votre loyer d'habitation"
-          description={`Paiement sécurisé de votre loyer pour ${homeData.unit?.name || 'votre logement'}.`}
+          description={`Paiement sécurisé de votre loyer pour ${resolved.unitName} (${resolved.unitNumber}).`}
           onPaymentSuccess={() => {
             setPayModalOpen(false);
           }}
         />
       )}
+    </div>
+  );
+}
+
+// ============================================================================
+// MODAL DE DÉPÔT SUR LE PORTEFEUILLE DU LOCATAIRE
+// ============================================================================
+function TenantWalletDepositModal({
+  walletKey,
+  onClose,
+  onSuccess,
+}: {
+  walletKey: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [amount, setAmount] = useState(150000);
+  const [method, setMethod] = useState('Mobile Money (Wave)');
+  const [phone, setPhone] = useState('+225 07 12 34 56 78');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || amount <= 0) return;
+    depositToTenantWallet(
+      walletKey,
+      Number(amount),
+      `${method} (${phone})`,
+      `Dépôt sur portefeuille locataire via ${method}`,
+    );
+    onSuccess();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-card text-foreground border border-border rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="size-10 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
+              <Wallet className="size-5" />
+            </div>
+            <div>
+              <h3 className="font-black text-base">Faire un Dépôt sur mon Portefeuille</h3>
+              <p className="text-xs text-muted-foreground">
+                Rechargez votre solde pour payer vos loyers et quittances
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg text-muted-foreground hover:bg-muted">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+          <div>
+            <label className="font-semibold block mb-1">Montant à déposer (FCFA) *</label>
+            <Input
+              type="number"
+              min="500"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value) || 0)}
+              required
+              className="text-sm font-black"
+            />
+          </div>
+
+          <div>
+            <label className="font-semibold block mb-1">Moyen de rechargement *</label>
+            <select
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold"
+            >
+              <option value="Mobile Money (Wave)">Wave Mobile Money</option>
+              <option value="Mobile Money (Orange Money)">Orange Money</option>
+              <option value="Mobile Money (MTN MoMo)">MTN Mobile Money</option>
+              <option value="Mobile Money (Moov Money)">Moov Money</option>
+              <option value="Carte Bancaire Visa/Mastercard">Carte Bancaire</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="font-semibold block mb-1">Numéro de téléphone débité *</label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} required />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+            >
+              <Plus className="size-4 mr-1" />
+              Créditer mon portefeuille ({amount.toLocaleString('fr-FR')} FCFA)
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MODAL DE TRANSFERT DU PORTEFEUILLE LOCATAIRE VERS LE PORTEFEUILLE PROPRIÉTAIRE
+// (Avec mention obligatoire de la nature du transfert : Loyer ou Quittance/Facture d'eau/élec)
+// ============================================================================
+function TenantWalletTransferModal({
+  walletKey,
+  walletBalance,
+  tenantProfile,
+  initialCategory = 'RENT',
+  preselectedQuittance = null,
+  onClose,
+  onSuccess,
+}: {
+  walletKey: string;
+  walletBalance: number;
+  tenantProfile: ReturnType<typeof useResolvedTenantProfile>;
+  initialCategory?: 'RENT' | 'QUITTANCE';
+  preselectedQuittance?: QuittanceItem | null;
+  onClose: () => void;
+  onSuccess: (category: 'RENT' | 'QUITTANCE', nature: string, amount: number) => void;
+}) {
+  const { toast } = useToast();
+  const [category, setCategory] = useState<'RENT' | 'QUITTANCE'>(
+    preselectedQuittance ? 'QUITTANCE' : initialCategory,
+  );
+  const pendingQuittances = useMemo(
+    () => getStoredQuittances().filter((q) => q.status === 'PENDING'),
+    [],
+  );
+  const [selectedQuittanceId, setSelectedQuittanceId] = useState<string>(
+    preselectedQuittance?._id || pendingQuittances[0]?._id || '',
+  );
+  const [amount, setAmount] = useState<number>(
+    preselectedQuittance
+      ? preselectedQuittance.amountMinor
+      : initialCategory === 'RENT'
+        ? tenantProfile.rentAmount
+        : pendingQuittances[0]?.amountMinor || 15000,
+  );
+  const [nature, setNature] = useState<string>(
+    preselectedQuittance
+      ? `${preselectedQuittance.typeLabel} - ${preselectedQuittance.period} (${tenantProfile.unitNumber})`
+      : initialCategory === 'RENT'
+        ? `Paiement Loyer ${tenantProfile.paymentPeriod} - ${tenantProfile.unitNumber} (${tenantProfile.propertyName})`
+        : pendingQuittances[0]
+          ? `${pendingQuittances[0].typeLabel} - ${pendingQuittances[0].period}`
+          : `Facture d'eau SODECI / Électricité - ${tenantProfile.unitNumber}`,
+  );
+
+  const handleCategoryChange = (nextCat: 'RENT' | 'QUITTANCE') => {
+    setCategory(nextCat);
+    if (nextCat === 'RENT') {
+      setAmount(tenantProfile.rentAmount);
+      setNature(
+        `Paiement Loyer ${tenantProfile.paymentPeriod} - ${tenantProfile.unitNumber} (${tenantProfile.propertyName})`,
+      );
+    } else {
+      const firstQ = pendingQuittances[0];
+      if (firstQ) {
+        setSelectedQuittanceId(firstQ._id);
+        setAmount(firstQ.amountMinor);
+        setNature(`${firstQ.typeLabel} - ${firstQ.period} (${tenantProfile.unitNumber})`);
+      } else {
+        setAmount(15000);
+        setNature(`Facture d'eau SODECI - ${tenantProfile.unitNumber}`);
+      }
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nature.trim()) {
+      toast({ title: 'Veuillez mentionner la nature du transfert', variant: 'error' });
+      return;
+    }
+    if (!amount || amount <= 0) {
+      toast({ title: 'Montant invalide', variant: 'error' });
+      return;
+    }
+    try {
+      transferFromTenantWalletToOwner({
+        tenantKey: walletKey,
+        tenantId: tenantProfile.tenantId,
+        tenantName: tenantProfile.fullName,
+        tenantEmail: tenantProfile.email,
+        tenantPhone: tenantProfile.phone,
+        propertyId: tenantProfile.propertyId,
+        propertyName: tenantProfile.propertyName,
+        unitName: tenantProfile.unitName,
+        unitNumber: tenantProfile.unitNumber,
+        amount: Number(amount),
+        category,
+        nature: nature.trim(),
+        period: tenantProfile.paymentPeriod,
+        quittanceId: category === 'QUITTANCE' ? selectedQuittanceId || undefined : undefined,
+      });
+      onSuccess(category, nature.trim(), Number(amount));
+    } catch (err: any) {
+      toast({
+        title: 'Transfert impossible',
+        description: err instanceof Error ? err.message : 'Vérifiez votre solde.',
+        variant: 'error',
+      });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-card text-foreground border border-border rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="size-10 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
+              <ArrowUpRight className="size-5" />
+            </div>
+            <div>
+              <h3 className="font-black text-base">
+                Transférer de mon Portefeuille vers le Propriétaire
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Solde disponible :{' '}
+                <strong className="text-emerald-500">
+                  {walletBalance.toLocaleString('fr-FR')} FCFA
+                </strong>
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg text-muted-foreground hover:bg-muted">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+          {/* Choix : Loyer vs Quittance/Facture d'eau */}
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-muted/50 border border-border">
+            <button
+              type="button"
+              onClick={() => handleCategoryChange('RENT')}
+              className={`p-2.5 rounded-xl font-bold text-left transition ${
+                category === 'RENT'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span className="block text-xs">🏠 Payer mon Loyer</span>
+              <span className="text-[10px] opacity-80">Vers Portefeuille Loyers Propriétaire</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleCategoryChange('QUITTANCE')}
+              className={`p-2.5 rounded-xl font-bold text-left transition ${
+                category === 'QUITTANCE'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span className="block text-xs">💧 Payer Facture / Quittance</span>
+              <span className="text-[10px] opacity-80">Eau SODECI, Électricité CIE, Charges</span>
+            </button>
+          </div>
+
+          {category === 'QUITTANCE' && pendingQuittances.length > 0 && (
+            <div>
+              <label className="font-semibold block mb-1">
+                Sélectionner la facture / quittance à régler :
+              </label>
+              <select
+                value={selectedQuittanceId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSelectedQuittanceId(id);
+                  const found = pendingQuittances.find((q) => q._id === id);
+                  if (found) {
+                    setAmount(found.amountMinor);
+                    setNature(
+                      `${found.typeLabel} - ${found.period} (${tenantProfile.unitNumber})`,
+                    );
+                  }
+                }}
+                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold"
+              >
+                {pendingQuittances.map((q) => (
+                  <option key={q._id} value={q._id}>
+                    {q.typeLabel} ({q.period}) — {q.amountMinor.toLocaleString('fr-FR')} FCFA
+                  </option>
+                ))}
+                <option value="">Autre facture d'eau / électricité…</option>
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="font-bold text-emerald-500 block mb-1">
+              Nature du transfert (obligatoire) *
+            </label>
+            <Input
+              value={nature}
+              onChange={(e) => setNature(e.target.value)}
+              placeholder="Ex: Loyer Novembre 2026 ou Facture d'eau SODECI Novembre 2026"
+              required
+            />
+            <span className="text-[10px] text-muted-foreground mt-0.5 block">
+              Cette mention apparaîtra immédiatement chez le propriétaire et validera
+              automatiquement votre paiement.
+            </span>
+          </div>
+
+          <div>
+            <label className="font-semibold block mb-1">Montant à transférer (FCFA) *</label>
+            <Input
+              type="number"
+              min="100"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value) || 0)}
+              required
+              className="text-sm font-black"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+            >
+              <ArrowUpRight className="size-4 mr-1" />
+              Transférer {amount.toLocaleString('fr-FR')} FCFA au Propriétaire
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -402,15 +964,24 @@ export function PortalPaymentsPage() {
 
 export function PortalReceiptsPage() {
   const { toast } = useToast();
+  const { user } = useSession();
+  const resolved = useResolvedTenantProfile(user?.email, user?.displayName);
+  const walletKey = resolved.email || resolved.tenantId;
 
   const [quittances, setQuittances] = useState<QuittanceItem[]>(() => getStoredQuittances());
+  const [wallet, setWallet] = useState<WalletState>(() => getTenantWallet(walletKey));
   const [selectedQuittanceToPay, setSelectedQuittanceToPay] = useState<QuittanceItem | null>(null);
+  const [walletTransferQuittance, setWalletTransferQuittance] = useState<QuittanceItem | null>(
+    null,
+  );
+  const [depositOpen, setDepositOpen] = useState(false);
   const [activeQuittanceForPrint, setActiveQuittanceForPrint] = useState<QuittanceItem | null>(
     null,
   );
 
   const reload = () => {
     setQuittances(getStoredQuittances());
+    setWallet(getTenantWallet(walletKey));
   };
 
   const pendingBills = quittances.filter((q) => q.status === 'PENDING');
@@ -419,8 +990,24 @@ export function PortalReceiptsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Mes Quittances, Factures & Reçus"
-        description="Retrouvez ici l'ensemble des factures transmises par votre propriétaire (Eau SODECI, Électricité CIE, Loyers et Charges) et réglez-les en un clic par Mobile Money."
+        title="Gestion des Quittances et Factures"
+        description="Réglez vos factures d'eau (SODECI), d'électricité (CIE) et charges en transférant votre solde depuis votre Portefeuille Locataire vers le Portefeuille du Propriétaire (validation automatique dans les délais) ou par Mobile Money."
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 px-3 py-1.5 text-xs font-black">
+              Mon Portefeuille : {wallet.balance.toLocaleString('fr-FR')} FCFA
+            </Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setDepositOpen(true)}
+              className="text-xs font-bold border-emerald-500/40 text-emerald-500"
+            >
+              <Plus className="size-3.5 mr-1" />
+              Faire un dépôt
+            </Button>
+          </div>
+        }
       />
 
       {/* Alerte si des factures sont en attente */}
@@ -432,7 +1019,7 @@ export function PortalReceiptsPage() {
             </div>
             <div>
               <p className="text-sm font-bold text-foreground">
-                Vous avez {pendingBills.length} facture(s) en attente de règlement
+                Vous avez {pendingBills.length} quittance(s) / facture(s) en attente de règlement
               </p>
               <p className="text-xs text-muted-foreground">
                 Montant total à payer :{' '}
@@ -448,7 +1035,7 @@ export function PortalReceiptsPage() {
       {/* Section des factures & quittances en attente de paiement */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-          <span>Factures à régler (Eau, Électricité & Loyers)</span>
+          <span>Factures & Quittances à régler (Eau, Électricité & Charges)</span>
           <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-500">
             {pendingBills.length}
           </span>
@@ -456,7 +1043,8 @@ export function PortalReceiptsPage() {
 
         {pendingBills.length === 0 ? (
           <div className="p-6 rounded-2xl border border-dashed border-border bg-card/40 text-center text-sm text-muted-foreground">
-            Toutes vos quittances et factures sont à jour ! Aucune charge en attente.
+            Toutes vos quittances et factures sont payées dans les délais ! Aucune charge en
+            attente.
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -505,23 +1093,34 @@ export function PortalReceiptsPage() {
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                        Montant à régler
+                  <div className="pt-2 border-t border-border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                        Montant à régler :
                       </span>
                       <strong className="text-base font-black text-emerald-500">
                         {q.amountMinor.toLocaleString('fr-FR')} FCFA
                       </strong>
                     </div>
 
-                    <Button
-                      onClick={() => setSelectedQuittanceToPay(q)}
-                      className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white shadow-sm flex items-center gap-1.5"
-                    >
-                      <Smartphone className="size-3.5" />
-                      Payer par Mobile Money
-                    </Button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      <Button
+                        onClick={() => setWalletTransferQuittance(q)}
+                        className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white shadow-sm flex items-center justify-center gap-1.5"
+                      >
+                        <Wallet className="size-3.5" />
+                        Payer par Portefeuille
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => setSelectedQuittanceToPay(q)}
+                        className="font-bold text-xs flex items-center justify-center gap-1.5"
+                      >
+                        <Smartphone className="size-3.5" />
+                        Mobile Money direct
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
@@ -533,7 +1132,7 @@ export function PortalReceiptsPage() {
       {/* Section des quittances réglées & reçus officiels */}
       <div className="space-y-3 pt-4">
         <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-          <span>Quittances réglées & Reçus officiels</span>
+          <span>Quittances réglées dans les délais & Reçus officiels</span>
           <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-500">
             {paidBills.length}
           </span>
@@ -547,7 +1146,7 @@ export function PortalReceiptsPage() {
                 <th className="px-4 py-3 font-semibold text-xs">Propriété</th>
                 <th className="px-4 py-3 font-semibold text-xs">Période</th>
                 <th className="px-4 py-3 font-semibold text-xs">Montant payé</th>
-                <th className="px-4 py-3 font-semibold text-xs">Mode</th>
+                <th className="px-4 py-3 font-semibold text-xs">Statut & Mode</th>
                 <th className="px-4 py-3 text-right font-semibold text-xs">Reçu certifié</th>
               </tr>
             </thead>
@@ -568,7 +1167,7 @@ export function PortalReceiptsPage() {
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 className="size-3" />
-                      {q.paymentMethod || 'Mobile Money'}
+                      {q.paymentMethod || 'Payé dans les délais'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -595,7 +1194,41 @@ export function PortalReceiptsPage() {
         </div>
       </div>
 
-      {/* Modal Paiement iKeepay pour la quittance choisie */}
+      {/* Modal Dépôt Portefeuille */}
+      {depositOpen && (
+        <TenantWalletDepositModal
+          walletKey={walletKey}
+          onClose={() => setDepositOpen(false)}
+          onSuccess={() => {
+            reload();
+            setDepositOpen(false);
+            toast({ title: 'Portefeuille rechargé avec succès !', variant: 'success' });
+          }}
+        />
+      )}
+
+      {/* Modal Transfert depuis le Portefeuille Locataire vers le Portefeuille du Propriétaire */}
+      {walletTransferQuittance && (
+        <TenantWalletTransferModal
+          walletKey={walletKey}
+          walletBalance={wallet.balance}
+          tenantProfile={resolved}
+          initialCategory="QUITTANCE"
+          preselectedQuittance={walletTransferQuittance}
+          onClose={() => setWalletTransferQuittance(null)}
+          onSuccess={(_cat, nature, amount) => {
+            reload();
+            setWalletTransferQuittance(null);
+            toast({
+              title: 'Facture payée dans les délais via votre Portefeuille !',
+              description: `${amount.toLocaleString('fr-FR')} FCFA transférés au propriétaire (${nature}). La quittance est automatiquement marquée comme payée.`,
+              variant: 'success',
+            });
+          }}
+        />
+      )}
+
+      {/* Modal Paiement iKeepay direct */}
       {selectedQuittanceToPay && (
         <IkeepayModal
           isOpen={Boolean(selectedQuittanceToPay)}
@@ -605,7 +1238,7 @@ export function PortalReceiptsPage() {
           title={`Paiement : ${selectedQuittanceToPay.typeLabel}`}
           description={`Règlement Mobile Money de la quittance ${selectedQuittanceToPay.number} (${selectedQuittanceToPay.period}) pour un montant de ${selectedQuittanceToPay.amountMinor.toLocaleString('fr-FR')} FCFA.`}
           onPaymentSuccess={() => {
-            markQuittanceAsPaid(selectedQuittanceToPay._id, 'iKeepay Mobile Money');
+            markQuittanceAsPaid(selectedQuittanceToPay._id, 'Payé dans les délais (Mobile Money)');
             reload();
             setSelectedQuittanceToPay(null);
             toast({
@@ -630,7 +1263,7 @@ export function PortalReceiptsPage() {
                   {activeQuittanceForPrint.typeLabel}
                 </h3>
               </div>
-              <Badge className="bg-emerald-500 text-white font-bold">RÉGLÉE</Badge>
+              <Badge className="bg-emerald-500 text-white font-bold">RÉGLÉE DANS LES DÉLAIS</Badge>
             </div>
 
             <div className="space-y-2 text-xs">
@@ -653,7 +1286,7 @@ export function PortalReceiptsPage() {
               <div className="flex justify-between py-1 border-b border-border/50">
                 <span className="text-muted-foreground">Mode de règlement :</span>
                 <span className="font-semibold text-emerald-500">
-                  {activeQuittanceForPrint.paymentMethod || 'Mobile Money'}
+                  {activeQuittanceForPrint.paymentMethod || 'Portefeuille / Mobile Money'}
                 </span>
               </div>
             </div>
@@ -685,30 +1318,31 @@ export function PortalReceiptsPage() {
 
 export function PortalLeasePage() {
   const { user } = useSession();
+  const resolved = useResolvedTenantProfile(user?.email, user?.displayName);
   const [contractModalOpen, setContractModalOpen] = useState(false);
 
   const certifiedContract: LeaseContractData = {
     leaseNumber: 'BAIL-2026-0042',
-    propertyName: 'Résidence Katd Les Palmiers',
-    propertyAddress: 'Boulevard de France, Cocody',
-    propertyZone: 'Cocody Palmeraie',
-    propertyCity: 'Abidjan',
-    unitName: 'Chambre Moderne Porte 3B',
-    unitType: 'Chambre moderne',
-    unitNumber: 'Porte 3B',
+    propertyName: resolved.propertyName,
+    propertyAddress: resolved.propertyAddress,
+    propertyZone: resolved.propertyZone,
+    propertyCity: resolved.propertyCity,
+    unitName: resolved.unitName,
+    unitType: resolved.unitType,
+    unitNumber: resolved.unitNumber,
     floor: 1,
-    tenantName: user?.displayName || 'Locataire Résident',
-    tenantPhone: '+225 07 12 34 56 78',
-    tenantEmail: user?.email || 'locataire@katdestate.immo',
+    tenantName: resolved.fullName,
+    tenantPhone: resolved.phone,
+    tenantEmail: resolved.email,
     ownerName: 'M. Amadou Diallo (Bailleur KatdEstate)',
     ownerPhone: '+225 07 10 20 30 40',
-    ownerEmail: 'bailleur.amadou@katdestate.immo',
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-    dueDay: 5,
-    rentAmountMinor: 150000,
+    ownerEmail: 'proprietaire@katdestate.immo',
+    startDate: resolved.leaseStartDate,
+    endDate: resolved.leaseEndDate,
+    dueDay: resolved.dueDay,
+    rentAmountMinor: resolved.rentAmount,
     chargesAmountMinor: 5000,
-    depositAmountMinor: 300000,
+    depositAmountMinor: resolved.advanceAmount || resolved.rentAmount * 2,
     currency: 'FCFA',
   };
 
@@ -719,7 +1353,6 @@ export function PortalLeasePage() {
         description="Votre bail d'habitation certifié établi par votre propriétaire, conforme aux normes KatdEstate."
       />
 
-      {/* Carte du contrat certifié reçu du propriétaire */}
       <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-card to-background border border-emerald-500/30 shadow-md space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -740,7 +1373,7 @@ export function PortalLeasePage() {
               </h2>
               <p className="text-xs text-muted-foreground">
                 Bien loué : <strong>{certifiedContract.propertyName}</strong> ·{' '}
-                {certifiedContract.unitName}
+                {certifiedContract.unitName} ({certifiedContract.unitNumber})
               </p>
             </div>
           </div>
@@ -754,7 +1387,6 @@ export function PortalLeasePage() {
           </Button>
         </div>
 
-        {/* Coordonnées Propriétaire & Logement */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
           <div className="p-3.5 rounded-2xl bg-background/80 border border-border space-y-1">
             <span className="text-[10px] uppercase font-bold text-muted-foreground block">
@@ -793,14 +1425,13 @@ export function PortalLeasePage() {
               Échéance : Le {certifiedContract.dueDay} de chaque mois
             </p>
             <p className="text-muted-foreground">
-              Caution versée : {(certifiedContract.depositAmountMinor ?? 0).toLocaleString('fr-FR')}{' '}
-              FCFA
+              Avance / Caution :{' '}
+              {(certifiedContract.depositAmountMinor ?? 0).toLocaleString('fr-FR')} FCFA
             </p>
           </div>
         </div>
       </div>
 
-      {/* Modal Contrat de Bail Certifié */}
       {contractModalOpen && (
         <LeaseContractModal
           contract={certifiedContract}
@@ -1072,66 +1703,34 @@ export function PortalInvoicesPage() {
   );
 }
 
-interface MessageThread {
-  _id: string;
-  subject: string;
-  body: string;
-  category: string;
-  createdAt: string;
-  replies?: { senderName: string; body: string; createdAt: string }[];
-}
-
+// ============================================================================
+// MESSAGERIE INTERACTIVE LOCATAIRE <-> PROPRIÉTAIRE
+// ============================================================================
 export function PortalMessagesPage() {
-  const base = useOrgPath();
-  const client = useQueryClient();
+  const { user } = useSession();
   const { toast } = useToast();
+  const resolved = useResolvedTenantProfile(user?.email, user?.displayName);
+
+  const [threads, setThreads] = useState<ChatThread[]>(() => getStoredChatThreads());
   const [open, setOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
-
-  const { data: messages, isLoading } = useOrgQuery<MessageThread[]>(
-    ['portal-messages'],
-    '/messages',
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(
+    () => getStoredChatThreads()[0]?._id || null,
   );
 
-  const createMsg = useMutation({
-    mutationFn: (body: unknown) =>
-      apiRequest(`${base}/messages`, {
-        method: 'POST',
-        body,
-      }),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ['portal-messages'] });
-      setOpen(false);
-      toast({ title: 'Message transmis au gestionnaire', variant: 'success' });
-    },
-    onError: (err: Error) =>
-      toast({ title: 'Échec de transmission', description: err.message, variant: 'error' }),
-  });
-
-  const replyMsg = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: string }) =>
-      apiRequest(`${base}/messages/${id}/reply`, {
-        method: 'POST',
-        body: { body },
-      }),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ['portal-messages'] });
-      setReplyText('');
-      toast({ title: 'Réponse envoyée', variant: 'success' });
-    },
-    onError: (err: Error) => toast({ title: 'Erreur', description: err.message, variant: 'error' }),
-  });
+  const reloadThreads = () => {
+    setThreads(getStoredChatThreads());
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Contacter mon gestionnaire"
-        description="Posez une question, signalez une démarche administrative ou répondez aux messages de la régie."
+        title="Messagerie avec mon Propriétaire"
+        description={`Échangez directement par message avec votre propriétaire au sujet de votre logement (${resolved.unitNumber} - ${resolved.propertyName}).`}
         actions={
           <Button onClick={() => setOpen((v) => !v)} className="inline-flex items-center gap-1.5">
             <Send className="size-3.5" />
-            Écrire au gestionnaire
+            Nouveau message au propriétaire
           </Button>
         }
       />
@@ -1142,27 +1741,48 @@ export function PortalMessagesPage() {
           onSubmit={(e) => {
             e.preventDefault();
             const form = new FormData(e.currentTarget);
-            const subject = form.get('subject') as string;
-            const category = form.get('category') as string;
-            const body = form.get('body') as string;
+            const subject = String(form.get('subject') || '').trim();
+            const category = String(form.get('category') || 'GENERAL');
+            const body = String(form.get('body') || '').trim();
             if (!subject || !body) return;
-            createMsg.mutate({ subject, category, body, priority: 'MEDIUM' });
+
+            const created = createLocalChatThread({
+              subject,
+              body,
+              category,
+              senderName: `${resolved.fullName} (Locataire)`,
+              senderRole: 'TENANT',
+              tenantId: resolved.tenantId,
+              tenantName: resolved.fullName,
+              tenantEmail: resolved.email,
+              propertyName: resolved.propertyName,
+              unitName: resolved.unitNumber,
+              recipientName: 'Propriétaire (Bailleur)',
+            });
+            reloadThreads();
+            setActiveThreadId(created._id);
+            setOpen(false);
+            toast({
+              title: 'Message envoyé au propriétaire !',
+              description: 'Votre propriétaire a reçu votre message dans sa messagerie.',
+              variant: 'success',
+            });
           }}
         >
-          <Input name="subject" placeholder="Sujet de votre message" required />
+          <Input name="subject" placeholder="Sujet de votre message (ex: Paiement loyer, Eau…)" required />
           <select
             name="category"
             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="GENERAL">Question générale</option>
-            <option value="PAYMENT">Loyer et quittances</option>
+            <option value="PAYMENT">Loyer, Portefeuille et Quittances</option>
             <option value="MAINTENANCE">Maintenance et réparations</option>
             <option value="LEASE">Contrat de location</option>
           </select>
           <textarea
             name="body"
             rows={4}
-            placeholder="Écrivez votre message à destination de l'équipe de gestion…"
+            placeholder="Écrivez votre message à destination de votre propriétaire…"
             required
             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
           />
@@ -1170,48 +1790,53 @@ export function PortalMessagesPage() {
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Annuler
             </Button>
-            <Button type="submit" disabled={createMsg.isPending}>
-              {createMsg.isPending ? 'Envoi…' : 'Envoyer'}
-            </Button>
+            <Button type="submit">Envoyer au propriétaire</Button>
           </div>
         </form>
       )}
 
-      {isLoading && (
-        <p className="py-6 text-center text-xs text-muted-foreground">Chargement des échanges…</p>
-      )}
-
       <div className="space-y-3">
-        {(messages ?? []).map((msg) => (
-          <div key={msg._id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+        {threads.map((msg) => (
+          <div key={msg._id} className="rounded-2xl border border-border bg-card p-4 space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-sm">{msg.subject}</p>
+                <p className="font-bold text-sm text-foreground">{msg.subject}</p>
                 <p className="text-xs text-muted-foreground">
-                  Catégorie : {msg.category} · Envoyé le{' '}
-                  {new Date(msg.createdAt).toLocaleDateString('fr-FR')}
+                  De <strong>{msg.senderName}</strong> ·{' '}
+                  {new Date(msg.createdAt).toLocaleString('fr-FR')}
                 </p>
               </div>
               <Button
                 variant="secondary"
-                className="h-7 px-2 text-xs"
+                className="h-8 px-3 text-xs font-semibold"
                 onClick={() => setActiveThreadId(activeThreadId === msg._id ? null : msg._id)}
               >
-                {activeThreadId === msg._id ? 'Fermer' : 'Répondre / Voir le fil'}
+                {activeThreadId === msg._id ? 'Masquer la discussion' : 'Répondre / Voir le fil'}
               </Button>
             </div>
 
-            <p className="text-xs text-foreground bg-muted/20 rounded-lg p-3 whitespace-pre-wrap">
+            <p className="text-xs text-foreground bg-muted/30 rounded-xl p-3 whitespace-pre-wrap">
               {msg.body}
             </p>
 
-            {/* Réponses et formulaire de réponse */}
             {activeThreadId === msg._id && (
               <div className="pt-2 border-t border-border/60 space-y-3">
                 {(msg.replies ?? []).map((r, i) => (
-                  <div key={i} className="rounded-lg bg-muted/40 p-2.5 text-xs">
-                    <p className="font-semibold text-foreground mb-1">{r.senderName} :</p>
-                    <p className="text-muted-foreground">{r.body}</p>
+                  <div
+                    key={i}
+                    className={`rounded-xl p-3 text-xs ${
+                      r.senderRole === 'TENANT'
+                        ? 'bg-emerald-500/10 border border-emerald-500/20 ml-4'
+                        : 'bg-primary/10 border border-primary/20 mr-4'
+                    }`}
+                  >
+                    <div className="flex justify-between mb-1">
+                      <p className="font-bold text-foreground">{r.senderName}</p>
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(r.createdAt).toLocaleString('fr-FR')}
+                      </span>
+                    </div>
+                    <p className="text-foreground whitespace-pre-wrap">{r.body}</p>
                   </div>
                 ))}
 
@@ -1219,17 +1844,24 @@ export function PortalMessagesPage() {
                   onSubmit={(e) => {
                     e.preventDefault();
                     if (!replyText.trim()) return;
-                    replyMsg.mutate({ id: msg._id, body: replyText.trim() });
+                    replyToLocalChatThread(msg._id, {
+                      senderName: `${resolved.fullName} (Locataire ${resolved.unitNumber})`,
+                      senderRole: 'TENANT',
+                      body: replyText.trim(),
+                    });
+                    reloadThreads();
+                    setReplyText('');
+                    toast({ title: 'Réponse envoyée au propriétaire', variant: 'success' });
                   }}
                   className="flex gap-2"
                 >
                   <Input
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Votre réponse au gestionnaire…"
+                    placeholder="Écrire votre réponse au propriétaire…"
                     className="h-9 text-xs"
                   />
-                  <Button type="submit" className="h-9 px-3 text-xs" disabled={replyMsg.isPending}>
+                  <Button type="submit" className="h-9 px-4 text-xs font-bold">
                     Envoyer
                   </Button>
                 </form>
@@ -1237,13 +1869,6 @@ export function PortalMessagesPage() {
             )}
           </div>
         ))}
-
-        {messages && messages.length === 0 && (
-          <EmptyState
-            title="Aucun échange"
-            description="Vous n'avez pas encore envoyé de message à votre gestionnaire."
-          />
-        )}
       </div>
     </div>
   );

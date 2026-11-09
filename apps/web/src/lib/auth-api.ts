@@ -1,12 +1,22 @@
 import type { AuthSession } from '@rentflow/shared';
 import { apiRequest, setAccessToken } from './api-client';
+import {
+  getBlockLeaders,
+  getBlockOwners,
+  getMandateCredentials,
+  getRegisteredUsers,
+  saveRegisteredUser,
+  STORAGE_TENANT_CREDENTIALS_KEY,
+  STORAGE_TENANTS_LIST_KEY,
+} from './katdestate-store';
 
 /**
  * Appels du domaine identité.
  *
- * Ce module est la seule porte d'entrée vers `/auth/*` : les composants ne
- * manipulent jamais d'URL ni de token. Chaque réponse met à jour l'access token
- * en mémoire, de sorte que l'appelant n'a pas à s'en préoccuper.
+ * Authentification sécurisée :
+ * - Seuls les comptes inscrits via `/register`, les comptes démo officiels,
+ *   et les identifiants créés par un propriétaire (Locataires & Mandataires)
+ *   peuvent se connecter sans inscription préalable.
  */
 
 export interface SignInPayload {
@@ -31,7 +41,7 @@ interface AuthTokensResponse {
   expiresIn: number;
 }
 
-const DEMO_PROFILES: Record<
+export const DEMO_PROFILES: Record<
   string,
   { role: string; name: string; orgName: string; platformRole?: string }
 > = {
@@ -71,65 +81,59 @@ const DEMO_PROFILES: Record<
     name: 'M. Yao Konan',
     orgName: 'Foyer Citoyen Konan',
   },
+  'admin@kadtestate.immo': {
+    role: 'SUPER_ADMIN',
+    name: 'Direction Super Admin',
+    orgName: 'KatdEstate Siège',
+    platformRole: 'SUPER_ADMIN',
+  },
+  'chef.quartier@kadtestate.immo': {
+    role: 'NEIGHBORHOOD_LEADER',
+    name: "Nanan Kouamé N'Guessan",
+    orgName: 'Chefferie de Cocody',
+  },
+  'chef.bloc@kadtestate.immo': {
+    role: 'BLOCK_LEADER',
+    name: 'M. Bakary Diarra',
+    orgName: 'Bloc Riviera Palmeraie 2',
+  },
+  'proprietaire@kadtestate.immo': {
+    role: 'OWNER',
+    name: 'M. Amadou Diallo',
+    orgName: 'Patrimoine & SCI Diallo',
+  },
+  'locataire@kadtestate.immo': {
+    role: 'TENANT',
+    name: 'Mme Aïssatou Traoré',
+    orgName: 'Résidence Palmeraie',
+  },
+  'agent@kadtestate.immo': {
+    role: 'AGENT',
+    name: "M. Koffi N'Dri",
+    orgName: 'Agence Immobilière Ivoire',
+  },
+  'resident@kadtestate.immo': {
+    role: 'RESIDENT',
+    name: 'M. Yao Konan',
+    orgName: 'Foyer Citoyen Konan',
+  },
 };
 
 const STORAGE_SESSION_KEY = 'katdestate_active_session';
+export const STORAGE_ACTIVE_TENANT_PROFILE_KEY = 'katdestate_active_tenant_profile';
 
-function guessRoleFromEmail(email: string): {
-  role: string;
-  name: string;
-  orgName: string;
-  platformRole?: string;
-} {
-  const lower = email.toLowerCase();
-  if (DEMO_PROFILES[lower]) return DEMO_PROFILES[lower];
-  if (lower.includes('admin')) {
-    return {
-      role: 'SUPER_ADMIN',
-      name: 'Administrateur Principal',
-      orgName: 'KatdEstate Siège',
-      platformRole: 'SUPER_ADMIN',
-    };
-  }
-  if (lower.includes('quartier') || lower.includes('chefferie')) {
-    return {
-      role: 'NEIGHBORHOOD_LEADER',
-      name: 'Chef de Quartier',
-      orgName: 'Chefferie Territoriale',
-    };
-  }
-  if (lower.includes('bloc')) {
-    return { role: 'BLOCK_LEADER', name: 'Chef de Bloc', orgName: 'Bloc Résidentiel' };
-  }
-  if (lower.includes('locat') || lower.includes('tenant')) {
-    return { role: 'TENANT', name: 'Locataire Résident', orgName: 'Résidence KatdEstate' };
-  }
-  if (lower.includes('agent')) {
-    return { role: 'AGENT', name: 'Agent Foncier & Immobilier', orgName: 'Agence Partenaire' };
-  }
-  if (lower.includes('resident') || lower.includes('citoyen')) {
-    return { role: 'RESIDENT', name: 'Résident Citoyen', orgName: 'Communauté Locale' };
-  }
-  return { role: 'OWNER', name: 'Propriétaire Immobilier', orgName: 'Patrimoine Personnel' };
-}
-
-function createLocalDemoSession(
+function createSessionForRole(
   email: string,
-  roleOverride?: string,
-  nameOverride?: string,
+  role: string,
+  displayName: string,
+  orgName: string = 'Espace KatdEstate',
 ): AuthSession {
   const emailLower = email.trim().toLowerCase();
-  const guessed = guessRoleFromEmail(emailLower);
-
-  const role = roleOverride || guessed.role;
-  const name = nameOverride || guessed.name;
-  const orgName = guessed.orgName;
-
   return {
     user: {
       id: `usr-${role.toLowerCase()}-${Date.now().toString(36)}`,
       email: emailLower,
-      displayName: name,
+      displayName,
       ...(role === 'SUPER_ADMIN' ? { platformRole: 'SUPER_ADMIN' as const } : {}),
     },
     memberships: [
@@ -185,6 +189,7 @@ export function clearSavedLocalSession() {
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(STORAGE_SESSION_KEY);
+      localStorage.removeItem(STORAGE_ACTIVE_TENANT_PROFILE_KEY);
     }
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(STORAGE_SESSION_KEY);
@@ -192,8 +197,162 @@ export function clearSavedLocalSession() {
   } catch {}
 }
 
+/**
+ * Vérifie si les identifiants correspondent à :
+ * 1. Un locataire créé par un propriétaire
+ * 2. Un mandataire / gestionnaire délégué créé par un propriétaire
+ * 3. Un utilisateur inscrit via /register
+ * 4. Un compte démo officiel
+ */
+function checkAuthorizedLocalAccount(
+  emailRaw: string,
+  passwordRaw: string,
+): AuthSession | null {
+  const emailLower = emailRaw.trim().toLowerCase();
+  const pwd = passwordRaw.trim();
+
+  if (typeof window !== 'undefined') {
+    // 1. Vérifier les locataires créés par le propriétaire
+    try {
+      const credsMap: Record<string, string> = JSON.parse(
+        localStorage.getItem(STORAGE_TENANT_CREDENTIALS_KEY) || '{}',
+      );
+      const customTenants: any[] = JSON.parse(
+        localStorage.getItem(STORAGE_TENANTS_LIST_KEY) || '[]',
+      );
+
+      // Chercher le locataire par email (insensible à la casse)
+      const matchedTenant = customTenants.find(
+        (t) => t.email && String(t.email).trim().toLowerCase() === emailLower,
+      );
+
+      // Chercher le mot de passe enregistré dans credsMap (clé exacte ou minuscule)
+      let expectedTenantPassword: string | undefined =
+        credsMap[emailLower] || credsMap[emailRaw.trim()];
+      if (!expectedTenantPassword) {
+        const matchingKey = Object.keys(credsMap).find(
+          (k) => k.trim().toLowerCase() === emailLower,
+        );
+        if (matchingKey) expectedTenantPassword = credsMap[matchingKey];
+      }
+      if (!expectedTenantPassword && matchedTenant?.loginPassword) {
+        expectedTenantPassword = String(matchedTenant.loginPassword);
+      }
+
+      if (matchedTenant || expectedTenantPassword) {
+        if (expectedTenantPassword && pwd !== expectedTenantPassword.trim()) {
+          throw new Error(
+            'Mot de passe locataire incorrect. Veuillez vérifier les identifiants transmis par votre propriétaire.',
+          );
+        }
+        const tenantName = matchedTenant?.fullName || emailLower.split('@')[0] || 'Locataire';
+        const orgName = matchedTenant?.propertyName || 'Résidence KatdEstate';
+        if (matchedTenant) {
+          localStorage.setItem(
+            STORAGE_ACTIVE_TENANT_PROFILE_KEY,
+            JSON.stringify(matchedTenant),
+          );
+        }
+        return createSessionForRole(emailLower, 'TENANT', tenantName, orgName);
+      }
+    } catch (e: any) {
+      if (e instanceof Error && e.message.includes('Mot de passe locataire incorrect')) {
+        throw e;
+      }
+    }
+
+    // 2. Vérifier les mandataires créés par le propriétaire
+    const mandates = getMandateCredentials();
+    const matchedMandate = mandates.find(
+      (m) => m.managerEmail.trim().toLowerCase() === emailLower,
+    );
+    if (matchedMandate) {
+      if (matchedMandate.status === 'REVOKED') {
+        throw new Error('Ce mandat de gestion a été révoqué par le propriétaire.');
+      }
+      if (matchedMandate.password && pwd !== matchedMandate.password.trim()) {
+        throw new Error(
+          'Mot de passe mandataire incorrect. Veuillez vérifier les identifiants fournis par le propriétaire.',
+        );
+      }
+      return createSessionForRole(
+        emailLower,
+        'OWNER',
+        `${matchedMandate.managerName} (Mandataire)`,
+        matchedMandate.propertyName || 'Patrimoine Sous Mandat',
+      );
+    }
+
+    // 3. Vérifier les chefs de bloc créés par le chef de quartier
+    const blockLeaders = getBlockLeaders();
+    const matchedBlockLeader = blockLeaders.find(
+      (l) => l.email.trim().toLowerCase() === emailLower,
+    );
+    if (matchedBlockLeader) {
+      if (matchedBlockLeader.password && pwd !== matchedBlockLeader.password.trim()) {
+        throw new Error(
+          'Mot de passe Chef de Bloc incorrect. Veuillez vérifier les identifiants transmis par le Chef de Quartier.',
+        );
+      }
+      return createSessionForRole(
+        emailLower,
+        'BLOCK_LEADER',
+        `${matchedBlockLeader.name} (Chef de Bloc)`,
+        `${matchedBlockLeader.blockName} • ${matchedBlockLeader.neighborhoodName}`,
+      );
+    }
+
+    // 4. Vérifier les propriétaires créés par le chef de bloc
+    const blockOwners = getBlockOwners();
+    const matchedBlockOwner = blockOwners.find(
+      (o) => o.email.trim().toLowerCase() === emailLower,
+    );
+    if (matchedBlockOwner) {
+      if (matchedBlockOwner.password && pwd !== matchedBlockOwner.password.trim()) {
+        throw new Error(
+          'Mot de passe Propriétaire incorrect. Veuillez vérifier les identifiants transmis par le Chef de Bloc.',
+        );
+      }
+      return createSessionForRole(
+        emailLower,
+        'OWNER',
+        `${matchedBlockOwner.fullName} (Propriétaire)`,
+        `${matchedBlockOwner.propertyName} (${matchedBlockOwner.blockName})`,
+      );
+    }
+
+    // 5. Vérifier les utilisateurs inscrits sur la plateforme
+    const registeredUsers = getRegisteredUsers();
+    const matchedUser = registeredUsers.find(
+      (u) => u.email.trim().toLowerCase() === emailLower,
+    );
+    if (matchedUser) {
+      if (matchedUser.password && pwd !== matchedUser.password.trim()) {
+        throw new Error('Mot de passe incorrect pour ce compte.');
+      }
+      return createSessionForRole(
+        emailLower,
+        matchedUser.role || 'OWNER',
+        matchedUser.displayName || emailLower,
+        'Espace KatdEstate',
+      );
+    }
+  }
+
+  // 4. Vérifier les comptes démo officiels
+  const demo = DEMO_PROFILES[emailLower];
+  if (demo) {
+    return createSessionForRole(emailLower, demo.role, demo.name, demo.orgName);
+  }
+
+  return null;
+}
+
 /** Crée une session et mémorise l'access token. */
 export async function signInRequest(payload: SignInPayload): Promise<SignInResult> {
+  // 1. Vérifier d'abord si c'est un compte locataire, mandataire, inscrit localement ou démo
+  const localAuthorizedSession = checkAuthorizedLocalAccount(payload.email, payload.password);
+
   try {
     const tokens = await apiRequest<AuthTokensResponse>('/auth/login', {
       method: 'POST',
@@ -202,20 +361,46 @@ export async function signInRequest(payload: SignInPayload): Promise<SignInResul
 
     setAccessToken(tokens.accessToken);
     const session = await apiRequest<AuthSession>('/auth/me');
+
+    // Si c'est un locataire créé par le propriétaire, s'assurer que son rôle TENANT est respecté
+    if (
+      localAuthorizedSession &&
+      localAuthorizedSession.memberships[0]?.role === 'TENANT' &&
+      session.memberships[0]?.role !== 'TENANT'
+    ) {
+      saveLocalSession(localAuthorizedSession);
+      return { session: localAuthorizedSession };
+    }
+
     saveLocalSession(session);
     return { session };
   } catch (err: any) {
-    // Si l'API est en cours de démarrage, bloquée par des cookies tiers ou hors ligne,
-    // créer une session locale résiliente pour garantir l'accès sans blocage
-    const mockSession = createLocalDemoSession(payload.email);
-    setAccessToken(`demo-token-${mockSession.user.id}`);
-    saveLocalSession(mockSession);
-    return { session: mockSession };
+    // Si le compte est autorisé (Locataire créé par propriétaire, Mandataire, Utilisateur inscrit ou Démo officielle)
+    if (localAuthorizedSession) {
+      setAccessToken(`token-${localAuthorizedSession.user.id}`);
+      saveLocalSession(localAuthorizedSession);
+      return { session: localAuthorizedSession };
+    }
+
+    // Sinon : REFUSER la connexion aux comptes non inscrits !
+    throw new Error(
+      "Accès refusé : Ce compte n'est pas inscrit ou vos identifiants sont incorrects. Veuillez d'abord créer un compte ou utiliser les identifiants fournis par votre propriétaire.",
+    );
   }
 }
 
 /** Enregistre un nouvel utilisateur avec son rôle choisi. */
 export async function registerRequest(payload: RegisterPayload): Promise<SignInResult> {
+  // Mémoriser systématiquement l'utilisateur inscrit dans le registre local
+  saveRegisteredUser({
+    email: payload.email.trim().toLowerCase(),
+    password: payload.password.trim(),
+    displayName: payload.displayName.trim(),
+    role: payload.role || 'OWNER',
+    phone: payload.phone,
+    createdAt: new Date().toISOString(),
+  });
+
   try {
     const tokens = await apiRequest<AuthTokensResponse>('/auth/register', {
       method: 'POST',
@@ -227,11 +412,15 @@ export async function registerRequest(payload: RegisterPayload): Promise<SignInR
     saveLocalSession(session);
     return { session };
   } catch (err: any) {
-    // Fallback immédiat si le serveur est en démarrage
-    const mockSession = createLocalDemoSession(payload.email, payload.role, payload.displayName);
-    setAccessToken(`demo-token-${mockSession.user.id}`);
-    saveLocalSession(mockSession);
-    return { session: mockSession };
+    const session = createSessionForRole(
+      payload.email,
+      payload.role || 'OWNER',
+      payload.displayName,
+      'Espace KatdEstate',
+    );
+    setAccessToken(`token-${session.user.id}`);
+    saveLocalSession(session);
+    return { session };
   }
 }
 

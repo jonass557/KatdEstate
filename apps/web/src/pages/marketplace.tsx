@@ -65,6 +65,7 @@ export interface MarketplaceListing {
 
 export const CATEGORY_LABELS: Record<string, string> = {
   ALL: 'Toutes les offres',
+  CARABOT: 'Maison en carabot',
   CHAMBRE_SIMPLE: 'Chambre simple',
   CHAMBRE_MODERNE: 'Chambre moderne',
   STUDIO_MODERNE: 'Studio moderne',
@@ -328,7 +329,9 @@ export function MarketplacePage() {
   // Load custom listings published by owners/agents
   const customListings = useMemo<MarketplaceListing[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('katdestate_custom_listings') || '[]');
+      const all: any[] = JSON.parse(localStorage.getItem('katdestate_custom_listings') || '[]');
+      // Sur la marketplace publique, afficher uniquement les annonces validées "PUBLIE"
+      return all.filter((l) => l.workflowStatus === 'PUBLIE' || (!l.workflowStatus && l.status === 'PUBLISHED'));
     } catch {
       return [];
     }

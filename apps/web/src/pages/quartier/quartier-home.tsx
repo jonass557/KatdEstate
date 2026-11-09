@@ -19,7 +19,7 @@ export function QuartierHomePage() {
       case 'SUPER_ADMIN':
         return 'chefferie';
       case 'NEIGHBORHOOD_LEADER':
-        return 'chefferie';
+        return 'neighborhood-leader';
       case 'BLOCK_LEADER':
         return 'block-leader';
       case 'RESIDENT':

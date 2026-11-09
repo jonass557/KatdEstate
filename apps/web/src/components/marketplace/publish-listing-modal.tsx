@@ -47,6 +47,12 @@ export interface NewListingPayload {
 }
 
 const PROPERTY_CATEGORIES = [
+  {
+    id: 'CARABOT',
+    label: 'Maison en carabot (Traditionnelle & Éco)',
+    icon: Home,
+    defaultType: 'RENT',
+  },
   { id: 'CHAMBRE_SIMPLE', label: 'Chambre simple', icon: Home, defaultType: 'RENT' },
   {
     id: 'CHAMBRE_MODERNE',
@@ -118,6 +124,12 @@ export function PublishListingModal({
     'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
   ]);
   const [newPhotoInput, setNewPhotoInput] = useState('');
+  const [photoExterieur, setPhotoExterieur] = useState(
+    'https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=800&q=80',
+  );
+  const [photoInterieur, setPhotoInterieur] = useState(
+    'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
+  );
 
   // Specs
   const [surfaceM2, setSurfaceM2] = useState<number>(35);
@@ -176,13 +188,37 @@ export function PublishListingModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !priceMinor || photoUrls.length === 0) {
+    if (!title.trim() || !priceMinor) {
       toast({
-        title: 'Veuillez remplir les champs obligatoires et au moins une photo.',
+        title: 'Veuillez remplir le titre et le montant.',
         variant: 'error',
       });
       return;
     }
+
+    if (category === 'CARABOT') {
+      if (!photoExterieur.trim() || !photoInterieur.trim()) {
+        toast({
+          title: 'Pour une Maison en carabot, 2 photos sont obligatoires (extérieur + intérieur).',
+          variant: 'error',
+        });
+        return;
+      }
+    } else if (photoUrls.length === 0) {
+      toast({
+        title: 'Veuillez ajouter au moins une photo pour cette annonce.',
+        variant: 'error',
+      });
+      return;
+    }
+
+    const finalPhotos =
+      category === 'CARABOT'
+        ? [
+            { url: photoExterieur.trim(), label: 'EXTERIEUR' as const, isPrimary: true },
+            { url: photoInterieur.trim(), label: 'INTERIEUR' as const, isPrimary: false },
+          ]
+        : photoUrls.map((url, idx) => ({ url, isPrimary: idx === 0 }));
 
     const payload: NewListingPayload = {
       title,
@@ -202,7 +238,7 @@ export function PublishListingModal({
       surfaceM2,
       bedrooms,
       bathrooms,
-      photos: photoUrls.map((url, idx) => ({ url, isPrimary: idx === 0 })),
+      photos: finalPhotos,
       contact: {
         name: contactName,
         phone: contactPhone,
@@ -214,14 +250,18 @@ export function PublishListingModal({
       advanceMonths,
     };
 
-    // Store in published items
+    // Store in custom listings with workflow status EN_ATTENTE
     try {
       const existing = JSON.parse(localStorage.getItem('katdestate_custom_listings') || '[]');
       existing.unshift({
         ...payload,
         _id: `listing-${Date.now()}`,
-        status: 'PUBLISHED',
+        workflowStatus: 'EN_ATTENTE',
+        status: 'PENDING',
+        authorId: user?.id || 'habitant-local',
+        authorName: user?.displayName || contactName,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
       localStorage.setItem('katdestate_custom_listings', JSON.stringify(existing));
     } catch {
@@ -229,9 +269,9 @@ export function PublishListingModal({
     }
 
     toast({
-      title: 'Annonce publiée avec succès !',
+      title: 'Annonce enregistrée — Statut : EN ATTENTE',
       description:
-        'Votre bien est désormais visible sur la marketplace avec localisation GPS et contact direct.',
+        'Votre annonce a été soumise avec succès. Le Chef de Bloc va procéder à la vérification terrain avant validation.',
       variant: 'success',
     });
 
@@ -372,24 +412,42 @@ export function PublishListingModal({
             {/* Caractéristiques */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
               <div className="space-y-1">
-                <label className="text-xs text-purple-200">Superficie (m²)</label>
+                <label className="text-xs text-purple-200">
+                  {category === 'CARABOT' ? 'Superficie (15-35 m²)' : 'Superficie (m²)'}
+                </label>
                 <Input
                   type="number"
                   value={surfaceM2}
                   onChange={(e) => setSurfaceM2(Number(e.target.value))}
-                  min="5"
+                  min={category === 'CARABOT' ? 15 : 5}
+                  max={category === 'CARABOT' ? 35 : undefined}
                   className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9"
                 />
+                {category === 'CARABOT' && (
+                  <span className="text-[10px] text-amber-400">Norme : 15 à 35 m²</span>
+                )}
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-purple-200">Chambres</label>
-                <Input
-                  type="number"
+                <label className="text-xs text-purple-200">
+                  {category === 'CARABOT' ? 'Chambres (1 à 2)' : 'Chambres'}
+                </label>
+                <select
                   value={bedrooms}
                   onChange={(e) => setBedrooms(Number(e.target.value))}
-                  min="0"
-                  className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9"
-                />
+                  className="h-9 w-full rounded-xl border border-purple-800/80 bg-purple-950/60 px-3 text-xs text-white"
+                >
+                  <option value={1}>1 Chambre</option>
+                  <option value={2}>2 Chambres</option>
+                  {category !== 'CARABOT' && (
+                    <>
+                      <option value={3}>3 Chambres</option>
+                      <option value={4}>4+ Chambres</option>
+                    </>
+                  )}
+                </select>
+                {category === 'CARABOT' && (
+                  <span className="text-[10px] text-amber-400">1 ou 2 pièces</span>
+                )}
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-purple-200">Salles de bain</label>
@@ -424,53 +482,120 @@ export function PublishListingModal({
             </div>
           </div>
 
-          {/* 3. Photos Multiples */}
-          <div className="space-y-3">
-            <label className="text-xs font-bold uppercase tracking-wider text-[#00e676]">
-              3. Galerie Photos du Bien ({photoUrls.length} photos) *
-            </label>
-            <div className="flex gap-2">
-              <Input
-                value={newPhotoInput}
-                onChange={(e) => setNewPhotoInput(e.target.value)}
-                placeholder="Entrez l'URL d'une photo (Unsplash, Cloudinary, etc.)..."
-                className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9 flex-1"
-              />
-              <Button
-                type="button"
-                onClick={handleAddPhoto}
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
-              >
-                <Plus className="size-4 mr-1" /> Ajouter
-              </Button>
-            </div>
-
-            {/* Thumbnails */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-              {photoUrls.map((url, idx) => (
-                <div
-                  key={idx}
-                  className="relative rounded-2xl overflow-hidden border border-purple-700/50 group h-24 bg-black/40"
-                >
-                  <img src={url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
-                  {idx === 0 && (
-                    <span className="absolute top-1 left-1 bg-[#00e676] text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded">
-                      PHOTO PRINCIPALE
-                    </span>
+          {/* 3. Photos */}
+          {category === 'CARABOT' ? (
+            <div className="space-y-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                  3. Photos Maison en carabot (2 URLs obligatoires : Extérieur + Intérieur) *
+                </label>
+                <span className="rounded bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                  Obligatoire
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-purple-200 font-semibold">
+                    1. Photo Façade Extérieure (URL) *
+                  </label>
+                  <Input
+                    value={photoExterieur}
+                    onChange={(e) => setPhotoExterieur(e.target.value)}
+                    placeholder="https://... (photo extérieur carabot)"
+                    required
+                    className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9"
+                  />
+                  {photoExterieur && (
+                    <div className="relative h-28 overflow-hidden rounded-xl border border-purple-700/60">
+                      <img
+                        src={photoExterieur}
+                        alt="Extérieur carabot"
+                        className="h-full w-full object-cover"
+                      />
+                      <span className="absolute bottom-1.5 left-1.5 rounded bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white">
+                        Extérieur
+                      </span>
+                    </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePhoto(idx)}
-                    className="absolute top-1 right-1 p-1 rounded-lg bg-rose-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Supprimer"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
                 </div>
-              ))}
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-purple-200 font-semibold">
+                    2. Photo Pièce Intérieure (URL) *
+                  </label>
+                  <Input
+                    value={photoInterieur}
+                    onChange={(e) => setPhotoInterieur(e.target.value)}
+                    placeholder="https://... (photo intérieur carabot)"
+                    required
+                    className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9"
+                  />
+                  {photoInterieur && (
+                    <div className="relative h-28 overflow-hidden rounded-xl border border-purple-700/60">
+                      <img
+                        src={photoInterieur}
+                        alt="Intérieur carabot"
+                        className="h-full w-full object-cover"
+                      />
+                      <span className="absolute bottom-1.5 left-1.5 rounded bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white">
+                        Intérieur
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-[#00e676]">
+                3. Galerie Photos du Bien ({photoUrls.length} photos) *
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  value={newPhotoInput}
+                  onChange={(e) => setNewPhotoInput(e.target.value)}
+                  placeholder="Entrez l'URL d'une photo (Unsplash, Cloudinary, etc.)..."
+                  className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9 flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddPhoto}
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+                >
+                  <Plus className="size-4 mr-1" /> Ajouter
+                </Button>
+              </div>
+
+              {/* Thumbnails */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                {photoUrls.map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="group relative h-20 rounded-xl overflow-hidden border border-purple-800/60 bg-purple-950/40"
+                  >
+                    <img
+                      src={url}
+                      alt={`Photo ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhoto(idx)}
+                      className="absolute top-1 right-1 p-1 rounded-md bg-red-600/80 text-white opacity-0 group-hover:opacity-100 transition"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                    {idx === 0 && (
+                      <span className="absolute bottom-1 left-1 rounded bg-[#00e676] text-black text-[9px] font-black px-1.5 py-0.5">
+                        Principale
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 4. Localisation Réelle & Coordonnées GPS / Carte */}
           <div className="space-y-3 p-4 rounded-2xl bg-purple-950/50 border border-purple-800/60">

@@ -8,7 +8,8 @@ import { renderPdf } from '../../common/pdf.js';
 import { buildSchedule } from '../../common/schedule.js';
 import { nextNumber } from '../../common/sequence.js';
 import { Lease, Tenant } from '../../models/lease.js';
-import { Organization } from '../../models/identity.js';
+import { Membership, Organization, User } from '../../models/identity.js';
+import { hashPassword } from '../../common/password.js';
 import { Unit } from '../../models/property.js';
 import { Payment, RentSchedule } from '../../models/finance.js';
 import { MaintenanceTicket, Notification } from '../../models/operations.js';
@@ -49,19 +50,64 @@ export function createTenantHandlers(config: AppConfig) {
 
   return {
     async create(req: Request, res: Response): Promise<void> {
-      const { identityDocumentNumber, email, firstName, lastName, ...rest } = req.body;
+      const { identityDocumentNumber, email, firstName, lastName, loginPassword, ...rest } =
+        req.body;
       const fullName =
         rest.fullName || [firstName, lastName].filter(Boolean).join(' ') || 'Locataire';
+      const organizationId = org(req);
+      let linkedUserId: unknown = undefined;
+
+      if (email && String(email).trim()) {
+        const emailNormalized = String(email).trim().toLowerCase();
+        const plainPassword =
+          loginPassword && String(loginPassword).trim()
+            ? String(loginPassword).trim()
+            : 'Locataire2026!';
+        try {
+          const passwordHash = await hashPassword(plainPassword, config.argon2);
+          let user = await User.findOne({ emailNormalized });
+          if (!user) {
+            user = await User.create({
+              email: emailNormalized,
+              emailNormalized,
+              displayName: fullName,
+              passwordHash,
+              status: 'ACTIVE',
+            });
+          } else {
+            user.passwordHash = passwordHash;
+            user.displayName = fullName;
+            await user.save();
+          }
+          linkedUserId = user._id;
+          const existingMembership = await Membership.findOne({
+            userId: user._id,
+            organizationId,
+          });
+          if (!existingMembership) {
+            await Membership.create({
+              userId: user._id,
+              organizationId,
+              role: 'TENANT',
+              status: 'ACTIVE',
+            });
+          }
+        } catch {
+          // Ne pas bloquer la création de la fiche locataire si l'email existe déjà ailleurs
+        }
+      }
+
       const tenant = await Tenant.create({
         ...rest,
         fullName,
         ...(firstName ? { firstName } : {}),
         ...(lastName ? { lastName } : {}),
         ...(email ? { email } : {}),
+        ...(linkedUserId ? { userId: linkedUserId } : {}),
         ...(identityDocumentNumber
           ? { identityDocumentNumberEnc: encryptString(identityDocumentNumber, secret) }
           : {}),
-        organizationId: org(req),
+        organizationId,
       });
       await audit(req, 'tenant.create', 'Tenant', String(tenant._id));
       res.status(201);

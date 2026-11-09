@@ -47,7 +47,17 @@ import {
   type QuittanceItem,
 } from '../lib/quittances';
 import { getLocalProperties } from './properties';
-import { getLocalTenants } from './tenants';
+import { getLocalTenants, saveLocalTenants, type Tenant } from './tenants';
+import {
+  getOwnerQuittanceWallet,
+  getOwnerRentWallet,
+  getRentValidations,
+  saveOwnerQuittanceWallet,
+  saveOwnerRentWallet,
+  saveRentValidation,
+  withdrawFromOwnerQuittanceWallet,
+  withdrawFromOwnerRentWallet,
+} from '../lib/katdestate-store';
 
 interface Schedule {
   _id: string;
@@ -121,8 +131,8 @@ const METHODS = [
 
 export function RentPage() {
   const [activeTab, setActiveTab] = useState<'schedules' | 'invoices' | 'deposits'>('schedules');
-  const [rentSubTab, setRentSubTab] = useState<'schedules' | 'by-tenant' | 'late-tenants'>(
-    'schedules',
+  const [rentSubTab, setRentSubTab] = useState<'by-tenant' | 'schedules' | 'late-tenants'>(
+    'by-tenant',
   );
   const [status, setStatus] = useState('');
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
@@ -133,11 +143,25 @@ export function RentPage() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showTenantHistoryModal, setShowTenantHistoryModal] = useState(false);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [validatingTenantRow, setValidatingTenantRow] = useState<any | null>(null);
+  const [selectedValidateMethod, setSelectedValidateMethod] = useState('Mobile Money (Wave)');
 
   const base = useOrgPath();
   const { toast } = useToast();
 
-  const localTenants = getLocalTenants();
+  const [localTenants, setLocalTenants] = useState<Tenant[]>(() => getLocalTenants());
+  const [rentValidations, setRentValidations] = useState(() => getRentValidations());
+  const [ownerRentWallet, setOwnerRentWallet] = useState(() => getOwnerRentWallet());
+
+  const reloadRentState = () => {
+    setLocalTenants(getLocalTenants());
+    setRentValidations(getRentValidations());
+    setOwnerRentWallet(getOwnerRentWallet());
+  };
+
+  useEffect(() => {
+    reloadRentState();
+  }, []);
 
   const { data: schedulesData } = useOrgList<Schedule>(
     ['schedules', status],
@@ -146,11 +170,11 @@ export function RentPage() {
   const { data: invoicesData } = useOrgList<Invoice>(['invoices'], '/invoices?pageSize=50');
   const summary = useOrgQuery<Summary>(['finance-summary'], '/finance/summary');
 
-  // Calcul synthétique par locataire & propriété
+  // Calcul synthétique par locataire & propriété occupée avec prise en compte des validations (Portefeuille ou Manuelles)
   const tenantRentSummaries = useMemo(() => {
     const defaultList = [
       {
-        id: 'ten-1',
+        id: 'ten-default-1',
         name: 'Kouamé Jean-Marc',
         phone: '+225 07 12 34 56 78',
         email: 'jean.kouame@gmail.com',
@@ -161,6 +185,8 @@ export function RentPage() {
         dueAmount: 0,
         lateDays: 0,
         status: 'UP_TO_DATE',
+        paymentMethod: 'Transfert Portefeuille (Loyer Novembre 2026)',
+        validatedBy: 'WALLET_AUTO',
       },
       {
         id: 'ten-2',
@@ -170,10 +196,12 @@ export function RentPage() {
         property: 'Résidence Katd Les Palmiers',
         unit: 'Studio Moderne N°2',
         monthlyRent: 120000,
-        paidTotal: 60000,
-        dueAmount: 60000,
+        paidTotal: 0,
+        dueAmount: 120000,
         lateDays: 6,
         status: 'LATE',
+        paymentMethod: 'En attente',
+        validatedBy: undefined,
       },
       {
         id: 'ten-3',
@@ -181,43 +209,173 @@ export function RentPage() {
         phone: '+225 01 23 45 67 89',
         email: 'ibrahim.ouattara@gmail.com',
         property: 'Villa Duplex Angré',
-        unit: 'Appartement 3 pièces',
+        unit: 'Appartement N°1 (3 pièces)',
         monthlyRent: 250000,
         paidTotal: 0,
         dueAmount: 250000,
         lateDays: 14,
         status: 'UNPAID',
+        paymentMethod: 'En attente',
+        validatedBy: undefined,
       },
     ];
 
-    if (localTenants.length > 0) {
-      return localTenants.map((lt, idx) => ({
-        id: lt._id,
-        name: lt.fullName,
-        phone: lt.phone || '+225 07 00 00 00 00',
-        email: lt.email || 'locataire@katdestate.immo',
-        property: lt.propertyName || 'Résidence Principale',
-        unit: lt.unitName || lt.unitNumber || 'Logement 1',
-        monthlyRent: lt.rentAmount || 120000,
-        paidTotal: idx === 0 ? lt.rentAmount || 120000 : 0,
-        dueAmount: idx === 0 ? 0 : lt.rentAmount || 120000,
-        lateDays: idx === 1 ? 5 : idx === 2 ? 12 : 0,
-        status: idx === 0 ? 'UP_TO_DATE' : idx === 1 ? 'LATE' : 'UNPAID',
-      }));
+    const rawList =
+      localTenants.length > 0
+        ? localTenants.map((lt, idx) => ({
+            id: lt._id,
+            name: lt.fullName,
+            phone: lt.phone || '+225 07 00 00 00 00',
+            email: lt.email || 'locataire@katdestate.immo',
+            property: lt.propertyName || 'Résidence Principale',
+            unit: lt.unitNumber || lt.unitName || 'Logement 1',
+            monthlyRent: lt.rentAmount || 120000,
+            paidTotal: lt.rentPaymentStatus === 'PAID' ? lt.rentAmount || 120000 : 0,
+            dueAmount: lt.rentPaymentStatus === 'PAID' ? 0 : lt.rentAmount || 120000,
+            lateDays: lt.rentPaymentStatus === 'PAID' ? 0 : idx === 1 ? 5 : 0,
+            status:
+              lt.rentPaymentStatus === 'PAID'
+                ? 'UP_TO_DATE'
+                : idx === 1
+                  ? 'LATE'
+                  : 'UNPAID',
+            paymentMethod: lt.lastPaymentMethod || 'En attente',
+            validatedBy: undefined as string | undefined,
+          }))
+        : defaultList;
+
+    return rawList.map((item) => {
+      const valById = rentValidations[item.id];
+      const valByEmail = item.email ? rentValidations[item.email.toLowerCase()] : undefined;
+      const val = valById || valByEmail;
+      if (val && val.status === 'PAID') {
+        return {
+          ...item,
+          paidTotal: val.paidAmount || item.monthlyRent,
+          dueAmount: 0,
+          lateDays: 0,
+          status: 'UP_TO_DATE',
+          paymentMethod: val.paymentMethod,
+          validatedBy: val.validatedBy,
+        };
+      }
+      return item;
+    });
+  }, [localTenants, rentValidations]);
+
+  // Statistiques des locataires ayant payé par propriété occupée
+  const rentStatsByProperty = useMemo(() => {
+    const map: Record<
+      string,
+      {
+        propertyName: string;
+        totalTenants: number;
+        paidCount: number;
+        lateCount: number;
+        unpaidCount: number;
+        collectedAmount: number;
+      }
+    > = {};
+    for (const item of tenantRentSummaries) {
+      const prop = item.property || 'Propriété';
+      if (!map[prop]) {
+        map[prop] = {
+          propertyName: prop,
+          totalTenants: 0,
+          paidCount: 0,
+          lateCount: 0,
+          unpaidCount: 0,
+          collectedAmount: 0,
+        };
+      }
+      map[prop].totalTenants += 1;
+      if (item.status === 'UP_TO_DATE') {
+        map[prop].paidCount += 1;
+        map[prop].collectedAmount += item.paidTotal;
+      } else if (item.status === 'LATE') {
+        map[prop].lateCount += 1;
+      } else {
+        map[prop].unpaidCount += 1;
+      }
     }
+    return Object.values(map);
+  }, [tenantRentSummaries]);
 
-    return defaultList;
-  }, [localTenants]);
-
-  const totalPaidRent = tenantRentSummaries.reduce((sum, item) => sum + item.paidTotal, 0);
+  const totalPaidRent = Math.max(
+    ownerRentWallet.balance,
+    tenantRentSummaries.reduce((sum, item) => sum + item.paidTotal, 0),
+  );
 
   const lateTenants = tenantRentSummaries.filter(
     (t) => t.status === 'LATE' || t.status === 'UNPAID',
   );
 
+  const handleManualValidateRent = (item: (typeof tenantRentSummaries)[0], method: string) => {
+    const now = new Date().toISOString();
+    saveRentValidation({
+      tenantId: item.id,
+      tenantName: item.name,
+      tenantEmail: item.email,
+      tenantPhone: item.phone,
+      propertyName: item.property,
+      unitName: item.unit,
+      monthlyRent: item.monthlyRent,
+      paidAmount: item.monthlyRent,
+      status: 'PAID',
+      paymentMethod: method,
+      period: 'Novembre 2026',
+      paidAt: now,
+      validatedBy: 'OWNER_MANUAL',
+    });
+
+    // Mettre à jour le locataire local s'il existe
+    const updatedTenants = localTenants.map((lt) =>
+      lt._id === item.id || (lt.email && lt.email.toLowerCase() === item.email.toLowerCase())
+        ? {
+            ...lt,
+            rentPaymentStatus: 'PAID' as const,
+            lastPaymentMethod: method,
+            lastPaidAt: now,
+          }
+        : lt,
+    );
+    saveLocalTenants(updatedTenants);
+
+    // Créditer aussi le Portefeuille Gestion des Loyers
+    const currentWallet = getOwnerRentWallet();
+    saveOwnerRentWallet({
+      balance: currentWallet.balance + item.monthlyRent,
+      totalReceived: currentWallet.totalReceived + item.monthlyRent,
+      totalWithdrawn: currentWallet.totalWithdrawn,
+      transactions: [
+        {
+          _id: `tx-man-rent-${Date.now()}`,
+          type: 'MANUAL_VALIDATION',
+          amount: item.monthlyRent,
+          nature: `Validation Loyer (${item.unit} - ${item.property})`,
+          method,
+          tenantId: item.id,
+          tenantName: item.name,
+          propertyName: item.property,
+          unitName: item.unit,
+          createdAt: now,
+        },
+        ...currentWallet.transactions,
+      ],
+    });
+
+    reloadRentState();
+    setValidatingTenantRow(null);
+    toast({
+      title: 'Loyer validé avec succès !',
+      description: `Le paiement de ${item.name} (${item.unit}) via ${method} est enregistré dans Gestion des Loyers.`,
+      variant: 'success',
+    });
+  };
+
   const handleRemindWhatsApp = (t: (typeof tenantRentSummaries)[0]) => {
     const text = encodeURIComponent(
-      `Bonjour ${t.name},\nNous vous rappelons que votre loyer d'un montant de ${t.dueAmount.toLocaleString('fr-FR')} FCFA pour votre logement (${t.unit} - ${t.property}) est en attente de règlement.\n\nVous pouvez effectuer votre paiement directement par Mobile Money depuis votre espace locataire KatdEstate : https://katdestate.vercel.app/portal/receipts\n\nMerci de votre confiance.`,
+      `Bonjour ${t.name},\nNous vous rappelons que votre loyer d'un montant de ${t.dueAmount.toLocaleString('fr-FR')} FCFA pour votre logement (${t.unit} - ${t.property}) est en attente de règlement.\n\nVous pouvez effectuer votre paiement depuis votre Portefeuille Locataire sur KatdEstate : https://katdestate.vercel.app/portal\n\nMerci de votre confiance.`,
     );
     const clean = t.phone.replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${clean}?text=${text}`, '_blank');
@@ -234,8 +392,8 @@ export function RentPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Gestion des loyers et factures"
-        description="Suivi des encaissements, loyers par locataire & propriété, relance des retards et demande de retrait Mobile Money."
+        title="Gestion des Loyers"
+        description="Portefeuille Gestion des Loyers, statistiques des locataires ayant payé par propriété occupée, validation manuelle ou automatique via portefeuille, et retrait Mobile Money."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -243,7 +401,7 @@ export function RentPage() {
               className="bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20"
             >
               <ArrowDownCircle className="size-4" />
-              <span>Demande de Retrait Mobile Money</span>
+              <span>Retrait du Portefeuille Gestion des Loyers</span>
             </Button>
             <Button variant="secondary" onClick={() => setShowPenaltiesModal(true)}>
               <Clock className="mr-1.5 size-4" />
@@ -256,6 +414,122 @@ export function RentPage() {
           </div>
         }
       />
+
+      {/* PORTEFEUILLE DÉDIÉ N°1 : PORTEFEUILLE GESTION DES LOYERS */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-emerald-500/15 via-card to-background border border-emerald-500/30 shadow-md space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="size-12 rounded-2xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
+              <Wallet className="size-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-500">
+                  Portefeuille Propriétaire N°1 — Gestion des Loyers
+                </span>
+                <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                  ACTIF & RETIRABLE
+                </Badge>
+              </div>
+              <h2 className="text-2xl font-black text-foreground">
+                {totalPaidRent.toLocaleString('fr-FR')} FCFA
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Reçoit automatiquement les transferts de loyers effectués depuis les portefeuilles
+                de vos locataires
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowPayoutModal(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 h-10 px-5 shadow-lg shadow-emerald-500/20"
+          >
+            <ArrowDownCircle className="size-4" />
+            <span>Retirer mes Loyers (Mobile Money)</span>
+          </Button>
+        </div>
+
+        {/* Derniers transferts reçus des locataires avec nature du transfert */}
+        {ownerRentWallet.transactions.length > 0 && (
+          <div className="pt-3 border-t border-border/60 space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+              Derniers transferts & règlements de loyers reçus :
+            </span>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {ownerRentWallet.transactions.slice(0, 4).map((tx) => (
+                <div
+                  key={tx._id}
+                  className="p-2.5 rounded-xl bg-background/80 border border-border flex items-center justify-between text-xs"
+                >
+                  <div>
+                    <p className="font-bold text-foreground">
+                      {tx.tenantName || 'Opération Portefeuille'} ·{' '}
+                      <span className="text-primary">{tx.unitName || tx.propertyName || ''}</span>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Nature : <strong className="text-foreground">{tx.nature}</strong>
+                    </p>
+                  </div>
+                  <span
+                    className={`font-black text-xs shrink-0 ${
+                      tx.type === 'WITHDRAWAL' ? 'text-rose-500' : 'text-emerald-500'
+                    }`}
+                  >
+                    {tx.type === 'WITHDRAWAL' ? '-' : '+'}
+                    {tx.amount.toLocaleString('fr-FR')} FCFA
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* STATISTIQUES DES LOCATAIRES AYANT PAYÉ LEUR LOYER PAR PROPRIÉTÉ OCCUPÉE */}
+      <Card className="border-border bg-card/60">
+        <CardContent className="p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-2.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Building2 className="size-4 text-emerald-500" />
+              Statistiques des locataires ayant payé leur loyer par propriété occupée
+            </span>
+            <span className="text-xs font-bold text-emerald-500">
+              {tenantRentSummaries.filter((t) => t.status === 'UP_TO_DATE').length} /{' '}
+              {tenantRentSummaries.length} locataire(s) à jour
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {rentStatsByProperty.map((st) => (
+              <div
+                key={st.propertyName}
+                className="p-3.5 rounded-2xl bg-background border border-border space-y-2 text-xs"
+              >
+                <div className="flex items-center justify-between">
+                  <strong className="font-bold text-foreground truncate">{st.propertyName}</strong>
+                  <Badge className="bg-emerald-500/15 text-emerald-500 text-[10px]">
+                    {st.collectedAmount.toLocaleString('fr-FR')} FCFA encaissés
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 text-center pt-1">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <span className="block font-black text-emerald-500">{st.paidCount}</span>
+                    <span className="text-[10px] text-muted-foreground">Ayant payé</span>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <span className="block font-black text-amber-500">{st.lateCount}</span>
+                    <span className="text-[10px] text-muted-foreground">En retard</span>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                    <span className="block font-black text-rose-500">{st.unpaidCount}</span>
+                    <span className="text-[10px] text-muted-foreground">Non payé</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {summary.data ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -477,11 +751,11 @@ export function RentPage() {
               <div className="p-4 rounded-2xl bg-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="font-bold text-sm text-foreground">
-                    Récapitulatif des Loyers Encaissés
+                    Détails Complets des Locataires & Loyers par Propriété Occupée
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Suivi précis de la somme versée par chaque locataire selon sa propriété
-                    attribuée
+                    Si le locataire paie depuis son portefeuille, son loyer est validé
+                    automatiquement. Sinon, validez manuellement son mode de paiement.
                   </p>
                 </div>
                 <Button
@@ -490,7 +764,7 @@ export function RentPage() {
                   className="bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-xs flex items-center gap-1.5"
                 >
                   <ArrowDownCircle className="size-4" />
-                  <span>Retrait sur mes encaissements</span>
+                  <span>Retirer du Portefeuille Loyers</span>
                 </Button>
               </div>
 
@@ -498,11 +772,11 @@ export function RentPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 text-left">
                     <tr>
-                      <th className="px-4 py-3 font-medium">Propriété</th>
-                      <th className="px-4 py-3 font-medium">Locataire & Logement</th>
+                      <th className="px-4 py-3 font-medium">Propriété & Logement</th>
+                      <th className="px-4 py-3 font-medium">Informations du Locataire</th>
                       <th className="px-4 py-3 font-medium">Loyer Mensuel</th>
-                      <th className="px-4 py-3 font-medium text-emerald-600">Total Encaissé</th>
-                      <th className="px-4 py-3 font-medium text-rose-600">Reste Dû</th>
+                      <th className="px-4 py-3 font-medium text-emerald-600">Total Payé</th>
+                      <th className="px-4 py-3 font-medium">Mode / Validation</th>
                       <th className="px-4 py-3 font-medium">Statut</th>
                       <th className="px-4 py-3 text-right font-medium">Action</th>
                     </tr>
@@ -515,10 +789,12 @@ export function RentPage() {
                             <Building2 className="size-3.5 text-primary shrink-0" />
                             <span>{item.property}</span>
                           </div>
+                          <p className="text-xs text-emerald-500 font-bold mt-0.5">{item.unit}</p>
                         </td>
                         <td className="px-4 py-3">
                           <p className="font-bold text-foreground">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">{item.unit}</p>
+                          <p className="text-xs text-muted-foreground">{item.phone}</p>
+                          <p className="text-[11px] text-muted-foreground">{item.email}</p>
                         </td>
                         <td className="px-4 py-3 font-medium">
                           {item.monthlyRent.toLocaleString('fr-FR')} FCFA
@@ -526,10 +802,21 @@ export function RentPage() {
                         <td className="px-4 py-3 font-black text-emerald-500">
                           {item.paidTotal.toLocaleString('fr-FR')} FCFA
                         </td>
-                        <td className="px-4 py-3 font-black text-rose-500">
-                          {item.dueAmount > 0
-                            ? `${item.dueAmount.toLocaleString('fr-FR')} FCFA`
-                            : '—'}
+                        <td className="px-4 py-3 text-xs">
+                          {item.status === 'UP_TO_DATE' ? (
+                            <div>
+                              <span className="font-semibold text-emerald-500 block">
+                                {item.paymentMethod || 'Mobile Money'}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {item.validatedBy === 'WALLET_AUTO'
+                                  ? '⚡ Validé auto (Portefeuille)'
+                                  : '✓ Validé par le propriétaire'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Non réglé</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <Badge
@@ -542,29 +829,41 @@ export function RentPage() {
                             }
                           >
                             {item.status === 'UP_TO_DATE'
-                              ? 'À jour'
+                              ? 'Payé / À jour'
                               : item.status === 'LATE'
                                 ? `${item.lateDays}j de retard`
-                                : 'Impayé'}
+                                : 'Non payé'}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {item.dueAmount > 0 ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleRemindWhatsApp(item)}
-                              className="text-xs h-8 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
-                            >
-                              <Smartphone className="size-3 mr-1" />
-                              Relancer
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-emerald-500 font-bold flex items-center justify-end gap-1">
-                              <CheckCircle2 className="size-3.5" />
-                              Soldé
-                            </span>
-                          )}
+                          <div className="flex items-center justify-end gap-1.5">
+                            {item.dueAmount > 0 ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => setValidatingTenantRow(item)}
+                                  className="text-xs h-8 bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+                                >
+                                  <CheckCircle2 className="size-3.5 mr-1" />
+                                  Valider paiement
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleRemindWhatsApp(item)}
+                                  className="text-xs h-8 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                                >
+                                  <Smartphone className="size-3 mr-1" />
+                                  Relancer
+                                </Button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-emerald-500 font-bold flex items-center justify-end gap-1">
+                                <CheckCircle2 className="size-3.5" />
+                                Validé
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -869,17 +1168,69 @@ export function RentPage() {
         </Modal>
       ) : null}
 
-      {/* Modal Retrait Mobile Money */}
+      {/* Modal Validation Manuelle du Loyer dans Gestion des Loyers */}
+      {validatingTenantRow ? (
+        <Modal
+          open={Boolean(validatingTenantRow)}
+          onOpenChange={(op) => !op && setValidatingTenantRow(null)}
+          title={`Valider le loyer de ${validatingTenantRow.name}`}
+          description={`${validatingTenantRow.property} · ${validatingTenantRow.unit}`}
+        >
+          <div className="space-y-4 text-xs">
+            <div className="p-3 rounded-xl bg-muted/40 border border-border flex justify-between items-center">
+              <span>Montant du loyer à valider :</span>
+              <strong className="text-base font-black text-emerald-500">
+                {validatingTenantRow.monthlyRent.toLocaleString('fr-FR')} FCFA
+              </strong>
+            </div>
+
+            <div>
+              <label className="font-semibold block mb-1.5">
+                Choisissez le mode de paiement utilisé par le locataire :
+              </label>
+              <select
+                value={selectedValidateMethod}
+                onChange={(e) => setSelectedValidateMethod(e.target.value)}
+                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold"
+              >
+                <option value="Mobile Money (Wave)">Mobile Money (Wave)</option>
+                <option value="Mobile Money (Orange Money)">Mobile Money (Orange Money)</option>
+                <option value="Mobile Money (MTN MoMo)">Mobile Money (MTN MoMo)</option>
+                <option value="Mobile Money (Moov Money)">Mobile Money (Moov Money)</option>
+                <option value="Espèces / Cash">Espèces / Cash</option>
+                <option value="Virement bancaire">Virement bancaire</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setValidatingTenantRow(null)}>
+                Annuler
+              </Button>
+              <Button
+                onClick={() => handleManualValidateRent(validatingTenantRow, selectedValidateMethod)}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+              >
+                <CheckCircle2 className="size-4 mr-1.5" />
+                Valider le paiement
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
+      {/* Modal Retrait Mobile Money (Portefeuille Gestion des Loyers) */}
       {showPayoutModal ? (
         <IkeepayPayoutModal
           open={showPayoutModal}
           onOpenChange={setShowPayoutModal}
           availableBalance={totalPaidRent}
           onSuccess={() => {
+            withdrawFromOwnerRentWallet(totalPaidRent, 'Mobile Money');
+            reloadRentState();
             toast({
-              title: 'Demande de retrait enregistrée',
+              title: 'Retrait du Portefeuille Gestion des Loyers initié',
               description:
-                'Votre virement Mobile Money vers votre compte a été initié avec succès.',
+                'Votre virement Mobile Money depuis votre Portefeuille Gestion des Loyers a été effectué.',
               variant: 'success',
             });
           }}
@@ -1513,6 +1864,7 @@ function TenantHistoryViewer() {
 export function PaymentsPage() {
   const { toast } = useToast();
   const [quittances, setQuittances] = useState<QuittanceItem[]>(() => getStoredQuittances());
+  const [ownerQuittanceWallet, setOwnerQuittanceWallet] = useState(() => getOwnerQuittanceWallet());
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [propertyFilter, setPropertyFilter] = useState<string>('ALL');
@@ -1521,10 +1873,13 @@ export function PaymentsPage() {
   const [activeQuittanceForPrint, setActiveQuittanceForPrint] = useState<QuittanceItem | null>(
     null,
   );
+  const [validatingQuittance, setValidatingQuittance] = useState<QuittanceItem | null>(null);
+  const [manualPaymentMethod, setManualPaymentMethod] = useState('Mobile Money (Wave)');
 
   // Sync with local storage
   const reloadQuittances = () => {
     setQuittances(getStoredQuittances());
+    setOwnerQuittanceWallet(getOwnerQuittanceWallet());
   };
 
   useEffect(() => {
@@ -1545,20 +1900,43 @@ export function PaymentsPage() {
 
   // Statistics
   const totalEmittedCount = quittances.length;
-  const totalPaidAmount = quittances
-    .filter((q) => q.status === 'PAID')
-    .reduce((sum, q) => sum + q.amountMinor, 0);
+  const totalPaidAmount = Math.max(
+    ownerQuittanceWallet.balance,
+    quittances.filter((q) => q.status === 'PAID').reduce((sum, q) => sum + q.amountMinor, 0),
+  );
   const pendingCount = quittances.filter((q) => q.status === 'PENDING').length;
   const pendingAmount = quittances
     .filter((q) => q.status === 'PENDING')
     .reduce((sum, q) => sum + q.amountMinor, 0);
 
-  const handleMarkAsPaid = (id: string) => {
-    markQuittanceAsPaid(id, 'Paiement direct (Espèces / Virement)');
+  const handleConfirmManualQuittance = (q: QuittanceItem, method: string) => {
+    markQuittanceAsPaid(q._id, `Payé (${method})`);
+    const currentW = getOwnerQuittanceWallet();
+    saveOwnerQuittanceWallet({
+      balance: currentW.balance + q.amountMinor,
+      totalReceived: currentW.totalReceived + q.amountMinor,
+      totalWithdrawn: currentW.totalWithdrawn,
+      transactions: [
+        {
+          _id: `tx-man-quit-${Date.now()}`,
+          type: 'MANUAL_VALIDATION',
+          amount: q.amountMinor,
+          nature: `${q.typeLabel} (${q.period})`,
+          method,
+          tenantId: q.tenantId,
+          tenantName: q.tenantName,
+          propertyName: q.propertyName,
+          quittanceId: q._id,
+          createdAt: new Date().toISOString(),
+        },
+        ...currentW.transactions,
+      ],
+    });
     reloadQuittances();
+    setValidatingQuittance(null);
     toast({
-      title: 'Quittance marquée comme réglée',
-      description: 'Le reçu officiel est maintenant disponible pour le locataire.',
+      title: 'Quittance validée par le propriétaire',
+      description: `Le paiement de ${q.tenantName} via ${method} a été enregistré et crédité.`,
       variant: 'success',
     });
   };
@@ -1592,8 +1970,8 @@ export function PaymentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Quittances & Factures de Charges"
-        description="Émettez et transmettez les quittances d'eau (SODECI), électricité (CIE) et loyers à vos locataires selon leur bien attribué, encaissez par Mobile Money et effectuez vos retraits."
+        title="Gestion des Quittances et Factures"
+        description="Émettez les quittances d'eau (SODECI), électricité (CIE) et charges. Lorsqu'un locataire transfère la somme depuis son portefeuille, la facture est marquée automatiquement comme payée dans les délais."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -1601,18 +1979,88 @@ export function PaymentsPage() {
               className="bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20"
             >
               <ArrowDownCircle className="size-4" />
-              <span>Demande de Retrait Mobile Money</span>
+              <span>Retrait du Portefeuille Quittances & Factures</span>
             </Button>
             <Button
               onClick={() => setShowCreateModal(true)}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs flex items-center gap-1.5"
             >
               <Plus className="size-4" />
-              <span>+ Émettre une quittance (Eau / Élec / Loyer)</span>
+              <span>+ Émettre une quittance (Eau / Élec / Autre)</span>
             </Button>
           </div>
         }
       />
+
+      {/* PORTEFEUILLE DÉDIÉ N°2 : PORTEFEUILLE GESTION DES QUITTANCES ET FACTURES */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-500/15 via-card to-background border border-amber-500/30 shadow-md space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="size-12 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+              <Wallet className="size-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-amber-500">
+                  Portefeuille Propriétaire N°2 — Gestion des Quittances et Factures
+                </span>
+                <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px]">
+                  EAU / ÉLECTRICITÉ / CHARGES
+                </Badge>
+              </div>
+              <h2 className="text-2xl font-black text-foreground">
+                {totalPaidAmount.toLocaleString('fr-FR')} FCFA
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Reçoit automatiquement les transferts des locataires pour leurs factures d’eau,
+                d’électricité et quittances
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowPayoutModal(true)}
+            className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-2 h-10 px-5 shadow-lg shadow-amber-500/20"
+          >
+            <ArrowDownCircle className="size-4" />
+            <span>Retirer mes Quittances (Mobile Money)</span>
+          </Button>
+        </div>
+
+        {ownerQuittanceWallet.transactions.length > 0 && (
+          <div className="pt-3 border-t border-border/60 space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+              Derniers transferts reçus pour paiement de quittances & factures :
+            </span>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {ownerQuittanceWallet.transactions.slice(0, 4).map((tx) => (
+                <div
+                  key={tx._id}
+                  className="p-2.5 rounded-xl bg-background/80 border border-border flex items-center justify-between text-xs"
+                >
+                  <div>
+                    <p className="font-bold text-foreground">
+                      {tx.tenantName || 'Portefeuille Quittances'} ·{' '}
+                      <span className="text-amber-500">{tx.propertyName || ''}</span>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Nature : <strong className="text-foreground">{tx.nature}</strong>
+                    </p>
+                  </div>
+                  <span
+                    className={`font-black text-xs shrink-0 ${
+                      tx.type === 'WITHDRAWAL' ? 'text-rose-500' : 'text-emerald-500'
+                    }`}
+                  >
+                    {tx.type === 'WITHDRAWAL' ? '-' : '+'}
+                    {tx.amount.toLocaleString('fr-FR')} FCFA
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Cartes de statistiques Quittances & Solde */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1775,12 +2223,12 @@ export function PaymentsPage() {
                           </Button>
                           <Button
                             variant="secondary"
-                            className="h-8 px-2 text-xs"
-                            title="Marquer comme encaissé manuellement"
-                            onClick={() => handleMarkAsPaid(q._id)}
+                            className="h-8 px-2 text-xs bg-emerald-600 text-white hover:bg-emerald-500 font-bold"
+                            title="Valider le paiement et choisir le mode utilisé"
+                            onClick={() => setValidatingQuittance(q)}
                           >
                             <CheckCircle2 className="mr-1 size-3.5" />
-                            Encaissé
+                            Valider paiement
                           </Button>
                         </>
                       )}
@@ -1827,17 +2275,69 @@ export function PaymentsPage() {
         />
       )}
 
-      {/* Modal Retrait Mobile Money */}
+      {/* Modal Validation Manuelle d'une Quittance (Mobile Money ou Espèces) */}
+      {validatingQuittance && (
+        <Modal
+          open={Boolean(validatingQuittance)}
+          onOpenChange={(op) => !op && setValidatingQuittance(null)}
+          title={`Valider le paiement : ${validatingQuittance.typeLabel}`}
+          description={`Locataire : ${validatingQuittance.tenantName} · ${validatingQuittance.propertyName}`}
+        >
+          <div className="space-y-4 text-xs">
+            <div className="p-3 rounded-xl bg-muted/40 border border-border flex justify-between items-center">
+              <span>Montant de la facture / quittance :</span>
+              <strong className="text-base font-black text-emerald-500">
+                {validatingQuittance.amountMinor.toLocaleString('fr-FR')} FCFA
+              </strong>
+            </div>
+
+            <div>
+              <label className="font-semibold block mb-1.5">
+                Mode de paiement utilisé par le locataire :
+              </label>
+              <select
+                value={manualPaymentMethod}
+                onChange={(e) => setManualPaymentMethod(e.target.value)}
+                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold"
+              >
+                <option value="Mobile Money (Wave)">Mobile Money (Wave)</option>
+                <option value="Mobile Money (Orange Money)">Mobile Money (Orange Money)</option>
+                <option value="Mobile Money (MTN MoMo)">Mobile Money (MTN MoMo)</option>
+                <option value="Mobile Money (Moov Money)">Mobile Money (Moov Money)</option>
+                <option value="Espèces / Cash">Espèces / Cash</option>
+                <option value="Virement bancaire">Virement bancaire</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setValidatingQuittance(null)}>
+                Annuler
+              </Button>
+              <Button
+                onClick={() => handleConfirmManualQuittance(validatingQuittance, manualPaymentMethod)}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+              >
+                <CheckCircle2 className="size-4 mr-1.5" />
+                Valider le paiement
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Retrait Mobile Money (Portefeuille Gestion des Quittances et Factures) */}
       {showPayoutModal && (
         <IkeepayPayoutModal
           open={showPayoutModal}
           onOpenChange={setShowPayoutModal}
           availableBalance={totalPaidAmount}
           onSuccess={() => {
+            withdrawFromOwnerQuittanceWallet(totalPaidAmount, 'Mobile Money');
+            reloadQuittances();
             toast({
-              title: 'Demande de retrait initiée',
+              title: 'Retrait du Portefeuille Quittances & Factures initié',
               description:
-                'Vos fonds issus des quittances ont été transférés sur votre compte Mobile Money.',
+                'Vos fonds issus du Portefeuille Gestion des Quittances et Factures ont été transférés sur votre compte Mobile Money.',
               variant: 'success',
             });
             setShowPayoutModal(false);

@@ -25,6 +25,7 @@ export const tenantBaseSchema = z.object({
   emergencyContactName: optionalText(160),
   emergencyContactPhone: optionalText(32),
   profession: optionalText(120),
+  loginPassword: optionalText(120),
   notes: optionalText(4_000),
   status: z.enum(TENANT_STATUSES).default('ACTIVE'),
 });

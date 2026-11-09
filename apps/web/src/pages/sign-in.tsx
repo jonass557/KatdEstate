@@ -28,49 +28,49 @@ const TEST_ACCOUNTS = [
   {
     role: 'SUPER_ADMIN',
     label: 'Super Admin',
-    email: 'admin@kadtestate.immo',
+    email: 'admin@katdestate.immo',
     icon: Crown,
     color: 'text-amber-400 bg-amber-400/10',
   },
   {
     role: 'OWNER',
     label: 'Propriétaire',
-    email: 'proprietaire@kadtestate.immo',
+    email: 'proprietaire@katdestate.immo',
     icon: Building2,
     color: 'text-blue-400 bg-blue-400/10',
   },
   {
     role: 'TENANT',
     label: 'Locataire',
-    email: 'locataire@kadtestate.immo',
+    email: 'locataire@katdestate.immo',
     icon: Home,
     color: 'text-emerald-400 bg-emerald-400/10',
   },
   {
     role: 'AGENT',
     label: 'Agent Immobilier',
-    email: 'agent@kadtestate.immo',
+    email: 'agent@katdestate.immo',
     icon: Briefcase,
     color: 'text-orange-400 bg-orange-400/10',
   },
   {
     role: 'NEIGHBORHOOD_LEADER',
     label: 'Chef de Quartier',
-    email: 'chef.quartier@kadtestate.immo',
+    email: 'chef.quartier@katdestate.immo',
     icon: Crown,
     color: 'text-purple-400 bg-purple-400/10',
   },
   {
     role: 'BLOCK_LEADER',
     label: 'Chef de Bloc',
-    email: 'chef.bloc@kadtestate.immo',
+    email: 'chef.bloc@katdestate.immo',
     icon: ShieldCheck,
     color: 'text-cyan-400 bg-cyan-400/10',
   },
   {
     role: 'RESIDENT',
     label: 'Résident',
-    email: 'resident@kadtestate.immo',
+    email: 'resident@katdestate.immo',
     icon: Users,
     color: 'text-rose-400 bg-rose-400/10',
   },
@@ -111,6 +111,11 @@ export function SignInPage() {
             setError(detail.path, { message: detail.message });
           }
         }
+        setFormError(error.message);
+        return;
+      }
+
+      if (error instanceof Error) {
         setFormError(error.message);
         return;
       }
@@ -159,10 +164,10 @@ export function SignInPage() {
             </div>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white font-mono">
-            Kadt<span className="text-emerald-400">Estate</span>
+            Katd<span className="text-emerald-400">Estate</span>
           </h1>
           <p className="text-xs text-slate-400">
-            Connectez-vous à votre espace de gestion, chefferie ou citoyen
+            Connectez-vous avec votre compte inscrit, vos identifiants locataire/mandataire ou un compte démo
           </p>
         </div>
 

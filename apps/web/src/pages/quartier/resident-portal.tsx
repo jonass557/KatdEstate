@@ -8,7 +8,9 @@ import {
   Home,
   Phone,
   PhoneCall,
+  Plus,
   ShieldCheck,
+  Store,
   User,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -16,6 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Input } from '../../components/ui/input';
 import { useToast } from '../../components/ui/toast';
 import { apiRequest } from '../../lib/api-client';
+import { PublishListingModal } from '../../components/marketplace/publish-listing-modal';
+import { getWorkflowListings, type WorkflowListingItem } from '../../lib/katdestate-store';
 
 const RESIDENCE_TYPE_OPTIONS = [
   { value: 'INDIVIDUAL_HOUSE', label: 'Maison individuelle' },
@@ -42,8 +46,16 @@ export function ResidentPortal() {
   const { toast } = useToast();
   const client = useQueryClient();
   const [activeTab, setActiveTab] = useState<
-    'register' | 'report' | 'emergencies' | 'announcements'
+    'register' | 'report' | 'annonces' | 'emergencies' | 'announcements'
   >('register');
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [myListings, setMyListings] = useState<WorkflowListingItem[]>(() =>
+    getWorkflowListings(),
+  );
+
+  const refreshListings = () => {
+    setMyListings(getWorkflowListings());
+  };
 
   // Queries for territory selection
   const { data: cities } = useQuery<any[]>({
@@ -129,7 +141,18 @@ export function ResidentPortal() {
       </div>
 
       {/* Tabs navigation */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-semibold">
+        <button
+          type="button"
+          onClick={() => setActiveTab('annonces')}
+          className={`flex items-center justify-center gap-1.5 rounded-xl p-3 border transition-colors ${
+            activeTab === 'annonces'
+              ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+              : 'bg-card border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+          }`}
+        >
+          <Store className="h-4 w-4" /> Mes Annonces ({myListings.length})
+        </button>
         <button
           type="button"
           onClick={() => setActiveTab('register')}
@@ -168,13 +191,104 @@ export function ResidentPortal() {
           onClick={() => setActiveTab('announcements')}
           className={`flex items-center justify-center gap-1.5 rounded-xl p-3 border transition-colors ${
             activeTab === 'announcements'
-              ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
               : 'bg-card border-border text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
         >
           <Bell className="h-4 w-4" /> Alertes & Infos
         </button>
       </div>
+
+      {/* TAB 0: MES ANNONCES & WORKFLOW DE VALIDATION */}
+      {activeTab === 'annonces' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/20 p-4 rounded-2xl border border-border">
+            <div>
+              <h2 className="text-sm font-bold text-foreground">
+                Suivi du Workflow de vos Annonces
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Workflow : Habitant crée (EN_ATTENTE) ➔ Chef de Bloc vérifie sur le terrain (APPROUVE_BLOC) ➔ Chef de Quartier publie sur le site (PUBLIÉ).
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => setPublishModalOpen(true)}
+              className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs inline-flex items-center gap-1.5"
+            >
+              <Plus className="size-4" />
+              + Déposer une annonce
+            </Button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {myListings.map((l) => (
+              <Card key={l._id} className="overflow-hidden border border-border bg-card flex flex-col justify-between text-xs">
+                <div className="p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                        l.workflowStatus === 'EN_ATTENTE'
+                          ? 'bg-amber-500/20 text-amber-600 border border-amber-500/30'
+                          : l.workflowStatus === 'APPROUVE_BLOC'
+                            ? 'bg-cyan-500/20 text-cyan-600 border border-cyan-500/30'
+                            : l.workflowStatus === 'PUBLIE'
+                              ? 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/30'
+                              : 'bg-red-500/20 text-red-600 border border-red-500/30'
+                      }`}
+                    >
+                      {l.workflowStatus === 'EN_ATTENTE' && '⏳ En attente vérif. terrain'}
+                      {l.workflowStatus === 'APPROUVE_BLOC' && '🛡️ Validé Bloc (Attente Chef Quartier)'}
+                      {l.workflowStatus === 'PUBLIE' && '✅ Publié sur le site web'}
+                      {l.workflowStatus === 'REFUSE' && '❌ Rejeté'}
+                    </span>
+
+                    {l.category === 'CARABOT' && (
+                      <span className="rounded bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold text-amber-500">
+                        Maison en carabot
+                      </span>
+                    )}
+                  </div>
+
+                  {l.photos?.[0]?.url && (
+                    <div className="h-28 overflow-hidden rounded-xl bg-muted">
+                      <img src={l.photos[0].url} alt={l.title} className="h-full w-full object-cover" />
+                    </div>
+                  )}
+
+                  <h3 className="font-bold text-sm text-foreground line-clamp-1">{l.title}</h3>
+                  <p className="font-black text-purple-600 text-sm">
+                    {l.priceMinor.toLocaleString('fr-FR')} {l.currency}
+                  </p>
+                  <p className="text-muted-foreground text-[11px] line-clamp-2">{l.description}</p>
+
+                  {/* Motif de rejet explicite visible par l'habitant */}
+                  {l.workflowStatus === 'REFUSE' && l.rejectionReason && (
+                    <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-2.5 text-[11px] text-red-500">
+                      <strong>Motif du refus :</strong> {l.rejectionReason}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3 border-t border-border bg-muted/10 text-[11px] text-muted-foreground">
+                  <span>Créé le : {new Date(l.createdAt).toLocaleDateString('fr-FR')}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <PublishListingModal
+            isOpen={publishModalOpen}
+            onClose={() => {
+              setPublishModalOpen(false);
+              refreshListings();
+            }}
+            onPublished={() => {
+              refreshListings();
+            }}
+          />
+        </div>
+      )}
 
       {/* TAB 1: ENREGISTRER MA RÉSIDENCE */}
       {activeTab === 'register' && (

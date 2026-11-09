@@ -115,7 +115,7 @@ export const NAVIGATION: readonly NavSection[] = [
     items: [
       {
         path: '/properties',
-        label: 'Propriétés',
+        label: 'Gestion des Propriétés',
         icon: Building2,
         phase: 'Livré',
         permission: 'properties.view',
@@ -134,7 +134,7 @@ export const NAVIGATION: readonly NavSection[] = [
     items: [
       {
         path: '/tenants',
-        label: 'Locataires',
+        label: 'Gestion des Locataires',
         icon: Users,
         phase: 'Livré',
         permission: 'tenants.view',
@@ -153,14 +153,14 @@ export const NAVIGATION: readonly NavSection[] = [
     items: [
       {
         path: '/rent',
-        label: 'Loyers',
+        label: 'Gestion des Loyers',
         icon: Receipt,
         phase: 'Livré',
         permission: 'rentSchedules.view',
       },
       {
         path: '/payments',
-        label: 'Paiements',
+        label: 'Gestion des Quittances et Factures',
         icon: CreditCard,
         phase: 'Livré',
         permission: 'payments.view',

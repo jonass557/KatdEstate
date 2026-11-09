@@ -1,6 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Home, UserCheck, Plus } from 'lucide-react';
+import {
+  CheckCircle2,
+  Copy,
+  Home,
+  KeyRound,
+  MessageSquare,
+  Plus,
+  Trash2,
+  UserCheck,
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -8,15 +18,59 @@ import { useToast } from '../components/ui/toast';
 import { apiRequest } from '../lib/api-client';
 import { useOrgPath, useOrgQuery } from '../lib/query';
 import { PublishListingModal } from '../components/marketplace/publish-listing-modal';
+import {
+  getMandateCredentials,
+  saveMandateCredential,
+  removeMandateCredential,
+  type MandateCredentialRecord,
+} from '../lib/katdestate-store';
 
 export function OwnerListingsPage() {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab');
+
   const [activeTab, setActiveTab] = useState<'listings' | 'mandates' | 'offers' | 'new-mandate'>(
-    'listings',
+    initialTab === 'mandates' || initialTab === 'new-mandate' || initialTab === 'offers'
+      ? initialTab
+      : 'listings',
   );
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [localMandates, setLocalMandates] = useState<MandateCredentialRecord[]>(() =>
+    getMandateCredentials(),
+  );
+
+  // New mandate form state
+  const [managerName, setManagerName] = useState('');
+  const [managerPhone, setManagerPhone] = useState('+225 ');
+  const [managerEmail, setManagerEmail] = useState('');
+  const [managerPassword, setManagerPassword] = useState('Mandat2026!');
+  const [agencyName, setAgencyName] = useState('');
+  const [scope, setScope] = useState<'ALL_PORTFOLIO' | 'PROPERTY'>('ALL_PORTFOLIO');
+  const [selectedPropertyId, setSelectedPropertyId] = useState('');
+  const [commissionRate, setCommissionRate] = useState(8);
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState('');
+  const [notes, setNotes] = useState('');
+  const [permissions, setPermissions] = useState<string[]>([
+    'COLLECTION',
+    'LEASES',
+    'MAINTENANCE',
+    'VISITS',
+  ]);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'mandates' || tab === 'new-mandate' || tab === 'offers' || tab === 'listings') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const refreshMandates = () => {
+    setLocalMandates(getMandateCredentials());
+  };
 
   // Queries
   const { data: listings } = useOrgQuery<any[]>(['owner-listings'], '/owner/listings');
@@ -42,13 +96,68 @@ export function OwnerListingsPage() {
 
   // Mutation: Create Mandate
   const createMandateMutation = useMutation({
-    mutationFn: (body: unknown) => apiRequest(`${base}/owner/mandates`, { method: 'POST', body }),
-    onSuccess: () => {
+    mutationFn: async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!managerName.trim() || !managerEmail.trim() || !managerPassword.trim()) {
+        throw new Error('Veuillez renseigner le nom, l’email et le mot de passe du mandataire.');
+      }
+
+      const propObj = (properties ?? []).find((p: any) => p._id === selectedPropertyId);
+      const record: MandateCredentialRecord = {
+        id: `mandat-${Date.now()}`,
+        managerName: managerName.trim(),
+        managerEmail: managerEmail.trim().toLowerCase(),
+        managerPhone: managerPhone.trim(),
+        password: managerPassword.trim(),
+        agencyName: agencyName.trim() || undefined,
+        scope,
+        propertyId: scope === 'PROPERTY' ? selectedPropertyId || undefined : undefined,
+        propertyName:
+          scope === 'PROPERTY' ? propObj?.name || 'Propriété désignée' : 'Tout le patrimoine',
+        permissions,
+        commissionRate: Number(commissionRate) || 0,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        status: 'ACTIVE',
+        notes: notes.trim() || undefined,
+        createdAt: new Date().toISOString(),
+      };
+
+      saveMandateCredential(record);
+
+      try {
+        await apiRequest(`${base}/owner/mandates`, {
+          method: 'POST',
+          body: {
+            agentId: managerEmail.trim().toLowerCase(),
+            propertyId: selectedPropertyId || undefined,
+            mandateType: 'MANAGEMENT',
+            commissionType: 'PERCENTAGE',
+            commissionRate: Number(commissionRate) || 0,
+            startDate,
+            endDate: endDate || startDate,
+            terms: notes,
+          },
+        });
+      } catch {
+        // Saved locally in katdestate-store
+      }
+
+      return record;
+    },
+    onSuccess: (record) => {
+      refreshMandates();
       toast({
-        title: 'Mandat proposé à l’agent',
-        description: 'En attente de son acceptation.',
+        title: 'Mandat & Identifiants de connexion créés !',
+        description: `${record.managerName} peut maintenant se connecter avec ${record.managerEmail} / ${record.password} pour gérer votre dashboard propriétaire.`,
         variant: 'success',
       });
+      setManagerName('');
+      setManagerEmail('');
+      setManagerPhone('+225 ');
+      setManagerPassword(`Mandat${Math.floor(1000 + Math.random() * 9000)}!`);
+      setAgencyName('');
+      setNotes('');
       void client.invalidateQueries({ queryKey: ['owner-mandates'] });
       setActiveTab('mandates');
     },
@@ -69,19 +178,37 @@ export function OwnerListingsPage() {
     onError: (err: Error) => toast({ title: 'Erreur', description: err.message, variant: 'error' }),
   });
 
+  const togglePermission = (perm: string) => {
+    if (permissions.includes(perm)) {
+      setPermissions(permissions.filter((p) => p !== perm));
+    } else {
+      setPermissions([...permissions, perm]);
+    }
+  };
+
+  const totalMandatesCount = localMandates.length + (mandates?.length || 0);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">
-            Commercialisation & Marketplace
+            Mandats de Gestion & Commercialisation Marketplace
           </h1>
           <p className="text-xs text-muted-foreground">
-            Gérez vos annonces directes, mandatez des agents immobiliers partenaires et négociez les
-            offres.
+            Mandatez une personne (en créant ses identifiants de connexion) pour vous aider à gérer
+            votre dashboard propriétaire, et gérez vos annonces Marketplace.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            onClick={() => setActiveTab('new-mandate')}
+            className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-1.5"
+          >
+            <UserCheck className="size-3.5" />
+            <span>+ Mandater un gestionnaire (Créer ses identifiants)</span>
+          </Button>
           <Button
             size="sm"
             onClick={() => setPublishModalOpen(true)}
@@ -90,19 +217,16 @@ export function OwnerListingsPage() {
             <Plus className="size-3.5" />
             <span>+ Publier une annonce</span>
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setActiveTab('new-mandate')}>
-            <UserCheck className="mr-1.5 h-3.5 w-3.5" /> Mandater un agent
-          </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-border pb-2 text-xs">
+      <div className="flex flex-wrap gap-2 border-b border-border pb-2 text-xs">
         {[
+          { key: 'mandates', label: `Mandats & Gestionnaires (${totalMandatesCount})` },
+          { key: 'new-mandate', label: '+ Nouveau Mandat (Créer identifiants)' },
           { key: 'listings', label: `Mes annonces (${listings?.length || 0})` },
-          { key: 'mandates', label: `Mandats agents (${mandates?.length || 0})` },
           { key: 'offers', label: `Offres reçues (${offers?.length || 0})` },
-          { key: 'new-mandate', label: '+ Nouveau mandat' },
         ].map((t) => (
           <button
             key={t.key}
@@ -125,7 +249,7 @@ export function OwnerListingsPage() {
           {!listings || listings.length === 0 ? (
             <Card className="p-8 text-center text-xs text-muted-foreground">
               Aucune annonce publiée pour l'instant. Vous pouvez créer une annonce ou confier la
-              commercialisation à un agent certifié.
+              gestion à un mandataire.
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -168,13 +292,125 @@ export function OwnerListingsPage() {
       {/* TAB 2: MANDATES */}
       {activeTab === 'mandates' && (
         <div className="space-y-4">
-          {!mandates || mandates.length === 0 ? (
-            <Card className="p-8 text-center text-xs text-muted-foreground">
-              Vous n'avez pas encore confié de mandat à un agent immobilier.
+          {localMandates.length === 0 && (!mandates || mandates.length === 0) ? (
+            <Card className="p-8 text-center text-xs text-muted-foreground space-y-3">
+              <p>
+                Vous n'avez pas encore mandaté de personne pour vous aider à gérer votre dashboard
+                propriétaire.
+              </p>
+              <Button
+                size="sm"
+                className="bg-amber-600 hover:bg-amber-500 text-white"
+                onClick={() => setActiveTab('new-mandate')}
+              >
+                + Créer un mandat et les identifiants du gestionnaire
+              </Button>
             </Card>
           ) : (
             <div className="space-y-3">
-              {mandates.map((m) => (
+              {localMandates.map((m) => (
+                <Card
+                  key={m.id}
+                  className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs border-amber-500/30 bg-amber-500/5"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-bold text-sm text-foreground">{m.managerName}</span>
+                      {m.agencyName && (
+                        <span className="text-muted-foreground">({m.agencyName})</span>
+                      )}
+                      <span
+                        className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                          m.status === 'ACTIVE'
+                            ? 'bg-emerald-500/20 text-emerald-600'
+                            : 'bg-red-500/20 text-red-600'
+                        }`}
+                      >
+                        {m.status === 'ACTIVE' ? 'ACTIF — ACCÈS DASHBOARD PROPRIÉTAIRE' : m.status}
+                      </span>
+                    </div>
+
+                    <p className="text-muted-foreground">
+                      Périmètre :{' '}
+                      <strong className="text-foreground">
+                        {m.scope === 'ALL_PORTFOLIO'
+                          ? 'Tout le patrimoine (Dashboard Propriétaire)'
+                          : m.propertyName || 'Propriété désignée'}
+                      </strong>{' '}
+                      • Commission : <strong>{m.commissionRate}%</strong> • Tél :{' '}
+                      <strong>{m.managerPhone}</strong>
+                    </p>
+
+                    <div className="inline-flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-background px-3 py-1.5 text-[11px]">
+                      <KeyRound className="size-3.5 text-amber-500" />
+                      <span>
+                        Email : <strong className="font-mono">{m.managerEmail}</strong>
+                      </span>
+                      <span>•</span>
+                      <span>
+                        Mot de passe : <strong className="font-mono">{m.password}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 text-xs inline-flex items-center gap-1"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(
+                          `Identifiants Mandataire KatdEstate\nEmail : ${m.managerEmail}\nMot de passe : ${m.password}\nConnexion : ${window.location.origin}/sign-in`,
+                        );
+                        toast({
+                          title: 'Identifiants copiés !',
+                          description: 'Vous pouvez les transmettre à votre mandataire.',
+                          variant: 'success',
+                        });
+                      }}
+                    >
+                      <Copy className="size-3.5" />
+                      Copier accès
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 text-xs bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 inline-flex items-center gap-1"
+                      onClick={() => {
+                        const cleanPhone = (m.managerPhone || '').replace(/\D/g, '');
+                        const text = encodeURIComponent(
+                          `Bonjour ${m.managerName}, je vous ai mandaté sur KatdEstate pour gérer mon espace propriétaire (${m.propertyName || 'Tout mon patrimoine'}).\n\nVoici vos identifiants de connexion :\n- Email : ${m.managerEmail}\n- Mot de passe : ${m.password}\n- Lien : ${window.location.origin}/sign-in`,
+                        );
+                        window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+                      }}
+                    >
+                      <MessageSquare className="size-3.5" />
+                      WhatsApp
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 border-red-200 hover:bg-red-50 h-8 inline-flex items-center gap-1"
+                      onClick={() => {
+                        removeMandateCredential(m.id);
+                        refreshMandates();
+                        toast({
+                          title: 'Mandat révoqué',
+                          description: `Les accès de ${m.managerName} ont été supprimés.`,
+                          variant: 'info',
+                        });
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                      Révoquer
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+
+              {(mandates ?? []).map((m) => (
                 <Card
                   key={m._id}
                   className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs"
@@ -282,108 +518,236 @@ export function OwnerListingsPage() {
 
       {/* TAB 4: NEW MANDATE FORM */}
       {activeTab === 'new-mandate' && (
-        <Card className="max-w-xl mx-auto">
+        <Card className="max-w-2xl mx-auto border-amber-500/30">
           <CardHeader>
-            <CardTitle className="text-base">Confier un mandat à un agent immobilier</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <UserCheck className="size-5 text-amber-500" />
+              Mandater une personne pour gérer votre Dashboard Propriétaire
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Remplissez les informations de la personne mandatée et créez ses identifiants de
+              connexion (Email + Mot de passe). Elle pourra se connecter pour vous aider à gérer
+              votre espace propriétaire.
+            </p>
           </CardHeader>
           <CardContent>
             <form
               className="space-y-4 text-xs"
               onSubmit={(e) => {
-                e.preventDefault();
-                const form = new FormData(e.currentTarget);
-                createMandateMutation.mutate({
-                  agentId: form.get('agentId'),
-                  propertyId: form.get('propertyId') || undefined,
-                  mandateType: form.get('mandateType'),
-                  commissionType: 'PERCENTAGE',
-                  commissionRate: Number(form.get('commissionRate')),
-                  startDate: form.get('startDate'),
-                  endDate: form.get('endDate'),
-                  terms: form.get('terms'),
-                });
+                createMandateMutation.mutate(e);
               }}
             >
-              <div>
-                <label className="font-semibold block mb-1">ID Utilisateur de l'agent *</label>
-                <Input
-                  name="agentId"
-                  placeholder="Identifiant de l'agent certifié DOMORA"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="font-semibold block mb-1">
-                  Propriété DOMORA à commercialiser
-                </label>
-                <select
-                  name="propertyId"
-                  className="w-full rounded-md border border-input p-2 bg-background"
+              {/* Périmètre */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setScope('ALL_PORTFOLIO')}
+                  className={`p-3 rounded-xl border text-left transition ${
+                    scope === 'ALL_PORTFOLIO'
+                      ? 'border-amber-500 bg-amber-500/10 text-foreground font-bold'
+                      : 'border-border bg-background text-muted-foreground'
+                  }`}
                 >
-                  <option value="">Sélectionnez un bien de votre parc...</option>
-                  {properties?.map((p) => (
-                    <option key={p._id} value={p._id}>
-                      {p.name} ({p.address?.city || 'Afrique'})
-                    </option>
-                  ))}
-                </select>
+                  <span className="block font-semibold">Tout mon Dashboard Propriétaire</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    Gestion complète de toutes les propriétés, locataires et loyers
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScope('PROPERTY')}
+                  className={`p-3 rounded-xl border text-left transition ${
+                    scope === 'PROPERTY'
+                      ? 'border-amber-500 bg-amber-500/10 text-foreground font-bold'
+                      : 'border-border bg-background text-muted-foreground'
+                  }`}
+                >
+                  <span className="block font-semibold">Une propriété spécifique</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    Sélectionner un bien précis de votre patrimoine
+                  </span>
+                </button>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              {scope === 'PROPERTY' && (
                 <div>
-                  <label className="font-semibold block mb-1">Type de mandat *</label>
+                  <label className="font-semibold block mb-1">Propriété concernée *</label>
                   <select
-                    name="mandateType"
-                    className="w-full rounded-md border border-input p-2 bg-background"
+                    value={selectedPropertyId}
+                    onChange={(e) => setSelectedPropertyId(e.target.value)}
+                    className="w-full rounded-xl border border-input p-2.5 bg-background"
+                    required
                   >
-                    <option value="SALE">Vente</option>
-                    <option value="RENT">Location</option>
-                    <option value="EXCLUSIVE">Exclusif</option>
-                    <option value="NON_EXCLUSIVE">Simple (Non-exclusif)</option>
-                    <option value="MANAGEMENT">Gestion locative complète</option>
+                    <option value="">Sélectionnez une propriété...</option>
+                    {properties?.map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.name} ({p.address?.city || 'Afrique'})
+                      </option>
+                    ))}
                   </select>
+                </div>
+              )}
+
+              {/* Informations de la personne mandatée */}
+              <div className="space-y-3 rounded-2xl border border-border bg-muted/20 p-4">
+                <p className="font-bold text-foreground">Informations de la personne mandatée</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="font-semibold block mb-1">Nom & Prénom du mandataire *</label>
+                    <Input
+                      value={managerName}
+                      onChange={(e) => setManagerName(e.target.value)}
+                      placeholder="Ex: Kouassi Stéphane"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold block mb-1">Téléphone / WhatsApp *</label>
+                    <Input
+                      value={managerPhone}
+                      onChange={(e) => setManagerPhone(e.target.value)}
+                      placeholder="+225 07 00 00 00"
+                      required
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="font-semibold block mb-1">
-                    Taux de commission convenu (%) *
+                    Agence ou Cabinet (optionnel)
                   </label>
                   <Input
-                    name="commissionRate"
-                    type="number"
-                    min="0"
-                    max="100"
-                    defaultValue="5"
-                    required
+                    value={agencyName}
+                    onChange={(e) => setAgencyName(e.target.value)}
+                    placeholder="Ex: Cabinet Immobilier Ivoire"
                   />
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              {/* Identifiants de connexion du mandataire */}
+              <div className="space-y-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+                <div className="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-400">
+                  <KeyRound className="size-4" />
+                  <span>Identifiants de connexion du Mandataire (pour se connecter)</span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="font-semibold block mb-1">
+                      Email de connexion du mandataire *
+                    </label>
+                    <Input
+                      type="email"
+                      value={managerEmail}
+                      onChange={(e) => setManagerEmail(e.target.value)}
+                      placeholder="mandataire@katdestate.com"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold block mb-1">Mot de passe de connexion *</label>
+                    <div className="flex gap-1.5">
+                      <Input
+                        type="text"
+                        value={managerPassword}
+                        onChange={(e) => setManagerPassword(e.target.value)}
+                        placeholder="Mandat2026!"
+                        required
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="h-9 px-2.5 text-[11px] shrink-0"
+                        onClick={() =>
+                          setManagerPassword(`Mandat${Math.floor(1000 + Math.random() * 9000)}!`)
+                        }
+                      >
+                        Générer
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Missions déléguées */}
+              <div className="space-y-2">
+                <label className="font-semibold block">Missions & Accès autorisés</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'COLLECTION', label: 'Gestion des loyers & quittances' },
+                    { id: 'LEASES', label: 'Gestion des locataires & baux' },
+                    { id: 'MAINTENANCE', label: 'Gestion des propriétés & travaux' },
+                    { id: 'VISITS', label: 'Annonces Marketplace & visites' },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => togglePermission(item.id)}
+                      className={`p-2.5 rounded-xl border text-left flex items-center justify-between text-xs transition ${
+                        permissions.includes(item.id)
+                          ? 'border-emerald-500 bg-emerald-500/10 font-bold text-foreground'
+                          : 'border-border bg-background text-muted-foreground'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      {permissions.includes(item.id) && (
+                        <CheckCircle2 className="size-3.5 text-emerald-500" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
                 <div>
-                  <label className="font-semibold block mb-1">Date de début *</label>
-                  <Input name="startDate" type="date" required />
+                  <label className="font-semibold block mb-1">Taux de commission (%) *</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={commissionRate}
+                    onChange={(e) => setCommissionRate(Number(e.target.value))}
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="font-semibold block mb-1">Date d'échéance *</label>
-                  <Input name="endDate" type="date" required />
+                  <label className="font-semibold block mb-1">Date de début *</label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold block mb-1">Date d'échéance (optionnel)</label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="font-semibold block mb-1">
-                  Clauses et conditions particulières
+                  Instructions et clauses particulières
                 </label>
                 <textarea
-                  name="terms"
-                  rows={3}
-                  className="w-full rounded-md border border-input bg-background p-2"
-                  placeholder="Conditions de commercialisation, horaires de visite autorisés..."
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full rounded-xl border border-input bg-background p-2.5"
+                  placeholder="Instructions pour la gestion de votre dashboard propriétaire..."
                 />
               </div>
 
-              <Button type="submit" disabled={createMandateMutation.isPending} className="w-full">
-                {createMandateMutation.isPending ? 'Enregistrement...' : 'Proposer le mandat'}
+              <Button
+                type="submit"
+                disabled={createMandateMutation.isPending}
+                className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold"
+              >
+                {createMandateMutation.isPending
+                  ? 'Création en cours...'
+                  : 'Créer le Mandat et Activer les Identifiants de Connexion'}
               </Button>
             </form>
           </CardContent>

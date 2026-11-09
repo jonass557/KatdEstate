@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Briefcase, CheckCircle2, ShieldCheck, UserCheck, X } from 'lucide-react';
+import { Briefcase, CheckCircle2, KeyRound, ShieldCheck, UserCheck, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useToast } from '../ui/toast';
+import { saveMandateCredential } from '../../lib/katdestate-store';
 
 export interface DelegationData {
   managerName: string;
   managerEmail: string;
   managerPhone: string;
+  loginPassword?: string | undefined;
   agencyName?: string | undefined;
   scope: 'ALL_PORTFOLIO' | 'PROPERTY';
   permissions: string[];
@@ -29,6 +31,7 @@ interface PropertyDelegationModalProps {
 
 export function PropertyDelegationModal({
   propertyName,
+  propertyId,
   initial,
   onSave,
   onClose,
@@ -38,6 +41,7 @@ export function PropertyDelegationModal({
   const [managerName, setManagerName] = useState(initial?.managerName || '');
   const [managerEmail, setManagerEmail] = useState(initial?.managerEmail || '');
   const [managerPhone, setManagerPhone] = useState(initial?.managerPhone || '');
+  const [loginPassword, setLoginPassword] = useState(initial?.loginPassword || 'Mandat2026!');
   const [agencyName, setAgencyName] = useState(initial?.agencyName || '');
   const [scope, setScope] = useState<'ALL_PORTFOLIO' | 'PROPERTY'>(initial?.scope || 'PROPERTY');
   const [commissionRate, setCommissionRate] = useState(initial?.commissionRate ?? 8);
@@ -62,24 +66,63 @@ export function PropertyDelegationModal({
     }
   };
 
+  const generateRandomPassword = () => {
+    const code = `Mandat${Math.floor(1000 + Math.random() * 9000)}!`;
+    setLoginPassword(code);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!managerName.trim()) {
       toast({ title: 'Le nom du mandataire est requis', variant: 'error' });
       return;
     }
-    if (!managerPhone.trim() && !managerEmail.trim()) {
+    if (!managerEmail.trim()) {
       toast({
-        title: 'Veuillez renseigner au moins un téléphone ou un email pour le mandataire',
+        title: "Veuillez renseigner l'email de connexion du mandataire",
+        variant: 'error',
+      });
+      return;
+    }
+    if (!loginPassword.trim() || loginPassword.trim().length < 4) {
+      toast({
+        title: 'Veuillez créer un mot de passe de connexion (min. 4 caractères)',
         variant: 'error',
       });
       return;
     }
 
+    // Save mandate login credentials so the mandated person can sign in to manage the Owner dashboard
+    saveMandateCredential({
+      id: `mandat-${propertyId || 'portfolio'}-${Date.now()}`,
+      managerName: managerName.trim(),
+      managerEmail: managerEmail.trim().toLowerCase(),
+      managerPhone: managerPhone.trim(),
+      password: loginPassword.trim(),
+      agencyName: agencyName.trim() || undefined,
+      scope,
+      propertyId: scope === 'PROPERTY' ? propertyId : undefined,
+      propertyName: scope === 'PROPERTY' ? propertyName : 'Tout le patrimoine',
+      permissions,
+      commissionRate: Number(commissionRate) || 0,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+      status,
+      notes: notes.trim() || undefined,
+      createdAt: new Date().toISOString(),
+    });
+
+    toast({
+      title: 'Identifiants du mandataire créés !',
+      description: `Email : ${managerEmail.trim()} | Mot de passe : ${loginPassword.trim()}`,
+      variant: 'success',
+    });
+
     onSave({
       managerName: managerName.trim(),
       managerEmail: managerEmail.trim(),
       managerPhone: managerPhone.trim(),
+      loginPassword: loginPassword.trim(),
       agencyName: agencyName.trim() || undefined,
       scope,
       permissions,
@@ -142,7 +185,9 @@ export function PropertyDelegationModal({
                 }`}
               >
                 <span className="block font-semibold">Tout le patrimoine</span>
-                <span className="text-[10px] text-muted-foreground">Toutes vos propriétés</span>
+                <span className="text-[10px] text-muted-foreground">
+                  Gérer tout votre dashboard propriétaire
+                </span>
               </button>
             </div>
           </div>
@@ -151,7 +196,7 @@ export function PropertyDelegationModal({
           <div className="space-y-3 p-3.5 rounded-2xl bg-muted/30 border border-border">
             <div className="flex items-center gap-1.5 text-foreground font-bold text-xs">
               <UserCheck className="size-4 text-amber-500" />
-              <span>Identité du Mandataire ou Gestionnaire</span>
+              <span>Informations de la personne mandatée</span>
             </div>
 
             <label className="block space-y-1">
@@ -168,47 +213,88 @@ export function PropertyDelegationModal({
 
             <div className="grid grid-cols-2 gap-2">
               <label className="block space-y-1">
-                <span className="text-muted-foreground font-medium">Téléphone / WhatsApp</span>
+                <span className="text-muted-foreground font-medium">Téléphone / WhatsApp *</span>
                 <Input
                   value={managerPhone}
                   onChange={(e) => setManagerPhone(e.target.value)}
                   placeholder="+225 07..."
+                  required
                 />
               </label>
 
               <label className="block space-y-1">
-                <span className="text-muted-foreground font-medium">Email</span>
+                <span className="text-muted-foreground font-medium">
+                  Agence ou Entreprise (optionnel)
+                </span>
+                <Input
+                  value={agencyName}
+                  onChange={(e) => setAgencyName(e.target.value)}
+                  placeholder="Ex: Agence Immobilière"
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Identifiants de connexion du Mandataire */}
+          <div className="space-y-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-xs">
+              <KeyRound className="size-4" />
+              <span>Création des identifiants de connexion du Mandataire</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Ces identifiants permettront à la personne mandatée de se connecter à la plateforme
+              KatdEstate pour vous aider à gérer votre dashboard propriétaire.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <label className="block space-y-1">
+                <span className="text-foreground font-semibold">
+                  Email de connexion du mandataire *
+                </span>
                 <Input
                   type="email"
                   value={managerEmail}
                   onChange={(e) => setManagerEmail(e.target.value)}
-                  placeholder="gerant@domaine.com"
+                  placeholder="mandataire@katdestate.com"
+                  required
                 />
               </label>
-            </div>
 
-            <label className="block space-y-1">
-              <span className="text-muted-foreground font-medium">
-                Agence ou Entreprise (optionnel)
-              </span>
-              <Input
-                value={agencyName}
-                onChange={(e) => setAgencyName(e.target.value)}
-                placeholder="Ex: Agence Immobilière Abidjan Sud"
-              />
-            </label>
+              <div className="space-y-1">
+                <span className="text-foreground font-semibold block">
+                  Mot de passe de connexion *
+                </span>
+                <div className="flex gap-1.5">
+                  <Input
+                    type="text"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Ex: Mandat2026!"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-9 px-2.5 text-[11px] shrink-0"
+                    onClick={generateRandomPassword}
+                  >
+                    Générer
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Droits & Permissions délégués */}
           <div className="space-y-2">
             <span className="font-semibold text-muted-foreground uppercase text-[11px]">
-              Droits & Missions délégués
+              Droits & Missions délégués sur votre Dashboard Propriétaire
             </span>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'COLLECTION', label: 'Encaissement des loyers' },
+                { id: 'COLLECTION', label: 'Gestion des loyers & quittances' },
                 { id: 'LEASES', label: 'Gestion des locataires & baux' },
-                { id: 'MAINTENANCE', label: 'Suivi des travaux & pannes' },
+                { id: 'MAINTENANCE', label: 'Gestion des propriétés & travaux' },
                 { id: 'VISITS', label: 'Visites & annonces marketplace' },
               ].map((item) => (
                 <button
@@ -284,8 +370,8 @@ export function PropertyDelegationModal({
           <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2 text-[11px] text-muted-foreground">
             <ShieldCheck className="size-4 text-emerald-500 shrink-0 mt-0.5" />
             <span>
-              Le mandataire désigné sera habilité à représenter le propriétaire dans la limite des
-              missions conférées et conformément au droit OHADA.
+              Le mandataire désigné pourra se connecter avec son email et mot de passe créés
+              ci-dessus pour vous assister dans la gestion de votre dashboard propriétaire.
             </span>
           </div>
 
@@ -299,7 +385,7 @@ export function PropertyDelegationModal({
               disabled={isSubmitting}
               className="bg-amber-600 hover:bg-amber-500 text-white font-bold"
             >
-              {isSubmitting ? 'Enregistrement...' : 'Valider la délégation'}
+              {isSubmitting ? 'Enregistrement...' : 'Créer le Mandat & Identifiants'}
             </Button>
           </div>
         </form>
