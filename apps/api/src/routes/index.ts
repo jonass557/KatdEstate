@@ -13,7 +13,7 @@ import { createDocumentRouter } from '../modules/documents/documents.routes.js';
 import { createInsightsRouter } from '../modules/insights/insights.routes.js';
 import { createPlatformRouter } from '../modules/platform/platform.routes.js';
 import { createPortalRouter } from '../modules/portal/portal.routes.js';
-import { createPropertyRouter } from '../modules/properties/properties.routes.js';
+import { createPropertyPublicRouter, createPropertyRouter } from '../modules/properties/properties.routes.js';
 import { createUtilityRouter } from '../modules/utilities/utilities.routes.js';
 import {
   createMarketplacePublicRouter,
@@ -33,6 +33,7 @@ export function createApiRouter(config: AppConfig) {
   router.use('/platform', createPlatformRouter(config));
   router.use('/marketplace', createMarketplacePublicRouter(config));
   router.use('/quartier', createQuartierPublicRouter(config));
+  router.use('/properties', createPropertyPublicRouter());
   router.use('/marketing', createMarketingRouter());
   router.use('/payments/ikeepay', createIkeepayRouter());
 

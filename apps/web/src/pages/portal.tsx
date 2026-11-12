@@ -30,7 +30,7 @@ import { Button } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
-import { API_BASE_URL, apiRequest, getAccessToken } from '../lib/api-client';
+import { API_BASE_URL, apiRequest, downloadFile, getAccessToken } from '../lib/api-client';
 import { useOrgPath, useOrgQuery } from '../lib/query';
 import { useSession } from '../app/session';
 import { IkeepayModal } from '../components/payments/ikeepay-modal';
@@ -1443,14 +1443,53 @@ export function PortalLeasePage() {
 }
 
 export function PortalDocumentsPage() {
+  const base = useOrgPath();
+  const { toast } = useToast();
   const { data } = useOrgQuery<Row[]>(['portal-documents'], '/portal/documents');
+  const rows = data ?? [];
   return (
     <div className="space-y-6">
       <PageHeader title="Mes documents" description="Documents déposés sur votre dossier." />
-      <List
-        rows={data}
-        render={(row) => `${row.originalName ?? 'Document'} · ${date(row.createdAt)}`}
-      />
+      {rows.length === 0 ? (
+        <EmptyState
+          title="Aucun document disponible"
+          description="Vos documents déposés apparaîtront ici et seront téléchargeables."
+        />
+      ) : (
+        <div className="space-y-2">
+          {rows.map((row) => (
+            <div
+              key={String(row._id)}
+              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3.5"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {String(row.originalName ?? 'Document')}
+                </p>
+                <p className="text-xs text-muted-foreground">{date(row.createdAt)}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="shrink-0 inline-flex items-center gap-1.5"
+                onClick={() => {
+                  const filename = String(row.originalName ?? 'document.pdf');
+                  downloadFile(`${base}/files/${String(row._id)}`, filename).catch((err: Error) =>
+                    toast({
+                      title: 'Téléchargement impossible',
+                      description: err.message,
+                      variant: 'error',
+                    }),
+                  );
+                }}
+              >
+                <Download className="size-3.5" />
+                Télécharger
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

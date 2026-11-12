@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, Bell, CheckCircle2, ShieldCheck, Clock } from 'lucide-react';
+import { FileText, Plus, Bell, CheckCircle2, ShieldCheck, Clock, Download } from 'lucide-react';
 import { PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -8,7 +8,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
-import { apiRequest } from '../lib/api-client';
+import { apiRequest, downloadFile } from '../lib/api-client';
 import { formatDate } from '../lib/format';
 import { useOrgList, useOrgPath, useOrgQuery } from '../lib/query';
 import {
@@ -259,6 +259,39 @@ export function LeasesPage() {
                   >
                     <FileText className="mr-1.5 size-3.5 text-primary" />
                     Contrat Certifié
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    className="h-8 text-xs font-semibold"
+                    onClick={async () => {
+                      if (/^[0-9a-fA-F]{24}$/.test(lease._id)) {
+                        try {
+                          await downloadFile(`${base}/leases/${lease._id}/pdf`, `bail-${lease.number}.pdf`);
+                          return;
+                        } catch {
+                          // fallback local
+                        }
+                      }
+                      const summary = [
+                        `CONTRAT DE BAIL : ${lease.number}`,
+                        `Statut : ${STATUS_LABELS[lease.status] ?? lease.status}`,
+                        `Période : Du ${formatDate(lease.startDate)} au ${formatDate(lease.endDate)}`,
+                        `Loyer mensuel : ${lease.rentAmountMinor.toLocaleString('fr-FR')} ${lease.currency || 'FCFA'}`,
+                      ].join('\n');
+                      const blob = new Blob([summary], { type: 'text/plain;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `bail-${lease.number}.txt`;
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    <Download className="mr-1.5 size-3.5" />
+                    Télécharger PDF
                   </Button>
 
                   <Button

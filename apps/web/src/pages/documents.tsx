@@ -19,7 +19,7 @@ import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { Modal } from '../components/ui/dialog';
 import { useToast } from '../components/ui/toast';
-import { apiRequest } from '../lib/api-client';
+import { apiRequest, downloadFile } from '../lib/api-client';
 import { useOrgPath, useOrgQuery } from '../lib/query';
 
 interface DocumentItem {
@@ -158,6 +158,51 @@ export function DocumentsPage() {
       size: 512 * 1024,
       expiresAt: expiresAt || undefined,
     });
+  };
+
+  const handleDownloadDocument = async (doc: DocumentItem) => {
+    const safeName = doc.title.replace(/[^a-zA-Z0-9À-ÿ._-]+/g, '_');
+    if (/^[0-9a-fA-F]{24}$/.test(doc._id)) {
+      try {
+        await downloadFile(`${base}/documents/${doc._id}/download`, `${safeName}.pdf`);
+        return;
+      } catch {
+        // Fallback ci-dessous si fichier distant indisponible
+      }
+    }
+    if (
+      doc.fileUrl &&
+      !doc.fileUrl.includes('storage.domora.app') &&
+      (doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('blob:') || doc.fileUrl.startsWith('data:'))
+    ) {
+      const link = document.createElement('a');
+      link.href = doc.fileUrl;
+      link.download = `${safeName}.pdf`;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return;
+    }
+    const content = [
+      `DOCUMENT : ${doc.title}`,
+      `Catégorie : ${doc.category || doc.type}`,
+      `Version : ${doc.version}`,
+      `Date : ${new Date(doc.createdAt).toLocaleDateString('fr-FR')}`,
+      doc.expiresAt ? `Expiration : ${doc.expiresAt.slice(0, 10)}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${safeName}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -318,16 +363,14 @@ export function DocumentsPage() {
                 </Badge>
               )}
 
-              {doc.fileUrl && (
-                <Button
-                  variant="secondary"
-                  className="h-8 px-2.5 text-xs inline-flex items-center gap-1"
-                  onClick={() => window.open(doc.fileUrl, '_blank', 'noopener')}
-                >
-                  <Download className="size-3.5" />
-                  Consulter
-                </Button>
-              )}
+              <Button
+                variant="secondary"
+                className="h-8 px-2.5 text-xs inline-flex items-center gap-1"
+                onClick={() => void handleDownloadDocument(doc)}
+              >
+                <Download className="size-3.5" />
+                Télécharger
+              </Button>
 
               {doc.isArchived ? (
                 <Button

@@ -194,6 +194,8 @@ export const PERMISSIONS = [
   'quartier.createTransactions',
   'quartier.issueCertificates',
   'quartier.verifyCertificates',
+  'quartier.manageOwners',
+  'quartier.geoOverride',
   'quartier.admin',
 ] as const;
 
@@ -300,6 +302,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'offers.view',
     'offers.decide',
     'commissions.view',
+    'quartier.view',
   ],
 
   PROPERTY_MANAGER: [
@@ -367,6 +370,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'offers.view',
     'offers.decide',
     'commissions.view',
+    'quartier.view',
   ],
 
   ACCOUNTANT: [
@@ -480,6 +484,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'quartier.createTransactions',
     'quartier.issueCertificates',
     'quartier.verifyCertificates',
+    'quartier.manageOwners',
     'notifications.view',
     'messages.view',
     'messages.send',
@@ -501,6 +506,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'quartier.createTransactions',
     'quartier.issueCertificates',
     'quartier.verifyCertificates',
+    'quartier.manageOwners',
     'notifications.view',
     'messages.view',
     'messages.send',

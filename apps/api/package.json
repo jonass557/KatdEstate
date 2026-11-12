@@ -11,6 +11,7 @@
     "start:prod": "node dist/server.js",
     "db:check": "tsx src/scripts/check-database.ts",
     "db:seed": "tsx src/scripts/seed-platform.ts",
+    "db:migrate:geo": "tsx src/scripts/migrate-geo-2dsphere.ts",
     "typecheck": "node --max-old-space-size=4096 ../../node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "vitest run",

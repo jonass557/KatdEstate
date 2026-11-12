@@ -47,6 +47,12 @@ function respond(
   };
 }
 
+export function createPropertyPublicRouter() {
+  const router = Router();
+  router.get('/public/:code', respond(service.getPublicPropertyByCode));
+  return router;
+}
+
 export function createPropertyRouter(config: AppConfig) {
   const router = Router({ mergeParams: true });
   router.use(createAuthenticate(config), requireOrganizationMembership);

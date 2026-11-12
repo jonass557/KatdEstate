@@ -17,7 +17,8 @@ import {
   PieChart,
   Sparkles,
 } from 'lucide-react';
-import type { PropertyInput } from '@rentflow/shared';
+import type { GeoJsonBoundary, PropertyInput } from '@rentflow/shared';
+import { PropertyQrCodeCard } from '../components/properties/PropertyQrCodeCard';
 import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
 import { Badge } from '../components/ui/badge';
@@ -26,13 +27,21 @@ import { Card, CardContent } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
-import { apiRequest } from '../lib/api-client';
+import { ApiError, apiRequest } from '../lib/api-client';
 import { useOrgList, useOrgPath, useOrgQuery } from '../lib/query';
 import {
   PropertyDelegationModal,
   type DelegationData,
 } from '../components/properties/property-delegation-modal';
 import { AddUnitModal } from '../components/properties/add-unit-modal';
+import { PropertyGeoSection, type PropertyGeoValue } from '../components/geo/PropertyGeoSection';
+import { GeoMapCanvas } from '../components/geo/GeoMapCanvas';
+import {
+  appendGeoAuditLogLocal,
+  getBlockOwners,
+  getStoredBlocks,
+  getStoredNeighborhoods,
+} from '../lib/katdestate-store';
 
 export const STORAGE_PROPERTIES_KEY = 'katdestate_custom_properties';
 export const STORAGE_UNITS_KEY = 'katdestate_custom_units';
@@ -60,6 +69,24 @@ export interface Property {
   apartmentsCount?: number | undefined;
   otherUnitsCount?: number | undefined;
   delegation?: DelegationData | undefined;
+  geoOwnerId?: string | undefined;
+  neighborhoodId?: string | undefined;
+  blockId?: string | undefined;
+  geoUniqueId?: string | undefined;
+  owner?: string | undefined;
+  manager?: string | undefined;
+  region?: string | undefined;
+  department?: string | undefined;
+  arrondissement?: string | undefined;
+  neighborhoodName?: string | undefined;
+  sectorName?: string | undefined;
+  neighborhoodLeaderName?: string | undefined;
+  blockLeaderName?: string | undefined;
+  latitude?: number | undefined;
+  longitude?: number | undefined;
+  location?: { type: 'Point'; coordinates: [number, number] } | undefined;
+  boundary?: GeoJsonBoundary | undefined;
+  geoDerogation?: { granted?: boolean | undefined; justification?: string | undefined } | undefined;
 }
 
 interface Unit {
@@ -728,6 +755,13 @@ export function PropertyFormPage({ mode }: { mode: 'create' | 'edit' }) {
         );
         createdProp = res;
       } catch (networkError) {
+        if (
+          networkError instanceof ApiError &&
+          networkError.status >= 400 &&
+          networkError.status < 500
+        ) {
+          throw networkError;
+        }
         // En cas de panne d'API ou d'absence de backend connecté,
         // on sauvegarde de manière 100% autonome dans le stockage local !
       }
@@ -735,6 +769,12 @@ export function PropertyFormPage({ mode }: { mode: 'create' | 'edit' }) {
       // Sauvegarde et mise à jour locale
       const list = getLocalProperties();
       const propId = createdProp?._id || id || `prop_${Date.now()}`;
+      const geoUniqueId =
+        createdProp?.geoUniqueId ||
+        input.geoUniqueId ||
+        effectiveInitial?.geoUniqueId ||
+        `DOM-PROP-${Date.now().toString(36).toUpperCase()}`;
+
       const savedProperty: Property = {
         _id: propId,
         name: input.name,
@@ -757,7 +797,41 @@ export function PropertyFormPage({ mode }: { mode: 'create' | 'edit' }) {
         studiosCount: (input.studioSimpleCount || 0) + (input.studioModerneCount || 0),
         apartmentsCount: input.appartementCount || 0,
         otherUnitsCount: input.otherCustomCount || 0,
+        geoOwnerId: createdProp?.geoOwnerId ?? input.geoOwnerId,
+        neighborhoodId: createdProp?.neighborhoodId ?? input.neighborhoodId,
+        blockId: createdProp?.blockId ?? input.blockId,
+        geoUniqueId,
+        region: createdProp?.region ?? input.region,
+        department: createdProp?.department ?? input.department,
+        arrondissement: createdProp?.arrondissement ?? input.arrondissement,
+        neighborhoodName: createdProp?.neighborhoodName ?? input.neighborhoodName,
+        sectorName: createdProp?.sectorName ?? input.sectorName,
+        neighborhoodLeaderName: createdProp?.neighborhoodLeaderName ?? input.neighborhoodLeaderName,
+        blockLeaderName: createdProp?.blockLeaderName ?? input.blockLeaderName,
+        latitude: createdProp?.latitude ?? input.latitude,
+        longitude: createdProp?.longitude ?? input.longitude,
+        location: createdProp?.location ?? input.location,
+        boundary: createdProp?.boundary ?? input.boundary,
+        geoDerogation: createdProp?.geoDerogation ?? input.geoDerogation,
       };
+
+      if (typeof savedProperty.latitude === 'number' || savedProperty.boundary) {
+        appendGeoAuditLogLocal({
+          entityType: 'PROPERTY',
+          entityId: propId,
+          entityName: `${savedProperty.name} (${geoUniqueId})`,
+          action: savedProperty.geoDerogation?.granted
+            ? 'DEROGATION_GRANTED'
+            : mode === 'create'
+              ? 'CREATE_BOUNDARY'
+              : 'UPDATE_BOUNDARY',
+          performedByName: savedProperty.blockLeaderName || 'Propriétaire / Gestionnaire',
+          performedByRole: 'OWNER',
+          previousBoundary: effectiveInitial?.boundary,
+          newBoundary: savedProperty.boundary,
+          justification: savedProperty.geoDerogation?.justification,
+        });
+      }
 
       const existingIndex = list.findIndex((p) => p._id === propId);
       if (existingIndex >= 0) {
@@ -912,6 +986,27 @@ function PropertyForm({
   const [otherName, setOtherName] = useState<string>(initial?.otherCustomType ?? '');
   const [otherCount, setOtherCount] = useState<number>(initial?.otherCustomCount ?? 0);
 
+  const [geoValue, setGeoValue] = useState<PropertyGeoValue>(() => ({
+    geoOwnerId: initial?.geoOwnerId,
+    neighborhoodId: initial?.neighborhoodId,
+    blockId: initial?.blockId,
+    geoUniqueId: initial?.geoUniqueId,
+    region: initial?.region,
+    department: initial?.department,
+    arrondissement: initial?.arrondissement,
+    neighborhoodName: initial?.neighborhoodName,
+    sectorName: initial?.sectorName,
+    neighborhoodLeaderName: initial?.neighborhoodLeaderName,
+    blockLeaderName: initial?.blockLeaderName,
+    latitude: initial?.latitude,
+    longitude: initial?.longitude,
+    location: initial?.location,
+    boundary: initial?.boundary,
+    geoDerogation: initial?.geoDerogation,
+  }));
+  const [geoValid, setGeoValid] = useState(true);
+  const [geoError, setGeoError] = useState<string | null>(null);
+
   const totalCalculated =
     Number(chambreSimple || 0) +
     Number(chambreModerne || 0) +
@@ -940,6 +1035,14 @@ function PropertyForm({
       setErrors({ address: 'L’adresse géographique est obligatoire' });
       return;
     }
+    if (!geoValid) {
+      setErrors({
+        geo:
+          geoError ||
+          'La localisation géographique du bien sort de votre zone autorisée.',
+      });
+      return;
+    }
 
     setErrors({});
 
@@ -947,7 +1050,7 @@ function PropertyForm({
       name: rawName,
       type: isCustomType ? 'OTHER' : selectedType,
       customPropertyType: isCustomType ? customTypeInput.trim() : undefined,
-      zone: rawZone || undefined,
+      zone: rawZone || geoValue.sectorName || geoValue.neighborhoodName || undefined,
       address: rawAddress,
       city: rawCity,
       country: rawCountry,
@@ -964,6 +1067,22 @@ function PropertyForm({
       otherUnitsCount: Number(otherCount || 0),
       description: rawDesc || undefined,
       status: rawStatus,
+      geoOwnerId: geoValue.geoOwnerId || undefined,
+      neighborhoodId: geoValue.neighborhoodId || undefined,
+      blockId: geoValue.blockId || undefined,
+      geoUniqueId: geoValue.geoUniqueId || undefined,
+      region: geoValue.region || undefined,
+      department: geoValue.department || undefined,
+      arrondissement: geoValue.arrondissement || undefined,
+      neighborhoodName: geoValue.neighborhoodName || undefined,
+      sectorName: geoValue.sectorName || undefined,
+      neighborhoodLeaderName: geoValue.neighborhoodLeaderName || undefined,
+      blockLeaderName: geoValue.blockLeaderName || undefined,
+      latitude: geoValue.latitude,
+      longitude: geoValue.longitude,
+      location: geoValue.location,
+      boundary: geoValue.boundary,
+      geoDerogation: geoValue.geoDerogation?.granted ? geoValue.geoDerogation : undefined,
     };
 
     onSubmit(submissionData as PropertyInput & { customPropertyType?: string });
@@ -1192,6 +1311,21 @@ function PropertyForm({
         </div>
       </div>
 
+      {/* LOCALISATION GÉOGRAPHIQUE DU BIEN (NIVEAU 3) */}
+      <PropertyGeoSection
+        value={geoValue}
+        onChange={setGeoValue}
+        onValidationChange={(valid, error) => {
+          setGeoValid(valid);
+          setGeoError(error ?? null);
+        }}
+      />
+      {errors.geo && (
+        <p className="text-xs font-semibold text-red-600 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">
+          {errors.geo}
+        </p>
+      )}
+
       {/* DESCRIPTION & STATUT */}
       <div className="space-y-4">
         <label className="block space-y-1 text-sm">
@@ -1416,6 +1550,133 @@ export function PropertyDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Matricule & Code QR officiel de la propriété */}
+      <PropertyQrCodeCard
+        matricule={p.geoUniqueId || p._id}
+        propertyName={p.name}
+        address={p.address}
+        city={p.city}
+        ownerName={p.owner}
+      />
+
+      {/* Cartographie & Métadonnées Géographiques (Niveau 3) */}
+      {(p.geoUniqueId ||
+        typeof p.latitude === 'number' ||
+        p.boundary ||
+        p.neighborhoodName ||
+        p.sectorName) && (
+        <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <MapPin className="size-4 text-amber-500" />
+              <span className="text-sm font-bold text-foreground">
+                Géolocalisation & Rattachement Territorial
+              </span>
+            </div>
+            {p.geoUniqueId && (
+              <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 text-xs font-mono font-bold text-amber-600">
+                ID : {p.geoUniqueId}
+              </span>
+            )}
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div>
+              <span className="text-muted-foreground block">Coordonnées GPS</span>
+              <strong className="text-foreground">
+                {typeof p.latitude === 'number' && typeof p.longitude === 'number'
+                  ? `${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}`
+                  : 'Non renseignées'}
+              </strong>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">Région / Département / Arr.</span>
+              <strong className="text-foreground">
+                {[p.region, p.department, p.arrondissement].filter(Boolean).join(' • ') ||
+                  'Non précisé'}
+              </strong>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">Quartier & Chef de Quartier</span>
+              <strong className="text-foreground">
+                {p.neighborhoodName || '-'}
+                {p.neighborhoodLeaderName ? ` (${p.neighborhoodLeaderName})` : ''}
+              </strong>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">Bloc & Chef de Bloc</span>
+              <strong className="text-foreground">
+                {p.sectorName || '-'}
+                {p.blockLeaderName ? ` (${p.blockLeaderName})` : ''}
+              </strong>
+            </div>
+          </div>
+
+          {(typeof p.latitude === 'number' || p.boundary) && (
+            <GeoMapCanvas
+              heightClassName="h-[300px]"
+              activeMarker={
+                typeof p.latitude === 'number' && typeof p.longitude === 'number'
+                  ? { lat: p.latitude, lng: p.longitude }
+                  : null
+              }
+              overlays={[
+                ...getStoredNeighborhoods()
+                  .filter((n) => n.boundary && n.id === p.neighborhoodId)
+                  .map((n) => ({
+                    id: n.id,
+                    level: 'NEIGHBORHOOD' as const,
+                    label: n.name,
+                    boundary: n.boundary!,
+                    color: '#7c3aed',
+                    fillOpacity: 0.05,
+                    strokeWeight: 2,
+                    locked: true,
+                  })),
+                ...getStoredBlocks()
+                  .filter((b) => b.boundary && b.id === p.blockId)
+                  .map((b) => ({
+                    id: b.id,
+                    level: 'BLOCK' as const,
+                    label: b.name,
+                    boundary: b.boundary!,
+                    color: b.color || '#06b6d4',
+                    fillOpacity: 0.08,
+                    strokeWeight: 2,
+                    locked: true,
+                  })),
+                ...getBlockOwners()
+                  .filter((o) => o.assignedBoundary && o.id === p.geoOwnerId)
+                  .map((o) => ({
+                    id: o.id,
+                    level: 'OWNER' as const,
+                    label: o.fullName,
+                    boundary: o.assignedBoundary!,
+                    color: '#10b981',
+                    fillOpacity: 0.14,
+                    strokeWeight: 2,
+                    locked: true,
+                  })),
+                ...(p.boundary
+                  ? [
+                      {
+                        id: p._id,
+                        level: 'PROPERTY' as const,
+                        label: p.name,
+                        boundary: p.boundary,
+                        color: '#f59e0b',
+                        fillOpacity: 0.35,
+                        strokeWeight: 3,
+                        locked: true,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          )}
+        </div>
+      )}
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">

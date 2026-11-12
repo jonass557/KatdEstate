@@ -8,6 +8,7 @@ import {
   FileCheck,
   Flame,
   KeyRound,
+  MapPin,
   MessageSquare,
   Plus,
   Send,
@@ -22,6 +23,7 @@ import { Input } from '../../components/ui/input';
 import { Modal } from '../../components/ui/dialog';
 import { useToast } from '../../components/ui/toast';
 import { useSession } from '../../app/session';
+import { BlockLeaderGeoPanel } from '../../components/geo/BlockLeaderGeoPanel';
 import {
   getBlockOwners,
   saveBlockOwner,
@@ -51,7 +53,7 @@ export function BlockLeaderDashboard() {
   });
 
   const [tab, setTab] = useState<
-    'habitants' | 'annonces' | 'proprietaires' | 'incidents' | 'messagerie'
+    'habitants' | 'annonces' | 'proprietaires' | 'incidents' | 'messagerie' | 'cartographie'
   >('annonces');
 
   // Local data states
@@ -416,6 +418,19 @@ export function BlockLeaderDashboard() {
         >
           <MessageSquare className="h-4 w-4" />
           <span>Message aux Habitants</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setTab('cartographie')}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
+            tab === 'cartographie'
+              ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/20'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          }`}
+        >
+          <MapPin className="h-4 w-4" />
+          <span>Cartographie & Zones Propriétaires</span>
         </button>
       </div>
 
@@ -848,6 +863,13 @@ export function BlockLeaderDashboard() {
             </Button>
           </form>
         </Card>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ONGLET 6 : CARTOGRAPHIE & ZONES PROPRIÉTAIRES DU BLOC (NIVEAU 2) */}
+      {/* ========================================================================= */}
+      {tab === 'cartographie' && (
+        <BlockLeaderGeoPanel activeBlockId={activeBlock.id} onDataChanged={refreshAll} />
       )}
 
       {/* MODAL : NOUVEL HABITANT */}

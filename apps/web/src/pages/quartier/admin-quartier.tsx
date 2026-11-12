@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building, Sparkles, UserCheck } from 'lucide-react';
+import { Building, Map, Sparkles, UserCheck } from 'lucide-react';
+import { AdminGoogleMapsSettingsCard } from '../../components/geo/AdminGoogleMapsSettingsCard';
 import { Button } from '../../components/ui/button';
 import { Card, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -12,7 +13,7 @@ export function AdminQuartierPage() {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
-  const [tab, setTab] = useState<'territory' | 'assignments' | 'plans' | 'stats'>('territory');
+  const [tab, setTab] = useState<'territory' | 'assignments' | 'plans' | 'stats' | 'api'>('territory');
 
   // Queries
   const { data: stats } = useOrgQuery<any>(
@@ -125,6 +126,17 @@ export function AdminQuartierPage() {
           }`}
         >
           <Sparkles className="h-4 w-4" /> Statistiques Générales
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('api')}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+            tab === 'api'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          }`}
+        >
+          <Map className="h-4 w-4" /> API Google Maps
         </button>
       </div>
 
@@ -387,6 +399,9 @@ export function AdminQuartierPage() {
           </Card>
         </div>
       )}
+
+      {/* TAB 4: API GOOGLE MAPS */}
+      {tab === 'api' && <AdminGoogleMapsSettingsCard endpoint={`${base}/quartier/geo/settings`} />}
     </div>
   );
 }

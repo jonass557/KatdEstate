@@ -65,11 +65,34 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+    touch-action: pan-y;
+    width: 100%;
+    max-width: 100vw;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     min-height: 100dvh;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+    touch-action: pan-y;
+    width: 100%;
+    max-width: 100vw;
+    position: relative;
+  }
+
+  #root {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  /* Conserver le contrôle tactile natif sur la carte Google Maps */
+  .gm-style,
+  .gm-style * {
+    touch-action: pan-x pan-y pinch-zoom;
   }
 
   :focus-visible {

@@ -169,6 +169,16 @@ const supportTicketSchema = new Schema(
   { timestamps },
 );
 
+const platformSettingsSchema = new Schema(
+  {
+    key: { type: String, required: true, unique: true, default: 'default' },
+    googleMapsBrowserApiKey: { type: String, trim: true, maxlength: 512, default: '' },
+    googleMapsServerApiKey: { type: String, trim: true, maxlength: 512, default: '' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  },
+  { timestamps },
+);
+
 export type DocumentFolderDocument = InferSchemaType<typeof documentFolderSchema> & {
   _id: Types.ObjectId;
 };
@@ -193,9 +203,12 @@ export type FeatureFlagDocument = InferSchemaType<typeof featureFlagSchema> & {
 export type SupportTicketDocument = InferSchemaType<typeof supportTicketSchema> & {
   _id: Types.ObjectId;
 };
+export type PlatformSettingsDocument = InferSchemaType<typeof platformSettingsSchema> & {
+  _id: Types.ObjectId;
+};
 
-function modelOf<T>(name: string, schema: Schema): Model<T> {
-  return (models[name] as Model<T> | undefined) ?? model<T>(name, schema);
+function modelOf<T>(name: string, schema: unknown): Model<T> {
+  return (models[name] as Model<T> | undefined) ?? (model(name, schema as Schema) as unknown as Model<T>);
 }
 
 export const DocumentFolder = modelOf<DocumentFolderDocument>(
@@ -220,6 +233,10 @@ export const Plan = modelOf<PlanDocument>('Plan', planSchema);
 export const Subscription = modelOf<SubscriptionDocument>('Subscription', subscriptionSchema);
 export const FeatureFlag = modelOf<FeatureFlagDocument>('FeatureFlag', featureFlagSchema);
 export const SupportTicket = modelOf<SupportTicketDocument>('SupportTicket', supportTicketSchema);
+export const PlatformSettings = modelOf<PlatformSettingsDocument>(
+  'PlatformSettings',
+  platformSettingsSchema,
+);
 
 export const FEATURE_FLAGS = [
   'AI_ASSISTANT',

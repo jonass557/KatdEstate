@@ -52,6 +52,49 @@ const propertySchema = new Schema(
     status: { type: String, enum: PROPERTY_STATUSES, default: 'ACTIVE', index: true },
     owner: { type: String, maxlength: 160 },
     manager: { type: String, maxlength: 160 },
+    ownerId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+    geoOwnerId: { type: Schema.Types.ObjectId, ref: 'GeoOwner', index: true },
+    neighborhoodId: { type: Schema.Types.ObjectId, ref: 'GeoNeighborhood', index: true },
+    blockId: { type: Schema.Types.ObjectId, ref: 'GeoBlock', index: true },
+    geoUniqueId: { type: String, trim: true, uppercase: true, maxlength: 64 },
+    region: { type: String, trim: true, maxlength: 120 },
+    department: { type: String, trim: true, maxlength: 120 },
+    arrondissement: { type: String, trim: true, maxlength: 120 },
+    neighborhoodName: { type: String, trim: true, maxlength: 120 },
+    sectorName: { type: String, trim: true, maxlength: 120 },
+    neighborhoodLeaderName: { type: String, trim: true, maxlength: 160 },
+    blockLeaderName: { type: String, trim: true, maxlength: 160 },
+    latitude: { type: Number, min: -90, max: 90 },
+    longitude: { type: Number, min: -180, max: 180 },
+    location: {
+      type: new Schema(
+        {
+          type: { type: String, enum: ['Point'], required: true },
+          coordinates: { type: [Number], required: true },
+        },
+        { _id: false },
+      ),
+    },
+    boundary: {
+      type: new Schema(
+        {
+          type: { type: String, enum: ['Polygon', 'MultiPolygon'], required: true },
+          coordinates: { type: Schema.Types.Mixed, required: true },
+        },
+        { _id: false },
+      ),
+    },
+    geoDerogation: {
+      type: new Schema(
+        {
+          granted: { type: Boolean, default: false },
+          justification: { type: String, trim: true, maxlength: 500 },
+          grantedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+          grantedAt: { type: Date },
+        },
+        { _id: false },
+      ),
+    },
     delegation: { type: delegationSubSchema },
     acquisitionDate: { type: Date },
     value: { type: Number, min: 0 },
@@ -64,6 +107,9 @@ const propertySchema = new Schema(
 propertySchema.index({ organizationId: 1, name: 1 }, { name: 'properties_org_name' });
 propertySchema.index({ organizationId: 1, city: 1 }, { name: 'properties_org_city' });
 propertySchema.index({ organizationId: 1, type: 1 }, { name: 'properties_org_type' });
+propertySchema.index({ geoUniqueId: 1 }, { unique: true, sparse: true, name: 'properties_geo_unique_id' });
+propertySchema.index({ location: '2dsphere' }, { sparse: true, name: 'properties_location_2dsphere' });
+propertySchema.index({ boundary: '2dsphere' }, { sparse: true, name: 'properties_boundary_2dsphere' });
 
 const buildingSchema = new Schema(
   {

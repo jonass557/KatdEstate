@@ -5,10 +5,12 @@ import {
   CheckCircle2,
   Copy,
   Crown,
+  Download,
   Edit3,
   FileCheck,
   FileText,
   KeyRound,
+  MapPin,
   MessageSquare,
   Plus,
   Printer,
@@ -26,6 +28,7 @@ import { Input } from '../../components/ui/input';
 import { Modal } from '../../components/ui/dialog';
 import { useToast } from '../../components/ui/toast';
 import { useSession } from '../../app/session';
+import { NeighborhoodGeoPanel } from '../../components/geo/NeighborhoodGeoPanel';
 import {
   getBlockLeaders,
   saveBlockLeader,
@@ -62,6 +65,7 @@ export function NeighborhoodLeaderDashboard() {
     | 'attestations'
     | 'broadcast'
     | 'rapport'
+    | 'cartographie'
   >('annonces');
 
   // Local data states
@@ -489,6 +493,19 @@ export function NeighborhoodLeaderDashboard() {
         >
           <FileText className="h-4 w-4" />
           <span>Rapport Mensuel PDF</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('cartographie')}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
+            activeTab === 'cartographie'
+              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          }`}
+        >
+          <MapPin className="h-4 w-4" />
+          <span>Cartographie & Zones Blocs</span>
         </button>
       </div>
 
@@ -1002,6 +1019,35 @@ export function NeighborhoodLeaderDashboard() {
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      const content = [
+                        `ATTESTATION COUTUMIÈRE OFFICIELLE — ${c.certificateNumber}`,
+                        `Type : ${c.title}`,
+                        `Bénéficiaire : ${c.beneficiaryName}`,
+                        `Bloc : ${c.blockName}`,
+                        c.plotNumber ? `Parcelle : ${c.plotNumber}` : '',
+                        `Délivré le : ${new Date(c.issuedAt).toLocaleDateString('fr-FR')}`,
+                      ]
+                        .filter(Boolean)
+                        .join('\n');
+                      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `attestation-${c.certificateNumber}.txt`;
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="h-8 text-xs inline-flex items-center gap-1"
+                  >
+                    <Download className="size-3.5" />
+                    Télécharger
+                  </Button>
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => window.print()}
                     className="h-8 text-xs inline-flex items-center gap-1"
@@ -1067,14 +1113,43 @@ export function NeighborhoodLeaderDashboard() {
                 Période : Novembre 2026 • Quartier Cocody
               </p>
             </div>
-            <Button
-              size="sm"
-              onClick={() => window.print()}
-              className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs inline-flex items-center gap-1.5"
-            >
-              <Printer className="size-4" />
-              Imprimer / Enregistrer en PDF
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  const content = [
+                    'RAPPORT MENSUEL OFFICIEL DE LA CHEFFERIE COUTUMIÈRE',
+                    `Période : Novembre 2026`,
+                    `Blocs sous gestion : ${blocks.length}`,
+                    `Habitants recensés : ${habitants.length}`,
+                    `Annonces publiées : ${listings.filter((l) => l.status === 'PUBLISHED').length}`,
+                    `Attestations délivrées : ${certificates.length}`,
+                  ].join('\n');
+                  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `rapport-mensuel-quartier-${new Date().toISOString().slice(0, 7)}.txt`;
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                  URL.revokeObjectURL(url);
+                }}
+                className="text-xs inline-flex items-center gap-1.5"
+              >
+                <Download className="size-4" />
+                Télécharger Rapport
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => window.print()}
+                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs inline-flex items-center gap-1.5"
+              >
+                <Printer className="size-4" />
+                Imprimer / Enregistrer en PDF
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
@@ -1126,6 +1201,11 @@ export function NeighborhoodLeaderDashboard() {
           </div>
         </Card>
       )}
+
+      {/* ========================================================================= */}
+      {/* ONGLET 9 : CARTOGRAPHIE & DÉLIMITATION DES ZONES DE BLOCS (NIVEAU 1) */}
+      {/* ========================================================================= */}
+      {activeTab === 'cartographie' && <NeighborhoodGeoPanel onDataChanged={refreshAll} />}
 
       {/* MODAL : NOMMER UN CHEF DE BLOC */}
       <Modal open={newLeaderModalOpen} onOpenChange={setNewLeaderModalOpen} title="Nommer un Chef de Bloc">

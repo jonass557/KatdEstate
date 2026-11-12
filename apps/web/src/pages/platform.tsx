@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { AdminGoogleMapsSettingsCard } from '../components/geo/AdminGoogleMapsSettingsCard';
 import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
 import { Building2 } from 'lucide-react';
@@ -60,6 +61,7 @@ export function PlatformPage() {
           />
         </div>
       ) : null}
+      <AdminGoogleMapsSettingsCard endpoint="/platform/geo-settings" />
     </div>
   );
 }

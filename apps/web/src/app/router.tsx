@@ -50,6 +50,8 @@ import { OwnerListingsPage } from '../pages/owner-listings';
 import { AdminMarketplacePage } from '../pages/admin-marketplace';
 import { AdminOwnersPage } from '../pages/admin-owners';
 import { QuartierHomePage } from '../pages/quartier/quartier-home';
+import { InteractiveQuartierMap } from '../pages/quartier/interactive-map';
+import { PropertyQrPublicPage } from '../pages/property-qr-public';
 import type { ReactNode } from 'react';
 
 /**
@@ -58,6 +60,7 @@ import type { ReactNode } from 'react';
 const PAGES: Record<string, ReactNode> = {
   '/dashboard': <DashboardPage />,
   '/quartier': <QuartierHomePage />,
+  '/geo-map': <InteractiveQuartierMap />,
   '/marketplace': <MarketplacePage />,
   '/agent': <AgentPage />,
   '/owner-listings': <OwnerListingsPage />,
@@ -127,6 +130,11 @@ const router = createBrowserRouter([
   {
     path: '/marketplace',
     element: <MarketplacePage />,
+  },
+  // Fiche publique QR Code de propriété
+  {
+    path: '/property-qr/:code',
+    element: <PropertyQrPublicPage />,
   },
   // Super Admin Platform
   {

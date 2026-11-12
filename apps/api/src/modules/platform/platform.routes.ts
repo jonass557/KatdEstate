@@ -8,6 +8,7 @@ import { sendSuccess } from '../../common/http.js';
 import { createAuthenticate } from '../../middleware/authenticate.js';
 import { validateRequest } from '../../middleware/validate-request.js';
 import { FEATURE_FLAGS, PLAN_CODE_VALUES } from '../../models/platform.js';
+import * as geo from '../quartier/geo.service.js';
 import * as service from './platform.service.js';
 
 const requireSuperAdmin: RequestHandler = (req, _res, next) => {
@@ -26,6 +27,11 @@ const planUpdate = z.object({
     .object({ properties: z.number().int(), users: z.number().int(), units: z.number().int() })
     .optional(),
   features: z.array(z.string()).optional(),
+});
+
+const geoSettingsUpdate = z.object({
+  googleMapsBrowserApiKey: z.string().trim().max(512).optional(),
+  googleMapsServerApiKey: z.string().trim().max(512).optional(),
 });
 
 function respond(
@@ -71,6 +77,8 @@ export function createPlatformRouter(config: AppConfig) {
     respond(service.updatePlan),
   );
   router.get('/flags', respond(service.listFlags));
+  router.get('/geo-settings', respond(geo.getAdminGeoSettings));
+  router.put('/geo-settings', validateRequest(geoSettingsUpdate), respond(geo.updateAdminGeoSettings));
   router.put(
     '/flags/:key',
     validateRequest(z.object({ key: z.enum(FEATURE_FLAGS) }), 'params'),

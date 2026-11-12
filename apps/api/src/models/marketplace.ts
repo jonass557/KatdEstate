@@ -307,8 +307,8 @@ export type ViewingDocument = InferSchemaType<typeof viewingSchema> & { _id: Typ
 export type OfferDocument = InferSchemaType<typeof offerSchema> & { _id: Types.ObjectId };
 export type CommissionDocument = InferSchemaType<typeof commissionSchema> & { _id: Types.ObjectId };
 
-function modelOf<T>(name: string, schema: Schema): Model<T> {
-  return (models[name] as Model<T> | undefined) ?? model<T>(name, schema);
+function modelOf<T>(name: string, schema: unknown): Model<T> {
+  return (models[name] as Model<T> | undefined) ?? (model(name, schema as Schema) as unknown as Model<T>);
 }
 
 export const AgentProfile = modelOf<AgentProfileDocument>('AgentProfile', agentProfileSchema);

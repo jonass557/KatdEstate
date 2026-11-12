@@ -6,6 +6,7 @@ import {
   UNIT_TYPES,
 } from '../constants/statuses.js';
 import { objectIdSchema, paginationSchema } from './common.js';
+import { geoJsonBoundarySchema, geoJsonPointSchema } from './geo.js';
 
 const trimmed = (max: number) => z.string().trim().min(1).max(max);
 const optionalText = (max: number) => z.string().trim().max(max).optional();
@@ -39,6 +40,28 @@ export const propertyInputSchema = z.object({
   value: z.number().nonnegative().optional(),
   owner: optionalText(160),
   manager: optionalText(160),
+  ownerId: optionalText(64),
+  geoOwnerId: optionalText(64),
+  neighborhoodId: optionalText(64),
+  blockId: optionalText(64),
+  geoUniqueId: optionalText(64),
+  region: optionalText(120),
+  department: optionalText(120),
+  arrondissement: optionalText(120),
+  neighborhoodName: optionalText(120),
+  sectorName: optionalText(120),
+  neighborhoodLeaderName: optionalText(160),
+  blockLeaderName: optionalText(160),
+  latitude: z.coerce.number().min(-90).max(90).optional(),
+  longitude: z.coerce.number().min(-180).max(180).optional(),
+  location: geoJsonPointSchema.optional(),
+  boundary: geoJsonBoundarySchema.optional(),
+  geoDerogation: z
+    .object({
+      granted: z.boolean().optional(),
+      justification: optionalText(500),
+    })
+    .optional(),
   delegation: z
     .object({
       managerName: trimmed(160),

@@ -1,10 +1,19 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
+import {
+  blockZoneUpdateSchema,
+  geoOwnerBoundaryUpdateSchema,
+  geoOwnerInputSchema,
+  neighborhoodBoundaryInputSchema,
+  objectIdSchema,
+} from '@rentflow/shared';
+import { z } from 'zod';
 import type { AppConfig } from '../../config/index.js';
 import { sendSuccess } from '../../common/http.js';
 import { createAuthenticate } from '../../middleware/authenticate.js';
 import { requireOrganizationMembership } from '../../middleware/organization.js';
 import { requirePermission } from '../../middleware/permissions.js';
+import { validateRequest } from '../../middleware/validate-request.js';
 import * as geo from './geo.service.js';
 import * as census from './census.service.js';
 import * as security from './security.service.js';
@@ -12,11 +21,20 @@ import * as communication from './communication.service.js';
 import * as stats from './stats.service.js';
 import * as chefferie from './chefferie.service.js';
 
+const geoSettingsUpdateSchema = z.object({
+  googleMapsBrowserApiKey: z.string().trim().max(512).optional(),
+  googleMapsServerApiKey: z.string().trim().max(512).optional(),
+});
+
 function respond(handler: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
     handler(req, res)
       .then(() => {
-        if (!res.headersSent) sendSuccess(res, res.locals.data);
+        if (!res.headersSent) {
+          sendSuccess(res, res.locals.data, {
+            statusCode: res.statusCode && res.statusCode !== 200 ? res.statusCode : 200,
+          });
+        }
       })
       .catch(next);
   };
@@ -33,6 +51,7 @@ export function createQuartierPublicRouter(_config: AppConfig) {
   router.get('/neighborhoods', respond(geo.listNeighborhoods));
   router.get('/blocks', respond(geo.listBlocks));
   router.get('/blocks/token/:token', respond(geo.getBlockByToken));
+  router.get('/geo/config', respond(geo.getPublicGeoConfig));
   router.post('/residents/register', respond(census.registerHouseholdResident));
   router.get('/emergency-contacts', respond(security.listEmergencyContacts));
   router.get('/announcements', respond(communication.listAnnouncements));
@@ -57,6 +76,18 @@ export function createQuartierRouter(config: AppConfig) {
 
   // --- Territoires & Affectations ---
   router.get('/cities', requirePermission('quartier.view'), respond(geo.listCities));
+  router.get('/geo/config', respond(geo.getPublicGeoConfig));
+  router.get(
+    '/geo/settings',
+    requirePermission('quartier.geoOverride'),
+    respond(geo.getAdminGeoSettings),
+  );
+  router.put(
+    '/geo/settings',
+    requirePermission('quartier.geoOverride'),
+    validateRequest(geoSettingsUpdateSchema),
+    respond(geo.updateAdminGeoSettings),
+  );
   router.post('/cities', requirePermission('quartier.manageSectors'), respond(geo.createCity));
   router.get('/districts', requirePermission('quartier.view'), respond(geo.listDistricts));
   router.post(
@@ -70,8 +101,46 @@ export function createQuartierRouter(config: AppConfig) {
     requirePermission('quartier.manageSectors'),
     respond(geo.createNeighborhood),
   );
+  router.patch(
+    '/neighborhoods/:id/boundary',
+    requirePermission('quartier.manageSectors'),
+    validateRequest(z.object({ id: objectIdSchema }), 'params'),
+    validateRequest(neighborhoodBoundaryInputSchema),
+    respond(geo.updateNeighborhoodBoundary),
+  );
   router.get('/blocks', requirePermission('quartier.view'), respond(geo.listBlocks));
   router.post('/blocks', requirePermission('quartier.manageSectors'), respond(geo.createBlock));
+  router.patch(
+    '/blocks/:id/boundary',
+    requirePermission('quartier.manageSectors'),
+    validateRequest(z.object({ id: objectIdSchema }), 'params'),
+    validateRequest(blockZoneUpdateSchema),
+    respond(geo.updateBlockBoundary),
+  );
+  router.patch(
+    '/blocks/:id/status',
+    requirePermission('quartier.manageSectors'),
+    validateRequest(z.object({ id: objectIdSchema }), 'params'),
+    respond(geo.updateBlockStatus),
+  );
+
+  // --- Zones géographiques des Propriétaires (Niveau 2) & Couches générales ---
+  router.get('/owners', requirePermission('quartier.view'), respond(geo.listGeoOwners));
+  router.post(
+    '/owners',
+    requirePermission('quartier.manageOwners'),
+    validateRequest(geoOwnerInputSchema),
+    respond(geo.createGeoOwner),
+  );
+  router.patch(
+    '/owners/:id/boundary',
+    requirePermission('quartier.manageOwners'),
+    validateRequest(z.object({ id: objectIdSchema }), 'params'),
+    validateRequest(geoOwnerBoundaryUpdateSchema),
+    respond(geo.updateGeoOwnerBoundary),
+  );
+  router.get('/geo/layers', requirePermission('quartier.view'), respond(geo.getGeoLayers));
+  router.get('/geo/audit', requirePermission('quartier.view'), respond(geo.listGeoAuditLogs));
 
   router.post(
     '/sectors/assign',

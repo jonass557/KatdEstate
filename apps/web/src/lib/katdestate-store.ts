@@ -1,4 +1,5 @@
 import { getStoredQuittances, saveStoredQuittances, type QuittanceItem } from './quittances';
+import { toGeoJsonPolygon, type GeoJsonBoundary } from '@rentflow/shared';
 
 // ============================================================================
 // 1. AUTHENTICATION & CREDENTIALS STORE (Locataires, Mandataires, Inscrits)
@@ -739,8 +740,40 @@ export interface BlockRecord {
   neighborhoodName: string;
   leaderName?: string | undefined;
   leaderEmail?: string | undefined;
+  leaderPhone?: string | undefined;
+  color?: string | undefined;
+  isActive?: boolean | undefined;
+  boundary?: GeoJsonBoundary | undefined;
   totalResidences: number;
   totalHabitants: number;
+  createdAt: string;
+}
+
+export interface NeighborhoodGeoRecord {
+  id: string;
+  name: string;
+  region?: string | undefined;
+  department?: string | undefined;
+  arrondissement?: string | undefined;
+  administrativeAddress?: string | undefined;
+  leaderName?: string | undefined;
+  leaderEmail?: string | undefined;
+  leaderPhone?: string | undefined;
+  boundary?: GeoJsonBoundary | undefined;
+  updatedAt: string;
+}
+
+export interface GeoAuditRecord {
+  id: string;
+  entityType: 'NEIGHBORHOOD' | 'BLOCK' | 'OWNER' | 'PROPERTY';
+  entityId: string;
+  entityName: string;
+  action: 'CREATE_BOUNDARY' | 'UPDATE_BOUNDARY' | 'REASSIGN_ZONE' | 'DEROGATION_GRANTED' | 'DEACTIVATE';
+  performedByName: string;
+  performedByRole: string;
+  previousBoundary?: GeoJsonBoundary | undefined;
+  newBoundary?: GeoJsonBoundary | undefined;
+  justification?: string | undefined;
   createdAt: string;
 }
 
@@ -752,6 +785,8 @@ export interface BlockOwnerRecord {
   password: string;
   blockId: string;
   blockName: string;
+  neighborhoodId?: string | undefined;
+  assignedBoundary?: GeoJsonBoundary | undefined;
   propertyName: string;
   propertyType: string;
   monthlyRentOrDues: number;
@@ -867,6 +902,8 @@ export interface WorkflowListingItem {
   updatedAt: string;
 }
 
+export const STORAGE_NEIGHBORHOODS_KEY = 'katdestate_neighborhoods_geo';
+export const STORAGE_GEO_AUDIT_KEY = 'katdestate_geo_audit_logs';
 export const STORAGE_BLOCK_LEADERS_KEY = 'katdestate_block_leaders';
 export const STORAGE_BLOCKS_KEY = 'katdestate_blocks';
 export const STORAGE_BLOCK_OWNERS_KEY = 'katdestate_block_owners';
@@ -875,16 +912,46 @@ export const STORAGE_QUARTIER_INCIDENTS_KEY = 'katdestate_quartier_incidents';
 export const STORAGE_QUARTIER_ANNOUNCEMENTS_KEY = 'katdestate_quartier_announcements';
 export const STORAGE_OFFICIAL_CERTIFICATES_KEY = 'katdestate_official_certificates';
 
-// Seed Blocs
+const INITIAL_NEIGHBORHOODS: NeighborhoodGeoRecord[] = [
+  {
+    id: 'neigh-cocody',
+    name: 'Cocody Riviera Palmeraie',
+    region: 'District Autonome d’Abidjan',
+    department: 'Abidjan',
+    arrondissement: 'Cocody',
+    administrativeAddress: 'Carrefour Duncan / Riviera Palmeraie, Cocody, Abidjan',
+    leaderName: 'Nanan Kouamé N’Guessan',
+    leaderEmail: 'chef.quartier@katdestate.immo',
+    leaderPhone: '+225 07 00 11 00 01',
+    boundary: toGeoJsonPolygon([
+      { lat: 5.352, lng: -3.992 },
+      { lat: 5.352, lng: -3.964 },
+      { lat: 5.376, lng: -3.964 },
+      { lat: 5.376, lng: -3.992 },
+    ]),
+    updatedAt: '2026-01-10T10:00:00Z',
+  },
+];
+
+// Seed Blocs (délimités sans chevauchement à l'intérieur du quartier Cocody)
 const INITIAL_BLOCKS: BlockRecord[] = [
   {
     id: 'block-1',
     code: 'BLOC-PALM-2',
     name: 'Bloc Riviera Palmeraie 2',
     neighborhoodId: 'neigh-cocody',
-    neighborhoodName: 'Cocody',
+    neighborhoodName: 'Cocody Riviera Palmeraie',
     leaderName: 'M. Bakary Diarra',
     leaderEmail: 'chef.bloc@katdestate.immo',
+    leaderPhone: '+225 07 11 22 33 44',
+    color: '#06b6d4',
+    isActive: true,
+    boundary: toGeoJsonPolygon([
+      { lat: 5.360, lng: -3.990 },
+      { lat: 5.360, lng: -3.978 },
+      { lat: 5.374, lng: -3.978 },
+      { lat: 5.374, lng: -3.990 },
+    ]),
     totalResidences: 48,
     totalHabitants: 165,
     createdAt: '2026-01-10T10:00:00Z',
@@ -894,9 +961,18 @@ const INITIAL_BLOCKS: BlockRecord[] = [
     code: 'BLOC-ROSIERS',
     name: 'Bloc Les Rosiers Programme 3',
     neighborhoodId: 'neigh-cocody',
-    neighborhoodName: 'Cocody',
+    neighborhoodName: 'Cocody Riviera Palmeraie',
     leaderName: 'Mme Affoué Konan',
     leaderEmail: 'affoue.konan@katdestate.immo',
+    leaderPhone: '+225 05 22 33 44 55',
+    color: '#8b5cf6',
+    isActive: true,
+    boundary: toGeoJsonPolygon([
+      { lat: 5.360, lng: -3.978 },
+      { lat: 5.360, lng: -3.966 },
+      { lat: 5.374, lng: -3.966 },
+      { lat: 5.374, lng: -3.978 },
+    ]),
     totalResidences: 36,
     totalHabitants: 128,
     createdAt: '2026-01-15T11:00:00Z',
@@ -906,9 +982,18 @@ const INITIAL_BLOCKS: BlockRecord[] = [
     code: 'BLOC-AKOUEDO',
     name: 'Bloc Akouédo Attié Extension',
     neighborhoodId: 'neigh-cocody',
-    neighborhoodName: 'Cocody',
+    neighborhoodName: 'Cocody Riviera Palmeraie',
     leaderName: 'M. Séka Patrick',
     leaderEmail: 'seka.patrick@katdestate.immo',
+    leaderPhone: '+225 07 55 44 33 22',
+    color: '#f59e0b',
+    isActive: true,
+    boundary: toGeoJsonPolygon([
+      { lat: 5.353, lng: -3.990 },
+      { lat: 5.353, lng: -3.978 },
+      { lat: 5.360, lng: -3.978 },
+      { lat: 5.360, lng: -3.990 },
+    ]),
     totalResidences: 29,
     totalHabitants: 94,
     createdAt: '2026-02-01T09:00:00Z',
@@ -918,9 +1003,18 @@ const INITIAL_BLOCKS: BlockRecord[] = [
     code: 'BLOC-ABATTA',
     name: 'Bloc Abatta Village Sud',
     neighborhoodId: 'neigh-cocody',
-    neighborhoodName: 'Cocody',
+    neighborhoodName: 'Cocody Riviera Palmeraie',
     leaderName: 'M. Gnakpa Denis',
     leaderEmail: 'gnakpa.denis@katdestate.immo',
+    leaderPhone: '+225 01 44 55 66 77',
+    color: '#ec4899',
+    isActive: true,
+    boundary: toGeoJsonPolygon([
+      { lat: 5.353, lng: -3.978 },
+      { lat: 5.353, lng: -3.966 },
+      { lat: 5.360, lng: -3.966 },
+      { lat: 5.360, lng: -3.978 },
+    ]),
     totalResidences: 42,
     totalHabitants: 150,
     createdAt: '2026-02-10T08:30:00Z',
@@ -1028,6 +1122,13 @@ const INITIAL_BLOCK_OWNERS: BlockOwnerRecord[] = [
     password: 'Proprio2026!',
     blockId: 'block-1',
     blockName: 'Bloc Riviera Palmeraie 2',
+    neighborhoodId: 'neigh-cocody',
+    assignedBoundary: toGeoJsonPolygon([
+      { lat: 5.362, lng: -3.988 },
+      { lat: 5.362, lng: -3.983 },
+      { lat: 5.369, lng: -3.983 },
+      { lat: 5.369, lng: -3.988 },
+    ]),
     propertyName: 'Immeuble La Paix (8 logements)',
     propertyType: 'Immeuble résidentiel',
     monthlyRentOrDues: 1200000,
@@ -1043,6 +1144,13 @@ const INITIAL_BLOCK_OWNERS: BlockOwnerRecord[] = [
     password: 'Proprio2026!',
     blockId: 'block-1',
     blockName: 'Bloc Riviera Palmeraie 2',
+    neighborhoodId: 'neigh-cocody',
+    assignedBoundary: toGeoJsonPolygon([
+      { lat: 5.362, lng: -3.983 },
+      { lat: 5.362, lng: -3.979 },
+      { lat: 5.369, lng: -3.979 },
+      { lat: 5.369, lng: -3.983 },
+    ]),
     propertyName: 'Concession Gnahoré (3 Maisons en carabot)',
     propertyType: 'Maison en carabot',
     monthlyRentOrDues: 90000,
@@ -1579,4 +1687,72 @@ export function saveOfficialCertificate(cert: OfficialCertificateRecord): void {
     list.unshift(cert);
     localStorage.setItem(STORAGE_OFFICIAL_CERTIFICATES_KEY, JSON.stringify(list));
   } catch {}
+}
+
+// ============================================================================
+// 5. CARTOGRAPHIE GÉOGRAPHIQUE 3 NIVEAUX (Quartiers, Blocs, Propriétaires, Audit)
+// ============================================================================
+
+export function getStoredNeighborhoods(): NeighborhoodGeoRecord[] {
+  if (typeof window === 'undefined') return INITIAL_NEIGHBORHOODS;
+  try {
+    const raw = localStorage.getItem(STORAGE_NEIGHBORHOODS_KEY);
+    if (!raw) {
+      localStorage.setItem(STORAGE_NEIGHBORHOODS_KEY, JSON.stringify(INITIAL_NEIGHBORHOODS));
+      return INITIAL_NEIGHBORHOODS;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return INITIAL_NEIGHBORHOODS;
+  }
+}
+
+export function saveNeighborhoodGeo(record: NeighborhoodGeoRecord): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const list = getStoredNeighborhoods();
+    const idx = list.findIndex((n) => n.id === record.id);
+    if (idx >= 0) {
+      list[idx] = record;
+    } else {
+      list.unshift(record);
+    }
+    localStorage.setItem(STORAGE_NEIGHBORHOODS_KEY, JSON.stringify(list));
+  } catch {}
+}
+
+export function updateStoredBlock(blockId: string, patch: Partial<BlockRecord>): BlockRecord | null {
+  const list = getStoredBlocks();
+  const idx = list.findIndex((b) => b.id === blockId);
+  if (idx < 0 || !list[idx]) return null;
+  const updated: BlockRecord = { ...list[idx]!, ...patch };
+  list[idx] = updated;
+  saveStoredBlocks(list);
+  return updated;
+}
+
+export function getGeoAuditLogsLocal(): GeoAuditRecord[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_GEO_AUDIT_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function appendGeoAuditLogLocal(entry: Omit<GeoAuditRecord, 'id' | 'createdAt'>): GeoAuditRecord {
+  const full: GeoAuditRecord = {
+    ...entry,
+    id: `geolog-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    createdAt: new Date().toISOString(),
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      const list = getGeoAuditLogsLocal();
+      list.unshift(full);
+      localStorage.setItem(STORAGE_GEO_AUDIT_KEY, JSON.stringify(list.slice(0, 200)));
+    } catch {}
+  }
+  return full;
 }

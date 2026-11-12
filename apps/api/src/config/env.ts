@@ -130,6 +130,9 @@ const envSchema = z
     CLOUDINARY_API_KEY: optionalStringSchema,
     CLOUDINARY_API_SECRET: optionalStringSchema,
     CLOUDINARY_FOLDER: z.string().trim().default('katdestate'),
+
+    // --- Cartographie Google Maps (serveur optionnel / Geocoding) --------
+    GOOGLE_MAPS_SERVER_API_KEY: optionalStringSchema,
   })
   .superRefine((value, ctx) => {
     const isProduction = value.NODE_ENV === 'production';
