@@ -782,6 +782,111 @@ export function InteractiveQuartierMap() {
         </Card>
       )}
 
+      {/* Charte des Chefs de Quartier & Gouvernance Territoriale */}
+      <Card className="p-5 space-y-4 border-purple-500/30 bg-purple-500/5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+              <Crown className="size-4 text-purple-600" />
+              Charte des Chefs de Quartier & Règles Territoriales (3 Niveaux)
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Référentiel officiel des limites coutumières et administratives appliquées sur la carte interactive.
+            </p>
+          </div>
+          <span className="rounded-full bg-purple-600/15 border border-purple-500/30 px-3 py-1 text-[11px] font-bold text-purple-600 self-start sm:self-auto">
+            {rawNeighborhoods.length} quartier{rawNeighborhoods.length > 1 ? 's' : ''} enregistré{rawNeighborhoods.length > 1 ? 's' : ''}
+          </span>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3 text-xs">
+          <div className="rounded-xl border border-purple-500/30 bg-background p-3.5 space-y-1">
+            <div className="flex items-center gap-2 font-bold text-purple-600">
+              <span className="size-3 rounded-full bg-purple-600 inline-block" />
+              Niveau 1 — Chef de Quartier
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              Délimite le périmètre général du quartier (polygone GeoJSON) et attribue des zones exclusives aux Chefs de Bloc à l’intérieur de ce périmètre.
+            </p>
+          </div>
+          <div className="rounded-xl border border-cyan-500/30 bg-background p-3.5 space-y-1">
+            <div className="flex items-center gap-2 font-bold text-cyan-600">
+              <span className="size-3 rounded-full bg-cyan-500 inline-block" />
+              Niveau 2 — Chef de Bloc
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              Gère sa zone de bloc (sans chevauchement avec les autres blocs), crée les identifiants des propriétaires et délimite leurs secteurs.
+            </p>
+          </div>
+          <div className="rounded-xl border border-emerald-500/30 bg-background p-3.5 space-y-1">
+            <div className="flex items-center gap-2 font-bold text-emerald-600">
+              <span className="size-3 rounded-full bg-emerald-500 inline-block" />
+              Niveau 3 — Propriétaire & Bien
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              Localise ses propriétés à l’intérieur du secteur autorisé (ou sous dérogation Admin tracée) avec matricule et QR Code officiel.
+            </p>
+          </div>
+        </div>
+
+        {rawNeighborhoods.length > 0 && (
+          <div className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
+            {rawNeighborhoods.map((n) => {
+              const areaM2 = n.boundary ? Math.round(computePolygonAreaM2(n.boundary)) : 0;
+              const blockCount = rawBlocks.filter((b) => b.neighborhoodId === n.id).length;
+              return (
+                <div
+                  key={n.id}
+                  className="rounded-xl border border-border bg-card p-3.5 text-xs space-y-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-foreground flex items-center gap-1.5">
+                        <Crown className="size-3.5 text-purple-600 shrink-0" />
+                        {n.name}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Chef : <strong className="text-foreground">{n.leaderName || 'Chef de Quartier'}</strong>
+                        {n.leaderPhone ? ` • ${n.leaderPhone}` : ''}
+                      </p>
+                    </div>
+                    <span className="rounded bg-purple-500/15 px-2 py-0.5 text-[10px] font-bold text-purple-600 shrink-0">
+                      {blockCount} bloc{blockCount > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {[n.region, n.department, n.arrondissement].filter(Boolean).join(' • ') ||
+                      n.administrativeAddress ||
+                      'Territoire coutumier enregistré'}
+                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-border/60">
+                    <span className="text-[11px] text-muted-foreground">
+                      {areaM2 > 0 ? `Superficie : ${(areaM2 / 10000).toFixed(2)} ha` : 'Zone non tracée'}
+                    </span>
+                    {n.boundary && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2.5 text-[11px]"
+                        onClick={() =>
+                          setFocusTarget({
+                            boundary: n.boundary ?? null,
+                            key: `charte-${n.id}-${Date.now()}`,
+                          })
+                        }
+                      >
+                        <MapPin className="size-3 mr-1" />
+                        Centrer
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       {/* Journal d'audit des modifications géographiques */}
       <Card className="p-4 space-y-3">
         <h3 className="text-sm font-black text-foreground flex items-center gap-2">

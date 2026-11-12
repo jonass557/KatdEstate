@@ -109,6 +109,7 @@ export function BlockLeaderDashboard() {
   const [propertyName, setPropertyName] = useState('');
   const [propertyType, setPropertyType] = useState('Immeuble résidentiel');
   const [monthlyDues, setMonthlyDues] = useState(150000);
+  const [lastCreatedOwner, setLastCreatedOwner] = useState<BlockOwnerRecord | null>(null);
 
   // Form states for new Incident
   const [incidentTitle, setIncidentTitle] = useState('');
@@ -250,16 +251,18 @@ export function BlockLeaderDashboard() {
   // 6. Action: Créer un propriétaire dans son bloc
   const handleCreateOwner = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ownerName.trim() || !ownerEmail.trim() || !ownerPassword.trim()) {
-      toast({ title: 'Nom, email et mot de passe requis', variant: 'error' });
+    if (!ownerName.trim() || !ownerEmail.trim()) {
+      toast({ title: 'Nom et email requis', variant: 'error' });
       return;
     }
+    const generatedPwd =
+      ownerPassword.trim() || `Proprio${Math.floor(1000 + Math.random() * 9000)}!`;
     const newO: BlockOwnerRecord = {
       id: `own-${Date.now()}`,
       fullName: ownerName.trim(),
       email: ownerEmail.trim().toLowerCase(),
       phone: ownerPhone.trim(),
-      password: ownerPassword.trim(),
+      password: generatedPwd,
       blockId: activeBlock.id,
       blockName: activeBlock.name,
       propertyName: propertyName.trim() || 'Propriété du bloc',
@@ -271,7 +274,13 @@ export function BlockLeaderDashboard() {
     };
     saveBlockOwner(newO);
     refreshAll();
+    setLastCreatedOwner(newO);
     setNewOwnerOpen(false);
+    setOwnerName('');
+    setOwnerEmail('');
+    setOwnerPhone('+225 ');
+    setPropertyName('');
+    setOwnerPassword(`Proprio${Math.floor(1000 + Math.random() * 9000)}!`);
     toast({
       title: 'Compte Propriétaire créé avec succès !',
       description: `${newO.fullName} peut se connecter avec : ${newO.email} / ${newO.password}`,
@@ -711,6 +720,38 @@ export function BlockLeaderDashboard() {
           </div>
 
           <div className="space-y-3">
+            {lastCreatedOwner && (
+              <Card className="p-4 border-emerald-500/40 bg-emerald-500/10 text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="size-4" />
+                    Nouveaux identifiants générés pour {lastCreatedOwner.fullName}
+                  </p>
+                  <p className="text-foreground">
+                    Email : <strong className="font-mono">{lastCreatedOwner.email}</strong> • Mot de passe :{' '}
+                    <strong className="font-mono">{lastCreatedOwner.password}</strong>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(
+                        `Identifiants Propriétaire KatdEstate\nEmail : ${lastCreatedOwner.email}\nMot de passe : ${lastCreatedOwner.password}\nConnexion : ${window.location.origin}/sign-in`,
+                      );
+                      toast({ title: 'Identifiants copiés !', variant: 'success' });
+                    }}
+                  >
+                    <Copy className="size-3.5 mr-1" />
+                    Copier
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setLastCreatedOwner(null)}>
+                    Fermer
+                  </Button>
+                </div>
+              </Card>
+            )}
             {owners.map((o) => (
               <Card
                 key={o.id}

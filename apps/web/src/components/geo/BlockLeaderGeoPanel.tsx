@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import {
   Building2,
   CheckCircle2,
+  Copy,
   Edit3,
   History,
+  KeyRound,
   Lock,
   MapPin,
   Plus,
@@ -108,6 +110,7 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+225 ');
   const [password, setPassword] = useState('Prop@2026!');
+  const [lastCreatedOwner, setLastCreatedOwner] = useState<BlockOwnerRecord | null>(null);
   const [propertyName, setPropertyName] = useState('');
   const [propertyType] = useState('Résidence / Immeuble');
   const [monthlyRentOrDues, setMonthlyRentOrDues] = useState('50000');
@@ -293,7 +296,9 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
   }, [activeBlock, blockOwners, parentNeighborhood]);
 
   const handleSaveOwnerBoundary = async () => {
-    if (!activeBlock || !draftBoundary || !validation.valid || validation.error) return;
+    if (!activeBlock) return;
+    if (mapMode === 'EDIT_OWNER' && (!draftBoundary || !validation.valid || validation.error)) return;
+    if (mapMode === 'CREATE_OWNER' && draftBoundary && (!validation.valid || validation.error)) return;
 
     if (mapMode === 'CREATE_OWNER' && (!fullName.trim() || !email.trim() || !phone.trim())) {
       toast({
@@ -307,6 +312,7 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
     setSaving(true);
     try {
       if (mapMode === 'CREATE_OWNER') {
+        const finalPassword = password.trim() || `Prop${Math.floor(1000 + Math.random() * 9000)}!`;
         try {
           await apiRequest(`${base}/quartier/owners`, {
             method: 'POST',
@@ -316,11 +322,11 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
               fullName: fullName.trim(),
               email: email.trim().toLowerCase(),
               phone: phone.trim(),
-              password: password.trim() || undefined,
+              password: finalPassword,
               propertyName: propertyName.trim() || 'Propriété du secteur',
               propertyType,
               monthlyRentOrDues: Number(monthlyRentOrDues) || 0,
-              assignedBoundary: draftBoundary,
+              ...(draftBoundary ? { assignedBoundary: draftBoundary } : {}),
             },
           });
         } catch (err) {
@@ -336,11 +342,11 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
           fullName: fullName.trim(),
           email: email.trim().toLowerCase(),
           phone: phone.trim(),
-          password: password.trim() || 'Prop@2026!',
+          password: finalPassword,
           blockId: activeBlock.id,
           blockName: activeBlock.name,
           neighborhoodId: activeBlock.neighborhoodId,
-          assignedBoundary: draftBoundary,
+          ...(draftBoundary ? { assignedBoundary: draftBoundary } : {}),
           propertyName: propertyName.trim() || 'Propriété du secteur',
           propertyType,
           monthlyRentOrDues: Number(monthlyRentOrDues) || 0,
@@ -349,20 +355,23 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
           createdAt: new Date().toISOString(),
         };
         saveBlockOwner(created);
+        setLastCreatedOwner(created);
 
-        appendGeoAuditLogLocal({
-          entityType: 'OWNER',
-          entityId: created.id,
-          entityName: created.fullName,
-          action: 'CREATE_BOUNDARY',
-          performedByName: user?.displayName || activeBlock.leaderName || 'Chef de Bloc',
-          performedByRole: userRole,
-          newBoundary: draftBoundary,
-        });
+        if (draftBoundary) {
+          appendGeoAuditLogLocal({
+            entityType: 'OWNER',
+            entityId: created.id,
+            entityName: created.fullName,
+            action: 'CREATE_BOUNDARY',
+            performedByName: user?.displayName || activeBlock.leaderName || 'Chef de Bloc',
+            performedByRole: userRole,
+            newBoundary: draftBoundary,
+          });
+        }
 
         toast({
-          title: 'Propriétaire et secteur enregistrés !',
-          description: `Zone administrative créée dans ${activeBlock.name} pour ${created.fullName}.`,
+          title: 'Propriétaire créé avec identifiants !',
+          description: `${created.fullName} • Email : ${created.email} • Mot de passe : ${created.password}`,
           variant: 'success',
         });
 
@@ -374,7 +383,7 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
         refreshLocal();
       } else if (mapMode === 'EDIT_OWNER' && selectedOwnerId) {
         const target = blockOwners.find((o) => o.id === selectedOwnerId);
-        if (!target) return;
+        if (!target || !draftBoundary) return;
 
         try {
           await apiRequest(`${base}/quartier/owners/${selectedOwnerId}/boundary`, {
@@ -560,11 +569,22 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
             <Button
               size="sm"
               className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-              disabled={!draftBoundary || !validation.valid || Boolean(validation.error) || saving}
+              disabled={
+                saving ||
+                (mapMode === 'EDIT_OWNER'
+                  ? !draftBoundary || !validation.valid || Boolean(validation.error)
+                  : Boolean(draftBoundary && (!validation.valid || validation.error)))
+              }
               onClick={handleSaveOwnerBoundary}
             >
               <CheckCircle2 className="h-4 w-4" />
-              <span>{saving ? 'Enregistrement...' : 'Valider & Enregistrer le secteur'}</span>
+              <span>
+                {saving
+                  ? 'Enregistrement...'
+                  : mapMode === 'CREATE_OWNER'
+                    ? 'Créer Propriétaire & Identifiants'
+                    : 'Valider & Enregistrer le secteur'}
+              </span>
             </Button>
           </div>
 
@@ -674,6 +694,39 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
         </Card>
       )}
 
+      {lastCreatedOwner && (
+        <Card className="p-4 border-emerald-500/40 bg-emerald-500/10 text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-1">
+            <p className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+              <CheckCircle2 className="size-4" />
+              Identifiants du Propriétaire créés : {lastCreatedOwner.fullName}
+            </p>
+            <p className="text-foreground">
+              Email : <strong className="font-mono">{lastCreatedOwner.email}</strong> • Mot de passe :{' '}
+              <strong className="font-mono">{lastCreatedOwner.password}</strong>
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                void navigator.clipboard.writeText(
+                  `Identifiants Propriétaire KatdEstate\nEmail : ${lastCreatedOwner.email}\nMot de passe : ${lastCreatedOwner.password}\nConnexion : ${window.location.origin}/sign-in`,
+                );
+                toast({ title: 'Identifiants copiés !', variant: 'success' });
+              }}
+            >
+              <Copy className="size-3.5 mr-1" />
+              Copier
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setLastCreatedOwner(null)}>
+              Fermer
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Liste des propriétaires du bloc + historique des modifications */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-4 space-y-3">
@@ -714,6 +767,29 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
                         {owner.phone} • {owner.propertyName} •{' '}
                         {area ? `${area.toLocaleString('fr-FR')} m²` : 'Secteur non tracé'}
                       </p>
+                      <div className="mt-1 inline-flex flex-wrap items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-2.5 py-1 text-[11px]">
+                        <KeyRound className="h-3 w-3 text-cyan-600" />
+                        <span>
+                          Email : <strong className="font-mono">{owner.email}</strong>
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Mot de passe : <strong className="font-mono">{owner.password || 'Prop@2026!'}</strong>
+                        </span>
+                        <button
+                          type="button"
+                          className="ml-1 inline-flex items-center gap-1 rounded bg-background px-1.5 py-0.5 text-[10px] font-semibold text-foreground border border-border hover:bg-muted"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(
+                              `Identifiants Propriétaire KatdEstate\nEmail : ${owner.email}\nMot de passe : ${owner.password || 'Prop@2026!'}\nConnexion : ${window.location.origin}/sign-in`,
+                            );
+                            toast({ title: 'Identifiants copiés !', variant: 'success' });
+                          }}
+                        >
+                          <Copy className="h-2.5 w-2.5" />
+                          Copier
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {owner.assignedBoundary && (

@@ -176,6 +176,7 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'carte', element: <InteractiveQuartierMap /> },
       { path: 'admin/owners', element: <AdminOwnersPage /> },
       { path: 'platform/owners', element: <AdminOwnersPage /> },
       {
