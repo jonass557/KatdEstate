@@ -1,27 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
+  AlertTriangle,
   CheckCircle2,
-  Compass,
-  Crosshair,
-  Edit3,
-  Layers,
   LocateFixed,
   MapPin,
   Maximize2,
   Minimize2,
   PenTool,
-  RefreshCw,
-  RotateCcw,
   Search,
   Trash2,
   Undo2,
-  AlertTriangle,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
 import {
   computePolygonAreaM2,
-  computePolygonCentroid,
   fromGeoJsonBoundary,
   toGeoJsonPolygon,
   type GeoJsonBoundary,
@@ -30,21 +25,23 @@ import {
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import {
-  geocodeAddressWithGoogle,
-  getBrowserGpsPosition,
-  loadGoogleMapsSdk,
-  resetGoogleMapsLoader,
-  reverseGeocodeWithGoogle,
-  saveGoogleMapsBrowserKey,
-  type GoogleMapsLoadState,
-} from '../../lib/geo/google-maps-loader';
-import {
   DEFAULT_MAP_PROVIDER_CONFIG,
   type GeoMarkerOverlay,
   type GeoPolygonOverlay,
   type GeocodeResult,
-  type MapViewMode,
 } from '../../lib/geo/map-provider';
+import { TILE_LAYERS, type TileLayerId } from '../../lib/geo/leaflet-tile-providers';
+import {
+  reverseGeocodeWithNominatim,
+  searchAddressWithNominatim,
+} from '../../lib/geo/nominatim-geocoder';
+import {
+  GpsNavigationTracker,
+  type GpsNavigationState,
+} from '../../lib/geo/gps-navigation-tracker';
+import { VoiceNavigator } from '../../lib/geo/voice-navigator';
+import { GpsNavigationHUD } from './GpsNavigationHUD';
+import type { TransportMode } from '../../lib/geo/routing-engine';
 
 export interface GeoMapCanvasProps {
   title?: string | undefined;
@@ -72,6 +69,9 @@ export interface GeoMapCanvasProps {
   /** Permet le zoom automatique vers un polygone ou marqueur cible */
   focusTarget?: { boundary?: GeoJsonBoundary | null; point?: LatLngPoint | null; key?: string } | null | undefined;
   legendItems?: Array<{ label: string; color: string }> | undefined;
+  /** Déclenchement externe de la navigation vers une destination */
+  targetDestination?: LatLngPoint | null | undefined;
+  targetDestinationName?: string | undefined;
 }
 
 export function GeoMapCanvas({
@@ -79,7 +79,7 @@ export function GeoMapCanvas({
   subtitle,
   heightClassName = 'h-[460px]',
   initialCenter,
-  initialZoom = 15,
+  initialZoom = 14,
   overlays = [],
   markers = [],
   activeBoundary = null,
@@ -96,758 +96,814 @@ export function GeoMapCanvas({
   validationSuccess,
   focusTarget,
   legendItems,
+  targetDestination = null,
+  targetDestinationName,
 }: GeoMapCanvasProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const overlayPolygonsRef = useRef<any[]>([]);
-  const overlayMarkersRef = useRef<any[]>([]);
-  const activePolyRef = useRef<any>(null);
-  const draftPolylineRef = useRef<any>(null);
-  const draftPointMarkersRef = useRef<any[]>([]);
-  const activeMarkerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const baseTileLayerRef = useRef<L.TileLayer | null>(null);
+  const overlayTileLayerRef = useRef<L.TileLayer | null>(null);
 
-  const [sdkState, setSdkState] = useState<GoogleMapsLoadState>({ status: 'LOADING' });
-  const [viewMode, setViewMode] = useState<MapViewMode>('HYBRID');
+  // Groupes de calques Leaflet
+  const overlaysLayerGroupRef = useRef<L.FeatureGroup | null>(null);
+  const markersLayerGroupRef = useRef<L.FeatureGroup | null>(null);
+  const drawLayerGroupRef = useRef<L.FeatureGroup | null>(null);
+  const routeLayerGroupRef = useRef<L.FeatureGroup | null>(null);
+  const userGpsLayerGroupRef = useRef<L.FeatureGroup | null>(null);
+
+  // État local des calques et de l'affichage
+  const [activeTileId, setActiveTileId] = useState<TileLayerId>('osm');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [drawingPoints, setDrawingPoints] = useState<LatLngPoint[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [gpsLoading, setGpsLoading] = useState(false);
-  const [mapNotice, setMapNotice] = useState<string | null>(null);
-  const [toolMode, setToolMode] = useState<'PAN' | 'DRAW_POLYGON' | 'EDIT_POLYGON' | 'PLACE_MARKER'>('PAN');
-  const [draftPoints, setDraftPoints] = useState<LatLngPoint[]>(() =>
-    fromGeoJsonBoundary(activeBoundary),
-  );
-  const [tempKeyInput, setTempKeyInput] = useState('');
+  const [searchResults, setSearchResults] = useState<GeocodeResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  // Synchronise draftPoints si activeBoundary change depuis l'extérieur
+  // Système de navigation GPS Turn-by-Turn
+  const [navDestinationName, setNavDestinationName] = useState<string>('');
+  const [navTransportMode, setNavTransportMode] = useState<TransportMode>('driving');
+  const [voiceNavigator] = useState(() => new VoiceNavigator(false));
+  const [isVoiceMuted, setIsVoiceMuted] = useState(false);
+  const [navState, setNavState] = useState<GpsNavigationState | null>(null);
+  const navTrackerRef = useRef<GpsNavigationTracker | null>(null);
+
+  // 1. Initialisation Leaflet Map
   useEffect(() => {
-    setDraftPoints(fromGeoJsonBoundary(activeBoundary));
-  }, [activeBoundary]);
+    if (!mapContainerRef.current) return;
+    if (mapInstanceRef.current) return;
 
-  const initLoader = useCallback(async () => {
-    setSdkState({ status: 'LOADING' });
-    const result = await loadGoogleMapsSdk();
-    setSdkState(result);
-  }, []);
+    const defaultCenter = initialCenter || DEFAULT_MAP_PROVIDER_CONFIG.defaultCenter;
 
-  useEffect(() => {
-    void initLoader();
-  }, [initLoader]);
-
-  // Initialisation de l'instance Google Maps
-  useEffect(() => {
-    if (sdkState.status !== 'READY' || !mapContainerRef.current || !window.google?.maps?.Map) {
-      return;
-    }
-
-    if (!mapInstanceRef.current) {
-      const center =
-        activeMarker ??
-        computePolygonCentroid(activeBoundary) ??
-        initialCenter ??
-        DEFAULT_MAP_PROVIDER_CONFIG.defaultCenter;
-
-      mapInstanceRef.current = new window.google.maps.Map(mapContainerRef.current, {
-        center,
-        zoom: initialZoom,
-        mapTypeId: viewMode.toLowerCase(),
-        streetViewControl: false,
-        mapTypeControl: false,
-        fullscreenControl: false,
-        zoomControl: false,
-        tilt: 0,
-      });
-
-      // Places Autocomplete si disponible
-      if (searchInputRef.current && window.google?.maps?.places?.Autocomplete) {
-        const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
-          fields: ['formatted_address', 'geometry', 'address_components', 'name'],
-        });
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
-          const loc = place?.geometry?.location;
-          if (!loc) return;
-          const lat = loc.lat();
-          const lng = loc.lng();
-          mapInstanceRef.current?.panTo({ lat, lng });
-          mapInstanceRef.current?.setZoom(18);
-          const geo: GeocodeResult = {
-            address: place.formatted_address || place.name || searchInputRef.current?.value || '',
-            lat,
-            lng,
-          };
-          onAddressSelected?.(geo);
-          if (allowMarkerPlacement && onMarkerChange) {
-            onMarkerChange({ lat, lng }, geo);
-          }
-        });
-      }
-    }
-  }, [sdkState.status]);
-
-  // Synchroniser le mode d'affichage ROADMAP / SATELLITE / HYBRID
-  useEffect(() => {
-    if (mapInstanceRef.current && window.google?.maps) {
-      mapInstanceRef.current.setMapTypeId(viewMode.toLowerCase());
-    }
-  }, [viewMode]);
-
-  // Click sur la carte selon l'outil actif (Dessiner polygone / Placer marqueur)
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map || !window.google?.maps) return;
-
-    map.setOptions({
-      draggableCursor: toolMode === 'DRAW_POLYGON' || toolMode === 'PLACE_MARKER' ? 'crosshair' : undefined,
+    const map = L.map(mapContainerRef.current, {
+      center: [defaultCenter.lat, defaultCenter.lng],
+      zoom: initialZoom,
+      zoomControl: false, // Boutons personnalisés
+      attributionControl: true,
     });
 
-    const listener = map.addListener('click', async (event: any) => {
-      if (!event?.latLng) return;
-      const lat = event.latLng.lat();
-      const lng = event.latLng.lng();
+    mapInstanceRef.current = map;
 
-      if (toolMode === 'DRAW_POLYGON' && allowPolygonDraw) {
-        setDraftPoints((prev) => {
-          const next = [...prev, { lat, lng }];
-          if (next.length >= 3) {
-            onBoundaryChange?.(toGeoJsonPolygon(next));
+    // Couche de tuiles initiale (OpenStreetMap)
+    const initialConfig = TILE_LAYERS[activeTileId];
+    baseTileLayerRef.current = L.tileLayer(initialConfig.url, {
+      attribution: initialConfig.attribution,
+      maxZoom: initialConfig.maxZoom,
+    }).addTo(map);
+
+    // Initialisation des feature groups
+    overlaysLayerGroupRef.current = L.featureGroup().addTo(map);
+    markersLayerGroupRef.current = L.featureGroup().addTo(map);
+    drawLayerGroupRef.current = L.featureGroup().addTo(map);
+    routeLayerGroupRef.current = L.featureGroup().addTo(map);
+    userGpsLayerGroupRef.current = L.featureGroup().addTo(map);
+
+    // Invalidation de taille après le premier rendu
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  // 2. Gestion du changement de style de carte (OSM, Satellite, Hybride, Dark)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const config = TILE_LAYERS[activeTileId];
+
+    // Supprimer l'ancienne couche de base
+    if (baseTileLayerRef.current) {
+      map.removeLayer(baseTileLayerRef.current);
+    }
+    // Supprimer l'éventuelle couche overlay
+    if (overlayTileLayerRef.current) {
+      map.removeLayer(overlayTileLayerRef.current);
+      overlayTileLayerRef.current = null;
+    }
+
+    baseTileLayerRef.current = L.tileLayer(config.url, {
+      attribution: config.attribution,
+      maxZoom: config.maxZoom,
+    }).addTo(map);
+
+    // Ajouter la couche overlay si elle existe (ex: routes sur vue satellite)
+    if (config.overlayUrl) {
+      overlayTileLayerRef.current = L.tileLayer(config.overlayUrl, {
+        attribution: config.overlayAttribution || '',
+        maxZoom: config.maxZoom,
+      }).addTo(map);
+    }
+  }, [activeTileId]);
+
+  // 3. Mise à jour de drawingPoints depuis activeBoundary externe
+  useEffect(() => {
+    if (activeBoundary) {
+      const pts = fromGeoJsonBoundary(activeBoundary);
+      setDrawingPoints(pts);
+    } else {
+      setDrawingPoints([]);
+    }
+  }, [activeBoundary]);
+
+  // 4. Gestion des clics sur la carte (dessin de polygone ou placement de marqueur)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const handleMapClick = async (e: L.LeafletMouseEvent) => {
+      const clickedPoint: LatLngPoint = { lat: e.latlng.lat, lng: e.latlng.lng };
+
+      if (allowPolygonDraw) {
+        setDrawingPoints((prev) => {
+          const next = [...prev, clickedPoint];
+          if (onBoundaryChange) {
+            onBoundaryChange(next.length >= 3 ? toGeoJsonPolygon(next) : null);
           }
           return next;
         });
-      } else if (toolMode === 'PLACE_MARKER' && allowMarkerPlacement) {
-        const pt = { lat, lng };
-        const geocode = await reverseGeocodeWithGoogle(lat, lng).catch(() => null);
-        onMarkerChange?.(pt, geocode);
+      } else if (allowMarkerPlacement) {
+        let geocode: GeocodeResult | null = null;
+        try {
+          geocode = await reverseGeocodeWithNominatim(clickedPoint.lat, clickedPoint.lng);
+        } catch {}
+        if (onMarkerChange) {
+          onMarkerChange(clickedPoint, geocode);
+        }
       }
-    });
+    };
 
+    map.on('click', handleMapClick);
     return () => {
-      window.google?.maps?.event?.removeListener(listener);
+      map.off('click', handleMapClick);
     };
-  }, [sdkState.status, toolMode, allowPolygonDraw, allowMarkerPlacement, onBoundaryChange, onMarkerChange]);
+  }, [allowPolygonDraw, allowMarkerPlacement, onBoundaryChange, onMarkerChange]);
 
-  // Rendu des couches overlays (Quartiers, Blocs, Propriétaires, Propriétés)
+  // 5. Rendu du tracé en cours d'édition (Polygone + Poignées)
   useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map || !window.google?.maps) return;
+    const group = drawLayerGroupRef.current;
+    if (!group) return;
 
-    for (const p of overlayPolygonsRef.current) p.setMap(null);
-    overlayPolygonsRef.current = [];
+    group.clearLayers();
 
-    for (const overlay of overlays) {
-      const path = fromGeoJsonBoundary(overlay.boundary);
-      if (path.length < 3) continue;
+    if (drawingPoints.length === 0) return;
 
-      const poly = new window.google.maps.Polygon({
-        paths: path,
-        strokeColor: overlay.color,
-        strokeOpacity: overlay.locked ? 0.9 : 0.95,
-        strokeWeight: overlay.strokeWeight ?? (overlay.level === 'NEIGHBORHOOD' ? 3 : 2),
+    // Sommets individuels
+    drawingPoints.forEach((pt, idx) => {
+      const marker = L.circleMarker([pt.lat, pt.lng], {
+        radius: idx === 0 ? 8 : 6,
+        color: idx === 0 ? '#10b981' : '#3b82f6',
+        fillColor: '#ffffff',
+        fillOpacity: 1,
+        weight: 2,
+      });
+      group.addLayer(marker);
+    });
+
+    // Lignes ou polygone fermé
+    if (drawingPoints.length >= 3) {
+      const latlngs = drawingPoints.map((p) => [p.lat, p.lng] as [number, number]);
+      const polygon = L.polygon(latlngs, {
+        color: '#10b981',
+        weight: 3,
+        fillColor: '#10b981',
+        fillOpacity: 0.25,
+      });
+      group.addLayer(polygon);
+    } else if (drawingPoints.length === 2) {
+      const latlngs = drawingPoints.map((p) => [p.lat, p.lng] as [number, number]);
+      const polyline = L.polyline(latlngs, {
+        color: '#10b981',
+        weight: 3,
+        dashArray: '5, 5',
+      });
+      group.addLayer(polyline);
+    }
+  }, [drawingPoints]);
+
+  // 6. Rendu des Polygones existants (`overlays`)
+  useEffect(() => {
+    const group = overlaysLayerGroupRef.current;
+    if (!group) return;
+
+    group.clearLayers();
+
+    overlays.forEach((overlay) => {
+      const pts = fromGeoJsonBoundary(overlay.boundary);
+      if (pts.length < 3) return;
+
+      const latlngs = pts.map((p) => [p.lat, p.lng] as [number, number]);
+      const polygon = L.polygon(latlngs, {
+        color: overlay.color,
+        weight: overlay.strokeWeight || 2.5,
         fillColor: overlay.color,
-        fillOpacity: overlay.fillOpacity ?? (overlay.level === 'NEIGHBORHOOD' ? 0.08 : 0.2),
-        clickable: Boolean(onOverlayClick),
-        editable: false,
-        zIndex: overlay.level === 'NEIGHBORHOOD' ? 1 : overlay.level === 'BLOCK' ? 2 : overlay.level === 'OWNER' ? 3 : 4,
+        fillOpacity: overlay.fillOpacity ?? 0.18,
       });
-      poly.setMap(map);
-      if (onOverlayClick) {
-        poly.addListener('click', () => onOverlayClick(overlay));
-      }
-      overlayPolygonsRef.current.push(poly);
-    }
 
-    for (const m of overlayMarkersRef.current) m.setMap(null);
-    overlayMarkersRef.current = [];
-
-    for (const markerItem of markers) {
-      const marker = new window.google.maps.Marker({
-        position: markerItem.position,
-        map,
-        title: markerItem.title,
-        icon: window.google.maps.SymbolPath
-          ? {
-              path: window.google.maps.SymbolPath.CIRCLE,
-              scale: 7,
-              fillColor: markerItem.color || '#10b981',
-              fillOpacity: 1,
-              strokeColor: '#ffffff',
-              strokeWeight: 2,
-            }
-          : undefined,
-      });
-      if (onMarkerClick) {
-        marker.addListener('click', () => onMarkerClick(markerItem));
-      }
-      overlayMarkersRef.current.push(marker);
-    }
-  }, [sdkState.status, overlays, markers, onOverlayClick, onMarkerClick]);
-
-  // Rendu du polygone en cours de dessin ou d'édition
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map || !window.google?.maps) return;
-
-    if (activePolyRef.current) {
-      activePolyRef.current.setMap(null);
-      activePolyRef.current = null;
-    }
-    if (draftPolylineRef.current) {
-      draftPolylineRef.current.setMap(null);
-      draftPolylineRef.current = null;
-    }
-    for (const dm of draftPointMarkersRef.current) dm.setMap(null);
-    draftPointMarkersRef.current = [];
-
-    if (draftPoints.length === 0) return;
-
-    if (draftPoints.length < 3) {
-      draftPolylineRef.current = new window.google.maps.Polyline({
-        path: draftPoints,
-        strokeColor: '#f59e0b',
-        strokeWeight: 3,
-        map,
-      });
-      for (const pt of draftPoints) {
-        const dot = new window.google.maps.Marker({
-          position: pt,
-          map,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 5,
-            fillColor: '#f59e0b',
-            fillOpacity: 1,
-            strokeColor: '#ffffff',
-            strokeWeight: 1.5,
-          },
-        });
-        draftPointMarkersRef.current.push(dot);
-      }
-      return;
-    }
-
-    const isEditable = allowPolygonDraw && (toolMode === 'EDIT_POLYGON' || toolMode === 'DRAW_POLYGON');
-    const polyColor = validationError ? '#ef4444' : '#10b981';
-
-    const poly = new window.google.maps.Polygon({
-      paths: draftPoints,
-      strokeColor: polyColor,
-      strokeWeight: 3,
-      fillColor: polyColor,
-      fillOpacity: 0.25,
-      editable: isEditable,
-      zIndex: 10,
-      map,
-    });
-
-    if (isEditable) {
-      const path = poly.getPath();
-      const syncPath = () => {
-        const updated: LatLngPoint[] = [];
-        for (let i = 0; i < path.getLength(); i++) {
-          const pt = path.getAt(i);
-          updated.push({ lat: pt.lat(), lng: pt.lng() });
-        }
-        setDraftPoints(updated);
-        if (updated.length >= 3) {
-          onBoundaryChange?.(toGeoJsonPolygon(updated));
-        }
-      };
-      path.addListener('set_at', syncPath);
-      path.addListener('insert_at', syncPath);
-      path.addListener('remove_at', syncPath);
-    }
-
-    activePolyRef.current = poly;
-  }, [sdkState.status, draftPoints, toolMode, allowPolygonDraw, validationError, onBoundaryChange]);
-
-  // Rendu du marqueur actif (Niveau 3 Propriété)
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map || !window.google?.maps) return;
-
-    if (activeMarkerRef.current) {
-      activeMarkerRef.current.setMap(null);
-      activeMarkerRef.current = null;
-    }
-
-    if (!activeMarker) return;
-
-    const marker = new window.google.maps.Marker({
-      position: activeMarker,
-      map,
-      draggable: allowMarkerPlacement,
-      title: 'Emplacement du bien',
-      animation: window.google.maps.Animation?.DROP,
-    });
-
-    if (allowMarkerPlacement && onMarkerChange) {
-      marker.addListener('dragend', async (event: any) => {
-        if (!event?.latLng) return;
-        const lat = event.latLng.lat();
-        const lng = event.latLng.lng();
-        const geocode = await reverseGeocodeWithGoogle(lat, lng).catch(() => null);
-        onMarkerChange({ lat, lng }, geocode);
-      });
-    }
-
-    activeMarkerRef.current = marker;
-  }, [sdkState.status, activeMarker, allowMarkerPlacement, onMarkerChange]);
-
-  // Zoom automatique vers une cible ou un polygone
-  const fitAllOnMap = useCallback((customBoundary?: GeoJsonBoundary | null, customPoint?: LatLngPoint | null) => {
-    const map = mapInstanceRef.current;
-    if (!map || !window.google?.maps) return;
-
-    if (customPoint) {
-      map.panTo(customPoint);
-      map.setZoom(18);
-      return;
-    }
-
-    const bounds = new window.google.maps.LatLngBounds();
-    let hasPoints = false;
-
-    const addPts = (pts: LatLngPoint[]) => {
-      for (const p of pts) {
-        bounds.extend(p);
-        hasPoints = true;
-      }
-    };
-
-    if (customBoundary) {
-      addPts(fromGeoJsonBoundary(customBoundary));
-    } else {
-      addPts(draftPoints);
-      for (const o of overlays) addPts(fromGeoJsonBoundary(o.boundary));
-      for (const m of markers) addPts([m.position]);
-      if (activeMarker) addPts([activeMarker]);
-    }
-
-    if (hasPoints) {
-      map.fitBounds(bounds, 48);
-    }
-  }, [draftPoints, overlays, markers, activeMarker]);
-
-  useEffect(() => {
-    if (sdkState.status === 'READY' && focusTarget) {
-      fitAllOnMap(focusTarget.boundary, focusTarget.point);
-    }
-  }, [sdkState.status, focusTarget, fitAllOnMap]);
-
-  const handleSearch = async () => {
-    const q = searchQuery.trim();
-    if (!q) return;
-    setSearching(true);
-    setMapNotice(null);
-    try {
-      const result = await geocodeAddressWithGoogle(q);
-      mapInstanceRef.current?.panTo({ lat: result.lat, lng: result.lng });
-      mapInstanceRef.current?.setZoom(18);
-      onAddressSelected?.(result);
-      if (allowMarkerPlacement && onMarkerChange) {
-        onMarkerChange({ lat: result.lat, lng: result.lng }, result);
-      }
-      setMapNotice(`Localisé : ${result.address}`);
-    } catch (err: any) {
-      setMapNotice(err?.message ?? 'Adresse introuvable.');
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleLocateGps = async () => {
-    setGpsLoading(true);
-    setMapNotice(null);
-    try {
-      const gps = await getBrowserGpsPosition();
-      const pt = { lat: gps.lat, lng: gps.lng };
-      mapInstanceRef.current?.panTo(pt);
-      mapInstanceRef.current?.setZoom(19);
-      const geocode = await reverseGeocodeWithGoogle(gps.lat, gps.lng).catch(() => null);
-      if (allowMarkerPlacement && onMarkerChange) {
-        onMarkerChange(pt, geocode);
-      }
-      if (geocode) onAddressSelected?.(geocode);
-      setMapNotice(
-        `Position GPS capturée (précision ±${Math.round(gps.accuracy)}m) : ${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)}`,
+      // Tooltip élégant
+      polygon.bindTooltip(
+        `<div class="font-bold text-xs">${overlay.label}</div>${overlay.sublabel ? `<div class="text-[10px] text-gray-500">${overlay.sublabel}</div>` : ''}`,
+        { permanent: false, direction: 'center', className: 'domora-leaflet-tooltip' },
       );
-    } catch (err: any) {
-      setMapNotice(err?.message ?? 'Impossible d’accéder au GPS.');
+
+      if (onOverlayClick) {
+        polygon.on('click', () => onOverlayClick(overlay));
+      }
+
+      group.addLayer(polygon);
+    });
+  }, [overlays, onOverlayClick]);
+
+  // 7. Rendu des Marqueurs de Propriétés et Points d'intérêt (`markers`)
+  useEffect(() => {
+    const group = markersLayerGroupRef.current;
+    if (!group) return;
+
+    group.clearLayers();
+
+    // Marqueur actif en cours d'édition (ex: formulaire de création)
+    if (activeMarker) {
+      const activeIcon = L.divIcon({
+        className: 'custom-active-marker',
+        html: `
+          <div style="background-color: #f59e0b; width: 34px; height: 34px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; color: white;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          </div>
+        `,
+        iconSize: [34, 34],
+        iconAnchor: [17, 34],
+      });
+
+      const m = L.marker([activeMarker.lat, activeMarker.lng], { icon: activeIcon });
+      group.addLayer(m);
+    }
+
+    // Marqueurs des propriétés recensées
+    markers.forEach((markerOverlay) => {
+      const { position, title: mTitle, subtitle: mSubtitle, color = '#10b981', propertyDetails } = markerOverlay;
+
+      const markerColor = color || '#10b981';
+      const customIcon = L.divIcon({
+        className: 'domora-property-marker',
+        html: `
+          <div style="background-color: ${markerColor}; width: 32px; height: 32px; border-radius: 50%; border: 2.5px solid #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; transition: transform 0.15s ease;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+      });
+
+      const m = L.marker([position.lat, position.lng], { icon: customIcon });
+
+      // Popup Leaflet complet conforme aux exigences
+      const propId = propertyDetails?.propertyId || markerOverlay.id;
+      const popupContent = document.createElement('div');
+      popupContent.className = 'p-1 space-y-2 text-xs font-sans max-w-[260px]';
+
+      const photoHtml = propertyDetails?.photoUrl
+        ? `<img src="${propertyDetails.photoUrl}" alt="${mTitle}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-bottom: 6px;" />`
+        : `<div style="width: 100%; height: 60px; background: #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 11px; margin-bottom: 6px;">Propriété DOMORA</div>`;
+
+      const priceHtml = propertyDetails?.priceMinor
+        ? `<div style="font-size: 13px; font-weight: 800; color: #059669;">${(propertyDetails.priceMinor).toLocaleString('fr-FR')} ${propertyDetails.currency || 'FCFA'}</div>`
+        : '';
+
+      const roomsHtml = propertyDetails?.roomsCount
+        ? `<span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${propertyDetails.roomsCount} pièces</span>`
+        : '';
+
+      popupContent.innerHTML = `
+        ${photoHtml}
+        <div>
+          <div style="font-weight: 700; font-size: 13px; color: #0f172a; line-height: 1.2;">${mTitle}</div>
+          <div style="color: #64748b; font-size: 11px; margin-top: 2px;">${mSubtitle || propertyDetails?.address || ''}</div>
+        </div>
+        ${priceHtml}
+        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+          ${roomsHtml}
+          ${propertyDetails?.type ? `<span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 10px;">${propertyDetails.type}</span>` : ''}
+        </div>
+        <div style="display: flex; gap: 6px; padding-top: 6px; border-top: 1px solid #e2e8f0;">
+          <button id="btn-details-${propId}" style="flex: 1; padding: 6px 8px; font-size: 11px; font-weight: 600; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; color: #334155;">
+            Voir détails
+          </button>
+          <button id="btn-go-${propId}" style="flex: 1; padding: 6px 8px; font-size: 11px; font-weight: 700; background: #059669; border: none; border-radius: 6px; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; gap: 4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+            Y aller
+          </button>
+        </div>
+      `;
+
+      m.bindPopup(popupContent, { maxWidth: 280, className: 'domora-property-popup' });
+
+      m.on('popupopen', () => {
+        const btnDetails = document.getElementById(`btn-details-${propId}`);
+        const btnGo = document.getElementById(`btn-go-${propId}`);
+
+        if (btnDetails) {
+          btnDetails.onclick = () => {
+            if (onMarkerClick) onMarkerClick(markerOverlay);
+            else window.location.href = `/properties/${propId}`;
+          };
+        }
+
+        if (btnGo) {
+          btnGo.onclick = () => {
+            startGpsNavigation(position, mTitle);
+          };
+        }
+      });
+
+      group.addLayer(m);
+    });
+  }, [markers, activeMarker, onMarkerClick]);
+
+  // 8. Focus automatique vers cible (focusTarget)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !focusTarget) return;
+
+    if (focusTarget.boundary) {
+      const pts = fromGeoJsonBoundary(focusTarget.boundary);
+      if (pts.length >= 3) {
+        const bounds = L.latLngBounds(pts.map((p) => [p.lat, p.lng]));
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17, animate: true });
+        return;
+      }
+    }
+
+    if (focusTarget.point) {
+      map.setView([focusTarget.point.lat, focusTarget.point.lng], 16, { animate: true });
+    }
+  }, [focusTarget]);
+
+  // 9. Déclenchement externe de la navigation (targetDestination)
+  useEffect(() => {
+    if (targetDestination) {
+      startGpsNavigation(targetDestination, targetDestinationName || 'Destination sélectionnée');
+    }
+  }, [targetDestination, targetDestinationName]);
+
+  // Fonction de démarrage de la navigation GPS
+  const startGpsNavigation = useCallback(
+    (destination: LatLngPoint, destName: string) => {
+      setNavDestinationName(destName);
+
+      if (navTrackerRef.current) {
+        navTrackerRef.current.stop();
+      }
+
+      const tracker = new GpsNavigationTracker({
+        destination,
+        destinationName: destName,
+        initialMode: navTransportMode,
+        voiceNavigator,
+        onStateUpdate: (state) => {
+          setNavState(state);
+          updateRouteOnMap(state);
+        },
+        onArrived: () => {
+          // Arrivé à bon port
+        },
+        onRecalculate: () => {
+          // Itinéraire recalculé
+        },
+      });
+
+      navTrackerRef.current = tracker;
+      void tracker.start();
+    },
+    [navTransportMode, voiceNavigator],
+  );
+
+  // Arrêt de la navigation GPS
+  const stopGpsNavigation = useCallback(() => {
+    if (navTrackerRef.current) {
+      navTrackerRef.current.stop();
+      navTrackerRef.current = null;
+    }
+    setNavState(null);
+    if (routeLayerGroupRef.current) routeLayerGroupRef.current.clearLayers();
+    if (userGpsLayerGroupRef.current) userGpsLayerGroupRef.current.clearLayers();
+  }, []);
+
+  // Mise à jour de la ligne d'itinéraire et de la position GPS de l'utilisateur sur la carte Leaflet
+  const updateRouteOnMap = useCallback((state: GpsNavigationState) => {
+    const routeGroup = routeLayerGroupRef.current;
+    const userGpsGroup = userGpsLayerGroupRef.current;
+    const map = mapInstanceRef.current;
+    if (!routeGroup || !userGpsGroup || !map) return;
+
+    routeGroup.clearLayers();
+    userGpsGroup.clearLayers();
+
+    // 1. Tracé de l'itinéraire
+    if (state.route && state.route.coordinates.length >= 2) {
+      const latlngs = state.route.coordinates.map((p) => [p.lat, p.lng] as [number, number]);
+
+      // Ligne d'ombrage extérieure
+      const routeHalo = L.polyline(latlngs, {
+        color: '#047857',
+        weight: 9,
+        opacity: 0.45,
+      });
+      // Ligne centrale lumineuse
+      const routeMain = L.polyline(latlngs, {
+        color: '#10b981',
+        weight: 6,
+        opacity: 0.95,
+      });
+
+      routeGroup.addLayer(routeHalo);
+      routeGroup.addLayer(routeMain);
+
+      // Si premier rendu du trajet, cadrer
+      if (!state.currentPosition) {
+        map.fitBounds(routeMain.getBounds(), { padding: [60, 60], animate: true });
+      }
+    }
+
+    // 2. Marqueur position GPS en direct de l'utilisateur avec cap d'orientation
+    if (state.currentPosition) {
+      const pos = state.currentPosition;
+      const headingDeg = state.heading !== null ? state.heading : 0;
+
+      const userIcon = L.divIcon({
+        className: 'domora-user-gps-marker',
+        html: `
+          <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+            <div style="position: absolute; width: 100%; height: 100%; border-radius: 50%; background: rgba(16, 185, 129, 0.3); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+            <div style="width: 26px; height: 26px; border-radius: 50%; background: #059669; border: 3px solid #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; transform: rotate(${headingDeg}deg);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#ffffff" stroke="none"><polygon points="12 2 19 21 12 17 5 21 12 2"></polygon></svg>
+            </div>
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
+
+      const userMarker = L.marker([pos.lat, pos.lng], { icon: userIcon, zIndexOffset: 1000 });
+      userGpsGroup.addLayer(userMarker);
+
+      // Si navigation active, recentrer automatiquement et fluidement
+      map.panTo([pos.lat, pos.lng], { animate: true, duration: 0.5 });
+    }
+  }, []);
+
+  // Recherche d'adresse mondiale avec Nominatim (OpenStreetMap)
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setIsSearching(true);
+    try {
+      const results = await searchAddressWithNominatim(searchQuery, 5);
+      setSearchResults(results);
+    } catch {
+      setSearchResults([]);
     } finally {
-      setGpsLoading(false);
+      setIsSearching(false);
     }
   };
 
-  const handleUndoVertex = () => {
-    setDraftPoints((prev) => {
+  const handleSelectSearchResult = (result: GeocodeResult) => {
+    const map = mapInstanceRef.current;
+    if (map) {
+      map.setView([result.lat, result.lng], 16, { animate: true });
+    }
+    setSearchResults([]);
+    setSearchQuery(result.address);
+    if (onAddressSelected) {
+      onAddressSelected(result);
+    }
+  };
+
+  // Récupérer ma position GPS actuelle
+  const handleLocateMe = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      alert('La géolocalisation n’est pas supportée par votre navigateur.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const map = mapInstanceRef.current;
+        if (map) {
+          map.setView([pt.lat, pt.lng], 16, { animate: true });
+        }
+      },
+      (err) => {
+        alert('Impossible de récupérer votre position : ' + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
+  // Contrôles du tracé de polygone
+  const handleUndoPoint = () => {
+    setDrawingPoints((prev) => {
       const next = prev.slice(0, -1);
-      onBoundaryChange?.(next.length >= 3 ? toGeoJsonPolygon(next) : null);
+      if (onBoundaryChange) {
+        onBoundaryChange(next.length >= 3 ? toGeoJsonPolygon(next) : null);
+      }
       return next;
     });
   };
 
-  const handleClearPolygon = () => {
-    setDraftPoints([]);
-    onBoundaryChange?.(null);
-    setToolMode('PAN');
+  const handleClearDraw = () => {
+    setDrawingPoints([]);
+    if (onBoundaryChange) onBoundaryChange(null);
   };
 
-  const areaM2 = useMemo(() => {
-    if (draftPoints.length < 3) return 0;
-    return computePolygonAreaM2(toGeoJsonPolygon(draftPoints));
-  }, [draftPoints]);
+  const handleValidateDraw = () => {
+    if (drawingPoints.length < 3) return;
+    const boundary = toGeoJsonPolygon(drawingPoints);
+    if (onBoundaryValidate) onBoundaryValidate(boundary);
+    if (onBoundaryChange) onBoundaryChange(boundary);
+  };
+
+  const currentAreaM2 = useMemo(() => {
+    if (drawingPoints.length < 3) return 0;
+    return Math.round(computePolygonAreaM2(toGeoJsonPolygon(drawingPoints)));
+  }, [drawingPoints]);
 
   return (
     <div
-      className={
-        isFullscreen
-          ? 'fixed inset-0 z-50 bg-background p-3 sm:p-5 flex flex-col gap-3 overflow-y-auto'
-          : 'space-y-3'
-      }
+      className={`relative w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-300 ${
+        isFullscreen ? 'fixed inset-0 z-50 rounded-none h-screen w-screen' : heightClassName
+      }`}
     >
-      {/* En-tête + Barre d'outils */}
-      {(title || subtitle) && (
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            {title && <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5"><Layers className="size-4 text-primary" /> {title}</h3>}
-            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsFullscreen((f) => !f)}
-            className="h-8 text-xs gap-1.5"
-          >
-            {isFullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
-            {isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
-          </Button>
-        </div>
+      {/* 1. HUD DE NAVIGATION GPS EN TEMPS RÉEL */}
+      {navState && navState.isNavigating && (
+        <GpsNavigationHUD
+          state={navState}
+          destinationName={navDestinationName}
+          isVoiceMuted={isVoiceMuted}
+          onToggleVoice={() => {
+            const muted = voiceNavigator.toggleMute();
+            setIsVoiceMuted(muted);
+          }}
+          onRecenter={() => {
+            if (navState.currentPosition && mapInstanceRef.current) {
+              mapInstanceRef.current.setView(
+                [navState.currentPosition.lat, navState.currentPosition.lng],
+                17,
+                { animate: true },
+              );
+            }
+          }}
+          onStopNavigation={stopGpsNavigation}
+          onModeChange={(mode) => {
+            setNavTransportMode(mode);
+            if (navTrackerRef.current) {
+              void navTrackerRef.current.setTransportMode(mode);
+            }
+          }}
+          currentMode={navTransportMode}
+        />
       )}
 
-      {/* Recherche adresse + GPS + Modes Carte */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2.5">
-        <div className="flex flex-1 min-w-[220px] items-center gap-1.5">
-          <div className="relative flex-1">
-            <Search className="size-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  void handleSearch();
-                }
-              }}
-              placeholder="Rechercher adresse, quartier, rue..."
-              className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 pl-8 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            disabled={searching || sdkState.status !== 'READY'}
-            onClick={() => void handleSearch()}
-            className="h-9 text-xs"
-          >
-            {searching ? '...' : 'Chercher'}
-          </Button>
-        </div>
+      {/* 2. Barre d'outils supérieure : Titre + Recherche Internationale OSM */}
+      <div className="absolute left-3 right-3 top-3 z-[400] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {title && (
+            <div className="rounded-xl border border-border/80 bg-background/95 px-3 py-1.5 shadow-md backdrop-blur">
+              <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <MapPin className="size-3.5 text-primary" />
+                {title}
+              </p>
+              {subtitle && <p className="text-[10px] text-muted-foreground">{subtitle}</p>}
+            </div>
+          )}
 
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={gpsLoading}
-          onClick={() => void handleLocateGps()}
-          className="h-9 text-xs gap-1.5 border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10"
-        >
-          <LocateFixed className="size-3.5" />
-          {gpsLoading ? 'Localisation...' : 'Ma position GPS'}
-        </Button>
-
-        {/* Sélecteur Normal / Satellite / Hybride */}
-        <div className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5 text-[11px]">
-          {(['ROADMAP', 'SATELLITE', 'HYBRID'] as const).map((mode) => (
+          {/* Sélecteur de style de tuiles (OSM / Satellite / Hybride / Sombre) */}
+          <div className="flex rounded-xl border border-border/80 bg-background/95 p-0.5 shadow-md backdrop-blur">
             <button
-              key={mode}
               type="button"
-              onClick={() => setViewMode(mode)}
-              className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
-                viewMode === mode
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                activeTileId === 'osm'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
+              onClick={() => setActiveTileId('osm')}
             >
-              {mode === 'ROADMAP' ? 'Normal' : mode === 'SATELLITE' ? 'Satellite' : 'Hybride'}
+              Plan Rues
             </button>
-          ))}
+            <button
+              type="button"
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                activeTileId === 'satellite'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTileId('satellite')}
+            >
+              Satellite
+            </button>
+            <button
+              type="button"
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                activeTileId === 'hybrid'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTileId('hybrid')}
+            >
+              Hybride
+            </button>
+            <button
+              type="button"
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                activeTileId === 'dark'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTileId('dark')}
+            >
+              Nuit
+            </button>
+          </div>
         </div>
 
-        {/* Zoom +/- et recentrer */}
-        <div className="inline-flex items-center gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => mapInstanceRef.current?.setZoom((mapInstanceRef.current?.getZoom() ?? 15) + 1)}
-            className="h-8 w-8 p-0"
-            title="Zoom avant"
-          >
-            <ZoomIn className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => mapInstanceRef.current?.setZoom((mapInstanceRef.current?.getZoom() ?? 15) - 1)}
-            className="h-8 w-8 p-0"
-            title="Zoom arrière"
-          >
-            <ZoomOut className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => fitAllOnMap()}
-            className="h-8 w-8 p-0"
-            title="Recentrer sur les zones"
-          >
-            <Compass className="size-4" />
-          </Button>
+        {/* Barre de recherche d'adresses mondiale (Nominatim OSM) */}
+        <div className="relative pointer-events-auto min-w-[240px] max-w-sm flex-1">
+          <form onSubmit={handleSearch} className="flex items-center gap-1">
+            <div className="relative w-full">
+              <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Rechercher ville, quartier, pays..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 rounded-xl pl-8 pr-3 text-xs bg-background/95 border-border/80 shadow-md backdrop-blur"
+              />
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              variant="secondary"
+              className="h-8 px-2 text-xs font-semibold shrink-0"
+              disabled={isSearching}
+            >
+              {isSearching ? '...' : 'Chercher'}
+            </Button>
+          </form>
+
+          {/* Suggestions de recherche Nominatim */}
+          {searchResults.length > 0 && (
+            <div className="absolute left-0 right-0 top-10 z-[500] max-h-56 overflow-y-auto rounded-xl border border-border bg-popover/95 p-1 shadow-xl backdrop-blur">
+              {searchResults.map((res, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="w-full text-left rounded-lg p-2 text-xs hover:bg-accent transition text-foreground"
+                  onClick={() => handleSelectSearchResult(res)}
+                >
+                  <p className="font-semibold line-clamp-1">{res.address}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {[res.neighborhood, res.city, res.country].filter(Boolean).join(' • ')}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Barre de dessin de polygone et placement de marqueur */}
-      {(allowPolygonDraw || allowMarkerPlacement) && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted/20 p-2">
-          {allowMarkerPlacement && (
+      {/* 3. Contrôles de Dessin de Polygone (Niveaux 1, 2, 3) */}
+      {allowPolygonDraw && (
+        <div className="absolute bottom-4 left-4 z-[400] flex flex-wrap items-center gap-2 rounded-2xl border border-border/80 bg-background/95 p-2 shadow-xl backdrop-blur">
+          <div className="flex items-center gap-1.5 px-2 text-xs font-bold text-foreground">
+            <PenTool className="size-3.5 text-primary" />
+            <span>{drawingPoints.length} point{drawingPoints.length > 1 ? 's' : ''}</span>
+            {currentAreaM2 > 0 && (
+              <span className="text-muted-foreground font-normal">
+                ({currentAreaM2 >= 10000 ? `${(currentAreaM2 / 10000).toFixed(2)} ha` : `${currentAreaM2.toLocaleString('fr-FR')} m²`})
+              </span>
+            )}
+          </div>
+
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs"
+            onClick={handleUndoPoint}
+            disabled={drawingPoints.length === 0}
+          >
+            <Undo2 className="size-3 mr-1" />
+            Annuler point
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+            onClick={handleClearDraw}
+            disabled={drawingPoints.length === 0}
+          >
+            <Trash2 className="size-3 mr-1" />
+            Effacer
+          </Button>
+
+          {onBoundaryValidate && (
             <Button
               type="button"
               size="sm"
-              variant={toolMode === 'PLACE_MARKER' ? 'primary' : 'outline'}
-              onClick={() => setToolMode((m) => (m === 'PLACE_MARKER' ? 'PAN' : 'PLACE_MARKER'))}
-              className="h-8 text-xs gap-1.5"
+              className="h-7 px-3 text-xs font-bold bg-primary hover:bg-primary/90"
+              onClick={handleValidateDraw}
+              disabled={drawingPoints.length < 3}
             >
-              <MapPin className="size-3.5" />
-              {toolMode === 'PLACE_MARKER' ? 'Cliquez sur le bâtiment...' : 'Placer marqueur bâtiment'}
+              <CheckCircle2 className="size-3 mr-1" />
+              Valider le tracé
             </Button>
           )}
-
-          {allowPolygonDraw && (
-            <>
-              <Button
-                type="button"
-                size="sm"
-                variant={toolMode === 'DRAW_POLYGON' ? 'primary' : 'outline'}
-                onClick={() => setToolMode((m) => (m === 'DRAW_POLYGON' ? 'EDIT_POLYGON' : 'DRAW_POLYGON'))}
-                className="h-8 text-xs gap-1.5"
-              >
-                <PenTool className="size-3.5" />
-                {toolMode === 'DRAW_POLYGON' ? 'Cliquez pour placer les sommets...' : 'Dessiner une zone'}
-              </Button>
-
-              {draftPoints.length >= 3 && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={toolMode === 'EDIT_POLYGON' ? 'secondary' : 'outline'}
-                  onClick={() => setToolMode((m) => (m === 'EDIT_POLYGON' ? 'PAN' : 'EDIT_POLYGON'))}
-                  className="h-8 text-xs gap-1.5"
-                >
-                  <Edit3 className="size-3.5" />
-                  Modifier les frontières
-                </Button>
-              )}
-
-              {draftPoints.length > 0 && (
-                <>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleUndoVertex}
-                    className="h-8 text-xs gap-1"
-                  >
-                    <Undo2 className="size-3.5" /> Annuler point
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleClearPolygon}
-                    className="h-8 text-xs gap-1 text-rose-500 hover:text-rose-400"
-                  >
-                    <Trash2 className="size-3.5" /> Effacer tracé
-                  </Button>
-                </>
-              )}
-
-              {draftPoints.length >= 3 && onBoundaryValidate && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    setToolMode('PAN');
-                    onBoundaryValidate(toGeoJsonPolygon(draftPoints));
-                  }}
-                  className="ml-auto h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white"
-                >
-                  <CheckCircle2 className="size-3.5" />
-                  Valider la zone ({draftPoints.length} sommets)
-                </Button>
-              )}
-            </>
-          )}
-
-          {areaM2 > 0 && (
-            <span className="text-[11px] font-mono text-muted-foreground ml-auto">
-              Surface estimée :{' '}
-              <strong>
-                {areaM2 > 10_000
-                  ? `${(areaM2 / 10_000).toFixed(2)} ha`
-                  : `${Math.round(areaM2).toLocaleString('fr-FR')} m²`}
-              </strong>
-            </span>
-          )}
         </div>
       )}
 
-      {/* Zone Carte Principale */}
-      <div
-        className={`relative w-full ${
-          isFullscreen ? 'flex-1 min-h-[420px]' : heightClassName
-        } rounded-2xl border border-border overflow-hidden bg-slate-950`}
-      >
-        {/* Canvas Google Maps */}
-        <div ref={mapContainerRef} className="w-full h-full" />
-
-        {/* État de chargement ou d'erreur Google Maps (sans fausse imagerie vidéo) */}
-        {sdkState.status !== 'READY' && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/92 p-5 text-center text-white">
-            {sdkState.status === 'LOADING' ? (
-              <div className="space-y-2">
-                <RefreshCw className="size-7 animate-spin text-emerald-400 mx-auto" />
-                <p className="text-sm font-bold">Connexion à Google Maps Platform...</p>
-              </div>
-            ) : (
-              <div className="max-w-lg space-y-3 rounded-2xl border border-amber-500/40 bg-slate-900/95 p-5 shadow-xl">
-                <div className="flex items-center justify-center gap-2 text-amber-400 font-bold text-sm">
-                  <AlertTriangle className="size-5 shrink-0" />
-                  <span>Google Maps non connecté ({sdkState.status})</span>
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {sdkState.errorMessage}
-                </p>
-                <div className="rounded-lg bg-slate-950/80 border border-white/10 p-3 text-left text-[11px] text-slate-400 space-y-1">
-                  <p className="font-semibold text-slate-200">APIs requises sur Google Cloud Console :</p>
-                  <p>• Maps JavaScript API · Places API · Geocoding API</p>
-                  <p>• Variable frontend : <code className="text-emerald-400">VITE_GOOGLE_MAPS_API_KEY</code></p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Input
-                    value={tempKeyInput}
-                    onChange={(e) => setTempKeyInput(e.target.value)}
-                    placeholder="Saisir clé navigateur Google Maps (test local)..."
-                    className="flex-1 h-8 text-xs bg-slate-950 border-white/20 text-white"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      saveGoogleMapsBrowserKey(tempKeyInput);
-                      resetGoogleMapsLoader();
-                      void initLoader();
-                    }}
-                    className="h-8 text-xs"
-                  >
-                    Connecter
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      resetGoogleMapsLoader();
-                      void initLoader();
-                    }}
-                    className="h-8 text-xs border-white/20 text-white"
-                  >
-                    <RotateCcw className="size-3.5 mr-1" /> Réessayer
-                  </Button>
-                </div>
-
-                {/* Résumé des données géographiques chargées même sans fond satellite */}
-                <div className="pt-2 border-t border-white/10 text-[11px] text-slate-400 flex flex-wrap justify-center gap-3">
-                  <span>Couches chargées : {overlays.length} polygones</span>
-                  <span>Points : {markers.length} marqueurs</span>
-                  {draftPoints.length > 0 && <span>Tracé actif : {draftPoints.length} sommets</span>}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Badge d'outil actif */}
-        {sdkState.status === 'READY' && toolMode !== 'PAN' && (
-          <div className="absolute top-3 left-3 z-10 rounded-xl bg-black/75 backdrop-blur-md px-3 py-1.5 text-xs text-white border border-white/15 flex items-center gap-2">
-            <Crosshair className="size-3.5 text-emerald-400 animate-pulse" />
-            <span>
-              {toolMode === 'DRAW_POLYGON' &&
-                `Mode tracé : cliquez sur la carte pour poser chaque point (${draftPoints.length} points)`}
-              {toolMode === 'EDIT_POLYGON' &&
-                'Mode édition : déplacez les sommets blancs pour ajuster la frontière'}
-              {toolMode === 'PLACE_MARKER' &&
-                'Mode marqueur : cliquez sur votre bâtiment ou déplacez le marqueur'}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Notifications & erreurs de validation géométrique */}
-      {mapNotice && (
-        <div className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs text-foreground">
-          {mapNotice}
-        </div>
-      )}
-
+      {/* 4. Messages d'erreurs et de succès de validation géométrique */}
       {validationError && (
-        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-500 flex items-start gap-2 font-medium">
-          <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+        <div className="absolute left-4 top-14 z-[400] max-w-md rounded-xl border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive shadow-lg backdrop-blur flex items-center gap-2">
+          <AlertTriangle className="size-4 shrink-0" />
           <span>{validationError}</span>
         </div>
       )}
-
       {validationSuccess && !validationError && (
-        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2.5 text-xs text-emerald-500 flex items-center gap-2 font-medium">
+        <div className="absolute left-4 top-14 z-[400] max-w-md rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 shadow-lg backdrop-blur flex items-center gap-2">
           <CheckCircle2 className="size-4 shrink-0" />
           <span>{validationSuccess}</span>
         </div>
       )}
 
-      {/* Légende dynamique + Mention réglementaire */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 bg-card/60 px-3 py-2 text-[11px] text-muted-foreground">
-        {legendItems && legendItems.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-3">
-            {legendItems.map((item) => (
-              <span key={item.label} className="inline-flex items-center gap-1.5 font-medium text-foreground">
-                <span className="size-2.5 rounded-sm border border-white/40" style={{ backgroundColor: item.color }} />
-                {item.label}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <span>Imagerie Google Maps · Modes Normal, Satellite & Hybride</span>
-        )}
-        <span className="text-[10px] opacity-80">
-          Images satellites fournies par le fournisseur (non temps réel). Délimitations à usage de gestion interne, ne constituant pas un titre foncier.
-        </span>
+      {/* 5. Boutons d'actions latérales (Zoom, Ma Position, Plein Écran) */}
+      <div className="absolute bottom-4 right-4 z-[400] flex flex-col gap-1.5">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="size-9 p-0 rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur flex items-center justify-center"
+          onClick={handleLocateMe}
+          title="Ma position GPS actuelle"
+        >
+          <LocateFixed className="size-4 text-primary" />
+        </Button>
+
+        <div className="flex flex-col rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur overflow-hidden">
+          <button
+            type="button"
+            className="flex size-8 items-center justify-center text-foreground hover:bg-muted transition"
+            onClick={() => mapInstanceRef.current?.zoomIn()}
+            title="Zoom avant"
+          >
+            <ZoomIn className="size-4" />
+          </button>
+          <div className="h-px bg-border/60" />
+          <button
+            type="button"
+            className="flex size-8 items-center justify-center text-foreground hover:bg-muted transition"
+            onClick={() => mapInstanceRef.current?.zoomOut()}
+            title="Zoom arrière"
+          >
+            <ZoomOut className="size-4" />
+          </button>
+        </div>
+
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="size-9 p-0 rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur flex items-center justify-center"
+          onClick={() => {
+            setIsFullscreen((prev) => !prev);
+            setTimeout(() => mapInstanceRef.current?.invalidateSize(), 300);
+          }}
+          title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+        >
+          {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+        </Button>
       </div>
+
+      {/* 6. Légende de la carte */}
+      {legendItems && legendItems.length > 0 && (
+        <div className="absolute bottom-4 left-4 z-[390] hidden sm:flex items-center gap-3 rounded-xl border border-border/80 bg-background/95 px-3 py-1.5 text-[11px] shadow-md backdrop-blur">
+          {legendItems.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+              <span className="text-muted-foreground">{item.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 7. Conteneur DOM Leaflet */}
+      <div ref={mapContainerRef} className="h-full w-full bg-slate-900" />
     </div>
   );
 }

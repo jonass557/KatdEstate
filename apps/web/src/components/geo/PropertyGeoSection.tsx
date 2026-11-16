@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Compass,
+  LocateFixed,
   MapPin,
   ShieldAlert,
   UserCheck,
@@ -14,6 +15,7 @@ import {
   validatePolygonGeometry,
   type GeoJsonBoundary,
 } from '@rentflow/shared';
+import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card } from '../ui/card';
 import { useSession } from '../../app/session';
@@ -419,9 +421,46 @@ export function PropertyGeoSection({
         </label>
       </div>
 
-      {/* Carte interactive Google Maps : placement marqueur + contour parcelle */}
+      <div className="flex items-center justify-between gap-2 pt-1">
+        <span className="text-xs text-muted-foreground">
+          Cliquez sur la carte pour positionner le bien ou utilisez la détection automatique :
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="gap-1.5 text-xs h-8"
+          onClick={() => {
+            if (typeof window === 'undefined' || !navigator.geolocation) {
+              alert('La géolocalisation n’est pas disponible.');
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const lat = Number(pos.coords.latitude.toFixed(6));
+                const lng = Number(pos.coords.longitude.toFixed(6));
+                onChange({
+                  ...value,
+                  latitude: lat,
+                  longitude: lng,
+                  location: { type: 'Point', coordinates: [lng, lat] },
+                });
+              },
+              (err) => {
+                alert('Erreur GPS : ' + err.message);
+              },
+              { enableHighAccuracy: true },
+            );
+          }}
+        >
+          <LocateFixed className="size-3.5 text-primary" />
+          <span>Position GPS actuelle</span>
+        </Button>
+      </div>
+
+      {/* Carte interactive OpenStreetMap / Leaflet : placement marqueur + contour parcelle */}
       <GeoMapCanvas
-        title="Carte satellite & positionnement du bien"
+        title="Positionnement mondial & parcelle"
         subtitle="Placez le marqueur sur votre bien ou tracez les limites exactes de la parcelle à l’intérieur de votre zone autorisée."
         heightClassName="h-[380px]"
         overlays={referenceOverlays}

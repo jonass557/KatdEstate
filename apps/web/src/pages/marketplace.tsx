@@ -16,6 +16,7 @@ import {
   Smartphone,
   CheckCircle2,
   ArrowRight,
+  Navigation,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -741,15 +742,33 @@ export function MarketplacePage() {
             {/* Tab 2: Map */}
             {activeTab === 'map' && (
               <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                   <span className="font-semibold text-foreground flex items-center gap-1.5">
                     <Compass className="size-4 text-emerald-500" />
                     Position GPS certifiée du bien
                   </span>
-                  <span className="text-muted-foreground font-mono">
-                    Lat: {selectedListing.location.latitude ?? 5.3599}, Long:{' '}
-                    {selectedListing.location.longitude ?? -4.0082}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground font-mono hidden sm:inline">
+                      Lat: {selectedListing.location.latitude ?? 5.3599}, Long:{' '}
+                      {selectedListing.location.longitude ?? -4.0082}
+                    </span>
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs gap-1.5 h-8 text-white shadow-sm"
+                      onClick={() => {
+                        const lat = selectedListing.location.latitude ?? 5.3599;
+                        const lng = selectedListing.location.longitude ?? -4.0082;
+                        navigate(
+                          `/geo-map?navToLat=${lat}&navToLng=${lng}&navName=${encodeURIComponent(
+                            selectedListing.title,
+                          )}`,
+                        );
+                      }}
+                    >
+                      <Navigation className="size-3.5" />
+                      <span>Y aller (Navigation GPS)</span>
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="h-64 sm:h-80 rounded-2xl overflow-hidden border border-border relative shadow-inner">

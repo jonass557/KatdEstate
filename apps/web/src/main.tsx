@@ -5,10 +5,13 @@ import { registerServiceWorker } from './app/service-worker';
 import './index.css';
 
 if (typeof window !== 'undefined') {
+  const isMapElement = (el: unknown): boolean =>
+    el instanceof Element && Boolean(el.closest('.gm-style') || el.closest('.leaflet-container'));
+
   window.addEventListener(
     'wheel',
     (e) => {
-      if ((e.ctrlKey || e.metaKey) && !(e.target instanceof Element && e.target.closest('.gm-style'))) {
+      if ((e.ctrlKey || e.metaKey) && !isMapElement(e.target)) {
         e.preventDefault();
       }
     },
@@ -23,7 +26,7 @@ if (typeof window !== 'undefined') {
     document.addEventListener(
       evt,
       (e) => {
-        if (!(e.target instanceof Element && e.target.closest('.gm-style'))) {
+        if (!isMapElement(e.target)) {
           e.preventDefault();
         }
       },

@@ -7,6 +7,7 @@ import {
   Home,
   Mail,
   MapPin,
+  Navigation,
   Phone,
   QrCode,
   ShieldCheck,
@@ -256,10 +257,21 @@ export function PropertyQrPublicPage() {
               <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 font-mono text-sm font-bold text-primary">
                 {property.geoUniqueId}
               </div>
-              <div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {typeof property.latitude === 'number' && typeof property.longitude === 'number' && (
+                  <Link
+                    to={`/geo-map?navToLat=${property.latitude}&navToLng=${property.longitude}&navName=${encodeURIComponent(
+                      property.name,
+                    )}`}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-500"
+                  >
+                    <Navigation className="size-3.5" />
+                    <span>Y aller (GPS)</span>
+                  </Link>
+                )}
                 <Button size="sm" variant="secondary" onClick={handleDownloadFiche}>
                   <Download className="mr-1.5 size-3.5" />
-                  Télécharger la fiche
+                  Télécharger fiche
                 </Button>
               </div>
             </div>

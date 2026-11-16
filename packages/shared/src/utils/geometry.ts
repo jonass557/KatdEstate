@@ -372,3 +372,101 @@ export function computePolygonAreaM2(boundary?: GeoJsonBoundary | null): number 
   }
   return Math.abs(area / 2);
 }
+
+/**
+ * Calcule la distance orthodromique exacte en mètres entre deux coordonnées (Haversine).
+ */
+export function computeDistanceMeters(p1: LatLngPoint, p2: LatLngPoint): number {
+  const R = 6371000; // Rayon terrestre moyen en mètres
+  const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
+  const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
+  const lat1 = (p1.lat * Math.PI) / 180;
+  const lat2 = (p2.lat * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLng / 2) * Math.sin(dLng / 2) * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Calcule l'azimut (bearing) en degrés (0-360°) entre deux points.
+ */
+export function computeBearing(from: LatLngPoint, to: LatLngPoint): number {
+  const lat1 = (from.lat * Math.PI) / 180;
+  const lat2 = (to.lat * Math.PI) / 180;
+  const dLng = ((to.lng - from.lng) * Math.PI) / 180;
+
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) -
+    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  const brng = (Math.atan2(y, x) * 180) / Math.PI;
+  return (brng + 360) % 360;
+}
+
+/**
+ * Calcule la distance minimale en mètres entre un point GPS et un segment [a, b].
+ */
+export function distanceToSegmentMeters(
+  p: LatLngPoint,
+  a: LatLngPoint,
+  b: LatLngPoint,
+): number {
+  const R = 6371000;
+  const refLat = (p.lat * Math.PI) / 180;
+  const cosRef = Math.cos(refLat);
+
+  // Conversion locale métrique
+  const px = ((p.lng * Math.PI) / 180) * R * cosRef;
+  const py = ((p.lat * Math.PI) / 180) * R;
+  const ax = ((a.lng * Math.PI) / 180) * R * cosRef;
+  const ay = ((a.lat * Math.PI) / 180) * R;
+  const bx = ((b.lng * Math.PI) / 180) * R * cosRef;
+  const by = ((b.lat * Math.PI) / 180) * R;
+
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+
+  if (lenSq === 0) {
+    return Math.hypot(px - ax, py - ay);
+  }
+
+  let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+
+  const projX = ax + t * dx;
+  const projY = ay + t * dy;
+
+  return Math.hypot(px - projX, py - projY);
+}
+
+/**
+ * Détecte si la position actuelle s'est écartée de l'itinéraire (seuil par défaut: 45m).
+ */
+export function isOffRoute(
+  currentPos: LatLngPoint,
+  routeCoordinates: LatLngPoint[],
+  thresholdMeters = 45,
+): boolean {
+  if (routeCoordinates.length === 0) return false;
+  if (routeCoordinates.length === 1) {
+    return computeDistanceMeters(currentPos, routeCoordinates[0]!) > thresholdMeters;
+  }
+
+  let minDistance = Infinity;
+  for (let i = 0; i < routeCoordinates.length - 1; i++) {
+    const a = routeCoordinates[i]!;
+    const b = routeCoordinates[i + 1]!;
+    const d = distanceToSegmentMeters(currentPos, a, b);
+    if (d < minDistance) {
+      minDistance = d;
+      if (minDistance <= thresholdMeters) return false;
+    }
+  }
+
+  return minDistance > thresholdMeters;
+}
+

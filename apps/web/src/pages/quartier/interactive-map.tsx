@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Building2,
   Crown,
@@ -8,6 +8,7 @@ import {
   History,
   Layers,
   MapPin,
+  Navigation,
   Search,
   Shield,
   UserCheck,
@@ -77,11 +78,27 @@ interface ApiGeoLayersResponse extends ApiGeoLayersPayload {
 }
 
 export function InteractiveQuartierMap() {
+  const [searchParams] = useSearchParams();
   const { user, memberships } = useSession();
   const base = useOrgPath();
   const userRole = memberships?.[0]?.role || (user as any)?.platformRole || 'OWNER';
 
   const [apiData, setApiData] = useState<ApiGeoLayersResponse | null>(null);
+
+  // Navigation GPS déclenchée par URL (ex: ?navToLat=...&navToLng=...&navName=...)
+  const [navTarget, setNavTarget] = useState<{ point: LatLngPoint; name: string } | null>(() => {
+    const pLat = searchParams.get('navToLat');
+    const pLng = searchParams.get('navToLng');
+    const pName = searchParams.get('navName') || 'Propriété sélectionnée';
+    if (pLat && pLng) {
+      const lat = parseFloat(pLat);
+      const lng = parseFloat(pLng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        return { point: { lat, lng }, name: pName };
+      }
+    }
+    return null;
+  });
 
   useEffect(() => {
     let active = true;
@@ -444,6 +461,17 @@ export function InteractiveQuartierMap() {
         subtitle: p.geoUniqueId || p.address,
         position: { lat: p.latitude!, lng: p.longitude! },
         color: '#f59e0b',
+        propertyDetails: {
+          propertyId: p._id,
+          name: p.name,
+          type: p.customPropertyType || p.type || 'Bien Immobilier',
+          address: p.address,
+          city: p.city,
+          neighborhood: p.neighborhoodName || p.zone || undefined,
+          roomsCount: p.roomsCount || (p.chambreSimpleCount || 0) + (p.chambreModerneCount || 0) || undefined,
+          status: p.status,
+          currency: 'FCFA',
+        },
         metadata: {
           type: 'Bien Immobilier Géolocalisé',
           identifiantGeo: p.geoUniqueId || p._id,
@@ -455,6 +483,8 @@ export function InteractiveQuartierMap() {
           coordonnees: `${p.latitude?.toFixed(6)}, ${p.longitude?.toFixed(6)}`,
           statut: p.status,
           propertyId: p._id,
+          latitude: p.latitude,
+          longitude: p.longitude,
         },
       }));
   }, [filteredProperties, showProperties]);
@@ -699,14 +729,16 @@ export function InteractiveQuartierMap() {
         )}
       </Card>
 
-      {/* Carte Google Maps Centrale */}
+      {/* Carte Cartographique Mondiale OpenStreetMap / Leaflet Centrale */}
       <GeoMapCanvas
-        title="Vue Cartographique Consolidée"
-        subtitle="Cliquez sur n’importe quel polygone ou marqueur pour afficher la fiche complète de l’entité"
+        title="Système Cartographique Mondial DOMORA"
+        subtitle="OpenStreetMap & Satellite Esri — Cliquez sur une propriété pour afficher son itinéraire et démarrer la navigation GPS"
         heightClassName="h-[540px]"
         overlays={mapOverlays}
         markers={mapMarkers}
         focusTarget={focusTarget}
+        targetDestination={navTarget?.point}
+        targetDestinationName={navTarget?.name}
         legendItems={[
           { label: 'Niveau 1 : Quartiers', color: '#7c3aed' },
           { label: 'Niveau 2 : Zones Chefs de Bloc', color: '#06b6d4' },
@@ -766,7 +798,25 @@ export function InteractiveQuartierMap() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {typeof selectedDetail.metadata?.latitude === 'number' &&
+              typeof selectedDetail.metadata?.longitude === 'number' && (
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs gap-1.5"
+                  onClick={() => {
+                    const lat = selectedDetail.metadata.latitude as number;
+                    const lng = selectedDetail.metadata.longitude as number;
+                    setNavTarget({
+                      point: { lat, lng },
+                      name: selectedDetail.title,
+                    });
+                  }}
+                >
+                  <Navigation className="size-3.5" />
+                  <span>Y aller (Navigation GPS)</span>
+                </Button>
+              )}
             {selectedDetail.propertyId && (
               <Link
                 to={`/properties/${selectedDetail.propertyId}`}

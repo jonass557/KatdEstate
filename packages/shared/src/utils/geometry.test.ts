@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeBearing,
+  computeDistanceMeters,
   computePolygonAreaM2,
   computePolygonCentroid,
   doPolygonsOverlap,
+  isOffRoute,
   isPointInsideBoundary,
   isPolygonInsidePolygon,
   toGeoJsonPolygon,
@@ -87,5 +90,30 @@ describe('géométrie GeoJSON', () => {
     expect(centroid?.lat).toBeCloseTo(5.3675, 4);
     expect(centroid?.lng).toBeCloseTo(-3.98, 4);
     expect(computePolygonAreaM2(quartier)).toBeGreaterThan(1_000_000);
+  });
+
+  it('calcule la distance GPS, le cap (bearing) et détecte la sortie d’itinéraire (off-route)', () => {
+    // Distance entre Douala (Logpom) et Douala (Bonamoussadi)
+    const logpom = { lat: 4.075, lng: 9.755 };
+    const bonamoussadi = { lat: 4.085, lng: 9.735 };
+
+    const distance = computeDistanceMeters(logpom, bonamoussadi);
+    expect(distance).toBeGreaterThan(2000);
+    expect(distance).toBeLessThan(3500);
+
+    const bearing = computeBearing(logpom, bonamoussadi);
+    expect(bearing).toBeGreaterThan(270); // vers le Nord-Ouest (~296°)
+    expect(bearing).toBeLessThan(360);
+
+    // Itinéraire droit entre Logpom et Bonamoussadi
+    const route = [logpom, { lat: 4.080, lng: 9.745 }, bonamoussadi];
+
+    // Un point à 5 mètres de l'itinéraire
+    const onRoutePt = { lat: 4.08003, lng: 9.74502 };
+    expect(isOffRoute(onRoutePt, route, 45)).toBe(false);
+
+    // Un point à 200 mètres de l'itinéraire
+    const farPt = { lat: 4.090, lng: 9.760 };
+    expect(isOffRoute(farPt, route, 45)).toBe(true);
   });
 });

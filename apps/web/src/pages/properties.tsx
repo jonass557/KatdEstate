@@ -16,6 +16,7 @@ import {
   DoorOpen,
   PieChart,
   Sparkles,
+  Navigation,
 } from 'lucide-react';
 import type { GeoJsonBoundary, PropertyInput } from '@rentflow/shared';
 import { PropertyQrCodeCard } from '../components/properties/PropertyQrCodeCard';
@@ -1486,7 +1487,23 @@ export function PropertyDetailPage() {
         title={p.name}
         description={`Zone : ${p.zone || p.city} · ${p.address}`}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {typeof p.latitude === 'number' && typeof p.longitude === 'number' && (
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-1.5 shadow-sm"
+                onClick={() => {
+                  navigate(
+                    `/geo-map?navToLat=${p.latitude}&navToLng=${p.longitude}&navName=${encodeURIComponent(
+                      p.name,
+                    )}`,
+                  );
+                }}
+              >
+                <Navigation className="size-4" />
+                <span>Y aller (GPS)</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -1574,11 +1591,29 @@ export function PropertyDetailPage() {
                 Géolocalisation & Rattachement Territorial
               </span>
             </div>
-            {p.geoUniqueId && (
-              <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 text-xs font-mono font-bold text-amber-600">
-                ID : {p.geoUniqueId}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {typeof p.latitude === 'number' && typeof p.longitude === 'number' && (
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-1.5 h-7"
+                  onClick={() => {
+                    navigate(
+                      `/geo-map?navToLat=${p.latitude}&navToLng=${p.longitude}&navName=${encodeURIComponent(
+                        p.name,
+                      )}`,
+                    );
+                  }}
+                >
+                  <Navigation className="size-3.5" />
+                  <span>Y aller</span>
+                </Button>
+              )}
+              {p.geoUniqueId && (
+                <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 text-xs font-mono font-bold text-amber-600">
+                  ID : {p.geoUniqueId}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
