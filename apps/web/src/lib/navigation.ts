@@ -11,6 +11,7 @@ import {
   MapPin,
   MessageSquare,
   Receipt,
+  Scan,
   Settings,
   ShieldCheck,
   Sparkles,
@@ -126,6 +127,12 @@ export const NAVIGATION: readonly NavSection[] = [
         icon: Building2,
         phase: 'Livré',
         permission: 'properties.view',
+      },
+      {
+        path: '/scan-qr',
+        label: 'Scanner un QR Code',
+        icon: Scan,
+        phase: 'Livré',
       },
       {
         path: '/units',

@@ -52,6 +52,7 @@ import { AdminOwnersPage } from '../pages/admin-owners';
 import { QuartierHomePage } from '../pages/quartier/quartier-home';
 import { InteractiveQuartierMap } from '../pages/quartier/interactive-map';
 import { PropertyQrPublicPage } from '../pages/property-qr-public';
+import { ScanQrPage } from '../pages/scan-qr';
 import type { ReactNode } from 'react';
 
 /**
@@ -59,6 +60,7 @@ import type { ReactNode } from 'react';
  */
 const PAGES: Record<string, ReactNode> = {
   '/dashboard': <DashboardPage />,
+  '/scan-qr': <ScanQrPage />,
   '/quartier': <QuartierHomePage />,
   '/geo-map': <InteractiveQuartierMap />,
   '/marketplace': <MarketplacePage />,
@@ -135,6 +137,11 @@ const router = createBrowserRouter([
   {
     path: '/property-qr/:code',
     element: <PropertyQrPublicPage />,
+  },
+  // Lecteur / Scanner universel de code QR
+  {
+    path: '/scan-qr',
+    element: <ScanQrPage />,
   },
   // Super Admin Platform
   {

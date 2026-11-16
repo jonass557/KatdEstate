@@ -10,12 +10,14 @@ import {
   Navigation,
   Phone,
   QrCode,
+  Scan,
   ShieldCheck,
   User,
 } from 'lucide-react';
 import { apiRequest } from '../lib/api-client';
 import { getLocalProperties, getLocalUnits } from './properties';
 import { Button } from '../components/ui/button';
+import { PropertyQrScannerModal } from '../components/properties/PropertyQrScannerModal';
 
 interface PublicPropertyPayload {
   property: {
@@ -77,6 +79,7 @@ export function PropertyQrPublicPage() {
   const [data, setData] = useState<PublicPropertyPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -145,6 +148,31 @@ export function PropertyQrPublicPage() {
             },
             units,
           });
+        } else if (typeof window !== 'undefined' && window.location.search) {
+          const searchParams = new URLSearchParams(window.location.search);
+          const pName = searchParams.get('n') || searchParams.get('name');
+          const pAddr = searchParams.get('a') || searchParams.get('addr') || '';
+          const pCity = searchParams.get('c') || searchParams.get('city') || '';
+          const pOwner = searchParams.get('o') || searchParams.get('owner') || '';
+          if (pName && active) {
+            setData({
+              property: {
+                _id: code,
+                geoUniqueId: code,
+                name: pName,
+                address: pAddr,
+                city: pCity,
+                status: 'ACTIF / VÉRIFIÉ',
+                description: 'Propriété enregistrée et certifiée sur DOMORA.',
+              },
+              owner: {
+                name: pOwner || 'Propriétaire Certifié',
+              },
+              units: [],
+            });
+          } else if (active) {
+            setError('Aucune propriété trouvée pour ce matricule ou code QR.');
+          }
         } else if (active) {
           setError('Aucune propriété trouvée pour ce matricule ou code QR.');
         }
@@ -226,10 +254,26 @@ export function PropertyQrPublicPage() {
           <QrCode className="size-10 text-destructive mx-auto" />
           <h1 className="text-lg font-bold text-foreground">Propriété introuvable</h1>
           <p className="text-sm text-muted-foreground">{error}</p>
-          <Link to="/">
-            <Button variant="secondary">Retour à l’accueil</Button>
-          </Link>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button
+              type="button"
+              onClick={() => setIsScannerOpen(true)}
+              className="w-full inline-flex items-center justify-center gap-2"
+            >
+              <Scan className="size-4" />
+              Scanner un autre QR Code
+            </Button>
+            <Link to="/">
+              <Button variant="secondary" className="w-full">
+                Retour à l’accueil
+              </Button>
+            </Link>
+          </div>
         </div>
+        <PropertyQrScannerModal
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+        />
       </div>
     );
   }
@@ -272,6 +316,10 @@ export function PropertyQrPublicPage() {
                 <Button size="sm" variant="secondary" onClick={handleDownloadFiche}>
                   <Download className="mr-1.5 size-3.5" />
                   Télécharger fiche
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setIsScannerOpen(true)}>
+                  <Scan className="mr-1.5 size-3.5 text-primary" />
+                  Scanner un autre QR
                 </Button>
               </div>
             </div>
@@ -421,6 +469,11 @@ export function PropertyQrPublicPage() {
           )}
         </div>
       </div>
+
+      <PropertyQrScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+      />
     </div>
   );
 }

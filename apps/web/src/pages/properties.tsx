@@ -17,9 +17,11 @@ import {
   PieChart,
   Sparkles,
   Navigation,
+  Scan,
 } from 'lucide-react';
 import type { GeoJsonBoundary, PropertyInput } from '@rentflow/shared';
 import { PropertyQrCodeCard } from '../components/properties/PropertyQrCodeCard';
+import { PropertyQrScannerModal } from '../components/properties/PropertyQrScannerModal';
 import { PageHeader } from '../components/page-header';
 import { StatCard } from '../components/stat-card';
 import { Badge } from '../components/ui/badge';
@@ -171,6 +173,7 @@ export function PropertiesPage() {
   const [page, setPage] = useState(1);
   const [delegatingProperty, setDelegatingProperty] = useState<Property | null>(null);
   const [deletingProperty, setDeletingProperty] = useState<Property | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [localProps, setLocalProps] = useState<Property[]>(() => getLocalProperties());
 
   const base = useOrgPath();
@@ -328,7 +331,16 @@ export function PropertiesPage() {
         title="Gestion des Propriétés"
         description="Créez, modifiez, supprimez vos propriétés, configurez leur composition (chambres simples, chambres modernes, studios, appartements) et suivez vos statistiques par zone."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsScannerOpen(true)}
+              className="inline-flex items-center gap-1.5"
+            >
+              <Scan className="size-4 text-primary" />
+              Scanner un QR Code
+            </Button>
             <Link to="/properties/new" className={buttonVariants('primary')}>
               <Plus className="size-4" /> Nouvelle propriété
             </Link>
@@ -716,6 +728,12 @@ export function PropertiesPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Scanner de Code QR */}
+      <PropertyQrScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+      />
     </div>
   );
 }
@@ -1380,6 +1398,7 @@ export function PropertyDetailPage() {
   const [addUnitOpen, setAddUnitOpen] = useState(false);
   const [delegationOpen, setDelegationOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Recherche sur API avec fallback local
   const propertyQuery = useOrgQuery<Property>(['property', id], `/properties/${id}`);
@@ -1504,6 +1523,15 @@ export function PropertyDetailPage() {
                 <span>Y aller (GPS)</span>
               </Button>
             )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsScannerOpen(true)}
+              className="gap-1.5 text-xs font-semibold"
+            >
+              <Scan className="size-4 text-primary" />
+              <span>Scanner un QR</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -1814,6 +1842,12 @@ export function PropertyDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Scanner de Code QR */}
+      <PropertyQrScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+      />
     </div>
   );
 }
