@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -6,6 +6,7 @@ import {
   LocateFixed,
   MapPin,
   ShieldAlert,
+  Trash2,
   UserCheck,
 } from 'lucide-react';
 import {
@@ -26,6 +27,8 @@ import {
 } from '../../lib/katdestate-store';
 import type { GeoPolygonOverlay, GeocodeResult } from '../../lib/geo/map-provider';
 import { GeoMapCanvas } from './GeoMapCanvas';
+import { getPreciseUserLocation } from '../../lib/geo/geolocation-helper';
+import { reverseGeocodeWithNominatim } from '../../lib/geo/nominatim-geocoder';
 
 export interface PropertyGeoValue {
   geoOwnerId?: string | undefined;
@@ -71,6 +74,100 @@ export function PropertyGeoSection({
   const neighborhoods = useMemo(() => getStoredNeighborhoods(), []);
   const blocks = useMemo(() => getStoredBlocks(), []);
   const owners = useMemo(() => getBlockOwners(), []);
+
+  const [latInput, setLatInput] = useState<string>(() => (typeof value.latitude === 'number' ? value.latitude.toString() : ''));
+  const [lngInput, setLngInput] = useState<string>(() => (typeof value.longitude === 'number' ? value.longitude.toString() : ''));
+  const [isLocatingGps, setIsLocatingGps] = useState(false);
+  const [gpsFeedback, setGpsFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof value.latitude === 'number') {
+      setLatInput(value.latitude.toString());
+    } else {
+      setLatInput('');
+    }
+    if (typeof value.longitude === 'number') {
+      setLngInput(value.longitude.toString());
+    } else {
+      setLngInput('');
+    }
+  }, [value.latitude, value.longitude]);
+
+  const handleApplyCoordinates = async () => {
+    const lat = parseFloat(latInput.replace(',', '.'));
+    const lng = parseFloat(lngInput.replace(',', '.'));
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      setGpsFeedback('Coordonnées invalides (Latitude entre -90 et 90, Longitude entre -180 et 180).');
+      return;
+    }
+    let geocode: GeocodeResult | null = null;
+    try {
+      geocode = await reverseGeocodeWithNominatim(lat, lng);
+    } catch {}
+    onChange({
+      ...value,
+      latitude: lat,
+      longitude: lng,
+      location: { type: 'Point', coordinates: [lng, lat] },
+      region: geocode?.region || value.region,
+      department: geocode?.department || value.department,
+      arrondissement: geocode?.arrondissement || value.arrondissement,
+      neighborhoodName: geocode?.neighborhood || value.neighborhoodName,
+    });
+    if (geocode?.address) {
+      onSuggestedAddress?.(geocode.address, geocode.city);
+    }
+    setGpsFeedback(`Coordonnées appliquées (${lat}, ${lng}).`);
+    setTimeout(() => setGpsFeedback(null), 3000);
+  };
+
+  const handleFetchCurrentGps = async () => {
+    setIsLocatingGps(true);
+    setGpsFeedback('Recherche satellite / réseau en cours...');
+    try {
+      const loc = await getPreciseUserLocation();
+      setLatInput(loc.lat.toString());
+      setLngInput(loc.lng.toString());
+      let geocode: GeocodeResult | null = null;
+      try {
+        geocode = await reverseGeocodeWithNominatim(loc.lat, loc.lng);
+      } catch {}
+      onChange({
+        ...value,
+        latitude: loc.lat,
+        longitude: loc.lng,
+        location: { type: 'Point', coordinates: [loc.lng, loc.lat] },
+        region: geocode?.region || value.region,
+        department: geocode?.department || value.department,
+        arrondissement: geocode?.arrondissement || value.arrondissement,
+        neighborhoodName: geocode?.neighborhood || value.neighborhoodName,
+      });
+      if (geocode?.address) {
+        onSuggestedAddress?.(geocode.address, geocode.city);
+      }
+      setGpsFeedback(`Position GPS détectée avec succès (${loc.lat}, ${loc.lng}).`);
+      setTimeout(() => setGpsFeedback(null), 3500);
+    } catch {
+      setGpsFeedback('Impossible d’obtenir la position GPS.');
+      setTimeout(() => setGpsFeedback(null), 3500);
+    } finally {
+      setIsLocatingGps(false);
+    }
+  };
+
+  const handleClearPosition = () => {
+    setLatInput('');
+    setLngInput('');
+    onChange({
+      ...value,
+      latitude: undefined,
+      longitude: undefined,
+      location: undefined,
+      boundary: undefined,
+    });
+    setGpsFeedback('Position et contour réinitialisés.');
+    setTimeout(() => setGpsFeedback(null), 3000);
+  };
 
   // Auto-sélection intelligente au premier affichage si vide
   useEffect(() => {
@@ -421,41 +518,82 @@ export function PropertyGeoSection({
         </label>
       </div>
 
-      <div className="flex items-center justify-between gap-2 pt-1">
-        <span className="text-xs text-muted-foreground">
-          Cliquez sur la carte pour positionner le bien ou utilisez la détection automatique :
-        </span>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          className="gap-1.5 text-xs h-8"
-          onClick={() => {
-            if (typeof window === 'undefined' || !navigator.geolocation) {
-              alert('La géolocalisation n’est pas disponible.');
-              return;
-            }
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                const lat = Number(pos.coords.latitude.toFixed(6));
-                const lng = Number(pos.coords.longitude.toFixed(6));
-                onChange({
-                  ...value,
-                  latitude: lat,
-                  longitude: lng,
-                  location: { type: 'Point', coordinates: [lng, lat] },
-                });
-              },
-              (err) => {
-                alert('Erreur GPS : ' + err.message);
-              },
-              { enableHighAccuracy: true },
-            );
-          }}
-        >
-          <LocateFixed className="size-3.5 text-primary" />
-          <span>Position GPS actuelle</span>
-        </Button>
+      {/* Panneau d'édition précise des Coordonnées GPS (Inputs manuels + Détection GPS + Actions) */}
+      <div className="rounded-xl border border-border/80 bg-muted/30 p-3 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <Compass className="size-3.5 text-primary" />
+            Coordonnées GPS du bien (Latitude / Longitude modifiables) :
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="gap-1.5 text-xs h-7"
+              onClick={() => void handleFetchCurrentGps()}
+              disabled={isLocatingGps}
+              title="Obtenir ma position GPS exacte via satellite ou réseau"
+            >
+              <LocateFixed className={`size-3.5 text-primary ${isLocatingGps ? 'animate-spin' : ''}`} />
+              <span>{isLocatingGps ? 'Détection en cours…' : 'Ma position GPS actuelle'}</span>
+            </Button>
+            {(typeof value.latitude === 'number' || value.boundary) && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="gap-1 text-xs h-7 text-destructive hover:bg-destructive/10"
+                onClick={handleClearPosition}
+                title="Réinitialiser les coordonnées et le tracé"
+              >
+                <Trash2 className="size-3.5" />
+                <span>Effacer</span>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
+          <div>
+            <label className="text-[11px] text-muted-foreground block mb-0.5">Latitude (ex : 5.352410)</label>
+            <Input
+              type="text"
+              placeholder="5.352410"
+              value={latInput}
+              onChange={(e) => setLatInput(e.target.value)}
+              className="h-8 text-xs font-mono"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] text-muted-foreground block mb-0.5">Longitude (ex : -3.987540)</label>
+            <Input
+              type="text"
+              placeholder="-3.987540"
+              value={lngInput}
+              onChange={(e) => setLngInput(e.target.value)}
+              className="h-8 text-xs font-mono"
+            />
+          </div>
+          <div className="sm:pt-4">
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 w-full text-xs font-bold gap-1 bg-primary hover:bg-primary/90"
+              onClick={() => void handleApplyCoordinates()}
+            >
+              <CheckCircle2 className="size-3.5" />
+              Appliquer coordonnées
+            </Button>
+          </div>
+        </div>
+
+        {gpsFeedback && (
+          <p className="text-xs text-primary font-medium flex items-center gap-1.5 animate-in fade-in">
+            <CheckCircle2 className="size-3.5 text-emerald-500" />
+            {gpsFeedback}
+          </p>
+        )}
       </div>
 
       {/* Carte interactive OpenStreetMap / Leaflet : placement marqueur + contour parcelle */}

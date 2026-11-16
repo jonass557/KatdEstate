@@ -42,6 +42,7 @@ import {
 import { VoiceNavigator } from '../../lib/geo/voice-navigator';
 import { GpsNavigationHUD } from './GpsNavigationHUD';
 import type { TransportMode } from '../../lib/geo/routing-engine';
+import { getPreciseUserLocation } from '../../lib/geo/geolocation-helper';
 
 export interface GeoMapCanvasProps {
   title?: string | undefined;
@@ -118,6 +119,8 @@ export function GeoMapCanvas({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<GeocodeResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<string | null>(null);
 
   // Système de navigation GPS Turn-by-Turn
   const [navDestinationName, setNavDestinationName] = useState<string>('');
@@ -583,26 +586,60 @@ export function GeoMapCanvas({
     }
   };
 
-  // Récupérer ma position GPS actuelle
-  const handleLocateMe = () => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      alert('La géolocalisation n’est pas supportée par votre navigateur.');
-      return;
-    }
+  // Récupérer ma position GPS actuelle (Triple fallback : Haute précision -> Réseau/WiFi -> IP)
+  const handleLocateMe = async () => {
+    setIsLocating(true);
+    setGpsStatus('Recherche position GPS / réseau...');
+    try {
+      const loc = await getPreciseUserLocation();
+      const pt: LatLngPoint = { lat: loc.lat, lng: loc.lng };
+      const map = mapInstanceRef.current;
+      if (map) {
+        map.setView([pt.lat, pt.lng], 17, { animate: true });
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        const map = mapInstanceRef.current;
-        if (map) {
-          map.setView([pt.lat, pt.lng], 16, { animate: true });
+        if (userGpsLayerGroupRef.current) {
+          userGpsLayerGroupRef.current.clearLayers();
+          const halo = L.circle([pt.lat, pt.lng], {
+            radius: Math.max(loc.accuracy || 20, 25),
+            color: '#3b82f6',
+            fillColor: '#3b82f6',
+            fillOpacity: 0.18,
+            weight: 1.5,
+          });
+          const dot = L.circleMarker([pt.lat, pt.lng], {
+            radius: 8,
+            color: '#ffffff',
+            fillColor: '#2563eb',
+            fillOpacity: 1,
+            weight: 3,
+          }).bindTooltip('Votre position actuelle', { permanent: false });
+          userGpsLayerGroupRef.current.addLayer(halo);
+          userGpsLayerGroupRef.current.addLayer(dot);
         }
-      },
-      (err) => {
-        alert('Impossible de récupérer votre position : ' + err.message);
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+      }
+
+      // Si le mode de placement de marqueur est actif, on place automatiquement le marqueur
+      if (allowMarkerPlacement && onMarkerChange) {
+        let geocode: GeocodeResult | null = null;
+        try {
+          geocode = await reverseGeocodeWithNominatim(pt.lat, pt.lng);
+        } catch {}
+        onMarkerChange(pt, geocode);
+      }
+
+      setGpsStatus(
+        loc.source === 'GPS_HIGH_ACCURACY'
+          ? 'Position GPS satellite acquise (± ' + loc.accuracy + ' m)'
+          : 'Position réseau / IP acquise',
+      );
+      setTimeout(() => setGpsStatus(null), 4000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur de géolocalisation';
+      setGpsStatus('Erreur : ' + msg);
+      setTimeout(() => setGpsStatus(null), 4000);
+    } finally {
+      setIsLocating(false);
+    }
   };
 
   // Contrôles du tracé de polygone
@@ -635,8 +672,8 @@ export function GeoMapCanvas({
 
   return (
     <div
-      className={`relative w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-300 ${
-        isFullscreen ? 'fixed inset-0 z-50 rounded-none h-screen w-screen' : heightClassName
+      className={`relative isolate w-full overflow-hidden rounded-2xl border border-border bg-slate-900 shadow-sm transition-all duration-300 ${
+        isFullscreen ? 'fixed inset-0 z-[9999] rounded-none h-screen w-screen' : heightClassName
       }`}
     >
       {/* 1. HUD DE NAVIGATION GPS EN TEMPS RÉEL */}
@@ -669,8 +706,8 @@ export function GeoMapCanvas({
         />
       )}
 
-      {/* 2. Barre d'outils supérieure : Titre + Recherche Internationale OSM */}
-      <div className="absolute left-3 right-3 top-3 z-[400] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+      {/* 2. Barre d'outils supérieure : Titre + Sélecteur de Tuiles + Recherche OSM (z-[1000] pour toujours rester au-dessus de Leaflet) */}
+      <div className="absolute left-3 right-3 top-3 z-[1000] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
           {title && (
             <div className="rounded-xl border border-border/80 bg-background/95 px-3 py-1.5 shadow-md backdrop-blur">
@@ -704,7 +741,7 @@ export function GeoMapCanvas({
               }`}
               onClick={() => setActiveTileId('satellite')}
             >
-              Satellite
+              Satellite HD
             </button>
             <button
               type="button"
@@ -741,7 +778,7 @@ export function GeoMapCanvas({
                 placeholder="Rechercher ville, quartier, pays..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 rounded-xl pl-8 pr-3 text-xs bg-background/95 border-border/80 shadow-md backdrop-blur"
+                className="h-8 rounded-xl pl-8 pr-3 text-xs bg-background/95 border-border/80 shadow-md backdrop-blur text-foreground"
               />
             </div>
             <Button
@@ -757,7 +794,7 @@ export function GeoMapCanvas({
 
           {/* Suggestions de recherche Nominatim */}
           {searchResults.length > 0 && (
-            <div className="absolute left-0 right-0 top-10 z-[500] max-h-56 overflow-y-auto rounded-xl border border-border bg-popover/95 p-1 shadow-xl backdrop-blur">
+            <div className="absolute left-0 right-0 top-10 z-[1100] max-h-56 overflow-y-auto rounded-xl border border-border bg-popover/95 p-1 shadow-xl backdrop-blur">
               {searchResults.map((res, i) => (
                 <button
                   key={i}
@@ -778,7 +815,7 @@ export function GeoMapCanvas({
 
       {/* 3. Contrôles de Dessin de Polygone (Niveaux 1, 2, 3) */}
       {allowPolygonDraw && (
-        <div className="absolute bottom-4 left-4 z-[400] flex flex-wrap items-center gap-2 rounded-2xl border border-border/80 bg-background/95 p-2 shadow-xl backdrop-blur">
+        <div className="absolute bottom-4 left-4 z-[1000] flex flex-wrap items-center gap-2 rounded-2xl border border-border/80 bg-background/95 p-2 shadow-xl backdrop-blur">
           <div className="flex items-center gap-1.5 px-2 text-xs font-bold text-foreground">
             <PenTool className="size-3.5 text-primary" />
             <span>{drawingPoints.length} point{drawingPoints.length > 1 ? 's' : ''}</span>
@@ -828,31 +865,39 @@ export function GeoMapCanvas({
         </div>
       )}
 
-      {/* 4. Messages d'erreurs et de succès de validation géométrique */}
-      {validationError && (
-        <div className="absolute left-4 top-14 z-[400] max-w-md rounded-xl border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive shadow-lg backdrop-blur flex items-center gap-2">
+      {/* 4. Messages d'état GPS, erreurs et succès de validation géométrique */}
+      {gpsStatus && (
+        <div className="absolute left-4 top-14 z-[1000] max-w-md rounded-xl border border-primary/40 bg-background/95 p-2.5 text-xs text-primary shadow-xl backdrop-blur flex items-center gap-2 animate-in fade-in">
+          <LocateFixed className="size-4 shrink-0 text-primary animate-pulse" />
+          <span className="font-semibold">{gpsStatus}</span>
+        </div>
+      )}
+
+      {validationError && !gpsStatus && (
+        <div className="absolute left-4 top-14 z-[1000] max-w-md rounded-xl border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive shadow-lg backdrop-blur flex items-center gap-2">
           <AlertTriangle className="size-4 shrink-0" />
           <span>{validationError}</span>
         </div>
       )}
-      {validationSuccess && !validationError && (
-        <div className="absolute left-4 top-14 z-[400] max-w-md rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 shadow-lg backdrop-blur flex items-center gap-2">
+      {validationSuccess && !validationError && !gpsStatus && (
+        <div className="absolute left-4 top-14 z-[1000] max-w-md rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 shadow-lg backdrop-blur flex items-center gap-2">
           <CheckCircle2 className="size-4 shrink-0" />
           <span>{validationSuccess}</span>
         </div>
       )}
 
       {/* 5. Boutons d'actions latérales (Zoom, Ma Position, Plein Écran) */}
-      <div className="absolute bottom-4 right-4 z-[400] flex flex-col gap-1.5">
+      <div className="absolute bottom-4 right-4 z-[1000] flex flex-col gap-1.5">
         <Button
           type="button"
           size="sm"
           variant="secondary"
           className="size-9 p-0 rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur flex items-center justify-center"
           onClick={handleLocateMe}
-          title="Ma position GPS actuelle"
+          disabled={isLocating}
+          title="Ma position GPS actuelle (Haute précision & réseau)"
         >
-          <LocateFixed className="size-4 text-primary" />
+          <LocateFixed className={`size-4 text-primary ${isLocating ? 'animate-spin' : ''}`} />
         </Button>
 
         <div className="flex flex-col rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur overflow-hidden">
@@ -892,7 +937,7 @@ export function GeoMapCanvas({
 
       {/* 6. Légende de la carte */}
       {legendItems && legendItems.length > 0 && (
-        <div className="absolute bottom-4 left-4 z-[390] hidden sm:flex items-center gap-3 rounded-xl border border-border/80 bg-background/95 px-3 py-1.5 text-[11px] shadow-md backdrop-blur">
+        <div className="absolute bottom-4 left-4 z-[990] hidden sm:flex items-center gap-3 rounded-xl border border-border/80 bg-background/95 px-3 py-1.5 text-[11px] shadow-md backdrop-blur">
           {legendItems.map((item, idx) => (
             <div key={idx} className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />

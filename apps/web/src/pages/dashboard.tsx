@@ -44,6 +44,7 @@ import { Button } from '../components/ui/button';
 import { useOrgQuery } from '../lib/query';
 import { IkeepayModal } from '../components/payments/ikeepay-modal';
 import { IkeepaySettingsModal } from '../components/admin/ikeepay-settings-modal';
+import { OwnerReportProblemModal } from '../components/quartier/OwnerReportProblemModal';
 
 interface Overview {
   incomeMinor: number;
@@ -95,6 +96,7 @@ export function DashboardPage() {
   // Modals state
   const [ikeepayPayinOpen, setIkeepayPayinOpen] = useState(false);
   const [ikeepaySettingsOpen, setIkeepaySettingsOpen] = useState(false);
+  const [ownerProblemModalOpen, setOwnerProblemModalOpen] = useState(false);
 
   // Build categorized button sections according to the active role
   const getSectionsForRole = (role: string): AppSection[] => {
@@ -913,11 +915,13 @@ export function DashboardPage() {
                 to: '/notifications',
               },
               {
-                title: 'Chefferie &\nQuartier',
-                icon: Crown,
-                colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
-                glowClass: 'shadow-indigo-500/25',
-                to: '/quartier',
+                title: 'Signaler un Problème\nà mon Chef de Bloc',
+                icon: AlertTriangle,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-amber-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                onClick: () => setOwnerProblemModalOpen(true),
+                badge: 'SUPPORT',
+                badgeBg: 'bg-rose-400 text-black',
               },
             ],
           },
@@ -1638,7 +1642,7 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {/* 5. Mobile Floating Action Shortcuts (like in the screenshot) */}
+      {/* 5. Mobile Floating Action Shortcuts */}
       <div className="fixed bottom-6 right-4 z-40 flex flex-col gap-2.5 sm:hidden">
         <button
           onClick={() => setIkeepayPayinOpen(true)}
@@ -1647,16 +1651,23 @@ export function DashboardPage() {
         >
           <CreditCard className="size-6" />
         </button>
-        <Link
-          to="/quartier"
-          className="size-12 rounded-full bg-purple-600 text-white shadow-xl flex items-center justify-center active:scale-95 transition-transform"
-          title="Chefferie & Foncier"
-        >
-          <Crown className="size-6" />
-        </Link>
+        {(userRole === 'NEIGHBORHOOD_LEADER' || userRole === 'BLOCK_LEADER' || userRole === 'SUPER_ADMIN') && (
+          <Link
+            to="/quartier"
+            className="size-12 rounded-full bg-purple-600 text-white shadow-xl flex items-center justify-center active:scale-95 transition-transform"
+            title="Chefferie & Foncier"
+          >
+            <Crown className="size-6" />
+          </Link>
+        )}
       </div>
 
       {/* 6. Modals */}
+      <OwnerReportProblemModal
+        isOpen={ownerProblemModalOpen}
+        onClose={() => setOwnerProblemModalOpen(false)}
+      />
+
       <IkeepayModal
         isOpen={ikeepayPayinOpen}
         onClose={() => setIkeepayPayinOpen(false)}

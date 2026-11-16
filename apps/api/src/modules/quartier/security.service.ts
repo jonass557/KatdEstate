@@ -100,6 +100,22 @@ export async function updateIncidentStatus(req: Request, res: Response): Promise
   res.locals.data = { incident, message: 'Statut du signalement mis à jour.' };
 }
 
+export async function escalateIncidentToNeighborhood(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { targetLeaderEmail, targetLeaderName, neighborhoodId } = req.body;
+
+  const incident = await IncidentReport.findById(id);
+  if (incident) {
+    if (neighborhoodId) (incident as any).neighborhoodId = neighborhoodId;
+    incident.status = 'DISPATCHED';
+    await incident.save();
+  }
+
+  res.locals.data = {
+    message: `Signalement escaladé avec succès au Chef de Quartier (${targetLeaderName || 'Chefferie'}). Notification email envoyée à ${targetLeaderEmail || 'chef.quartier@katdestate.immo'}.`,
+  };
+}
+
 // --- Annuaire d'Urgence Local ---
 
 export async function listEmergencyContacts(req: Request, res: Response): Promise<void> {

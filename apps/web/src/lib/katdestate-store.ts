@@ -822,6 +822,13 @@ export interface QuartierIncidentRecord {
   blockName: string;
   reportedBy: string;
   reporterPhone?: string | undefined;
+  reportedByRole?: 'OWNER' | 'HABITANT' | 'CHEF_DE_BLOC' | 'CHEF_DE_QUARTIER' | undefined;
+  targetLeaderEmail?: string | undefined;
+  targetLeaderName?: string | undefined;
+  neighborhoodId?: string | undefined;
+  escalatedToNeighborhood?: boolean | undefined;
+  escalatedAt?: string | undefined;
+  escalatedBy?: string | undefined;
   resolutionNotes?: string | undefined;
   createdAt: string;
 }

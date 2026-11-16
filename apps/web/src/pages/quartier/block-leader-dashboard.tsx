@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   AlertTriangle,
+  ArrowUpRight,
   Building,
   CheckCircle2,
   Copy,
@@ -8,6 +9,7 @@ import {
   FileCheck,
   Flame,
   KeyRound,
+  Mail,
   MapPin,
   MessageSquare,
   Plus,
@@ -27,10 +29,12 @@ import { BlockLeaderGeoPanel } from '../../components/geo/BlockLeaderGeoPanel';
 import {
   getBlockOwners,
   saveBlockOwner,
+  getStoredBlocks,
   getStoredHabitants,
   saveStoredHabitant,
   getStoredIncidents,
   saveStoredIncident,
+  getStoredNeighborhoods,
   getWorkflowListings,
   updateListingWorkflow,
   saveWorkflowListings,
@@ -313,6 +317,29 @@ export function BlockLeaderDashboard() {
     setIncidentTitle('');
     setIncidentDesc('');
     toast({ title: 'Signalement enregistré dans le bloc', variant: 'success' });
+  };
+
+  const handleEscalateIncident = (inc: QuartierIncidentRecord) => {
+    const allBlocks = getStoredBlocks();
+    const currentStoredBlock = allBlocks.find((b) => b.id === activeBlock.id) || allBlocks[0];
+    const neighs = getStoredNeighborhoods();
+    const neigh = neighs.find((n) => n.id === currentStoredBlock?.neighborhoodId) || neighs[0];
+
+    const updated: QuartierIncidentRecord = {
+      ...inc,
+      escalatedToNeighborhood: true,
+      escalatedAt: new Date().toISOString(),
+      escalatedBy: `${currentStoredBlock?.leaderName || user?.displayName || 'Bakary Diarra'} (Chef de ${activeBlock.name})`,
+      neighborhoodId: neigh?.id,
+    };
+    saveStoredIncident(updated);
+    refreshAll();
+
+    toast({
+      title: 'Signalement transmis au Chef de Quartier',
+      description: `Notification email adressée à ${neigh?.leaderEmail || 'chef.quartier@katdestate.immo'} (${neigh?.leaderName || 'Nanan Kouamé'}).`,
+      variant: 'success',
+    });
   };
 
   // 8. Action: Envoyer un message broadcast aux habitants du bloc
@@ -843,9 +870,9 @@ export function BlockLeaderDashboard() {
 
           <div className="space-y-2">
             {incidents.map((inc) => (
-              <Card key={inc.id} className="p-3.5 space-y-2 text-xs border-border">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+              <Card key={inc.id} className="p-3.5 space-y-2.5 text-xs border-border">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-sm text-foreground">{inc.title}</span>
                     <span className="rounded bg-red-500/20 text-red-600 px-2 py-0.5 text-[10px] font-bold">
                       {inc.category}
@@ -853,15 +880,45 @@ export function BlockLeaderDashboard() {
                     <span className="rounded bg-amber-500/20 text-amber-600 px-2 py-0.5 text-[10px] font-bold">
                       Gravité : {inc.severity}
                     </span>
+                    {inc.reportedByRole === 'OWNER' && (
+                      <span className="rounded bg-purple-500/20 text-purple-600 dark:text-purple-300 px-2 py-0.5 text-[10px] font-bold">
+                        Propriétaire Foncier
+                      </span>
+                    )}
+                    {inc.escalatedToNeighborhood && (
+                      <span className="rounded bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 px-2 py-0.5 text-[10px] font-bold flex items-center gap-1">
+                        <Mail className="size-3" />
+                        Transmis au Chef de Quartier
+                      </span>
+                    )}
                   </div>
                   <span className="text-[11px] text-muted-foreground">
                     {new Date(inc.createdAt).toLocaleString('fr-FR')}
                   </span>
                 </div>
-                <p className="text-muted-foreground">{inc.description}</p>
-                <div className="flex items-center justify-between pt-1 border-t border-border text-[11px] text-muted-foreground">
-                  <span>Signalé par : {inc.reportedBy}</span>
-                  <span className="font-semibold text-cyan-600">Statut : {inc.status}</span>
+                <p className="text-muted-foreground whitespace-pre-line">{inc.description}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border text-[11px]">
+                  <div className="space-y-0.5 text-muted-foreground">
+                    <p>Signalé par : <strong className="text-foreground">{inc.reportedBy}</strong> {inc.reporterPhone ? `(${inc.reporterPhone})` : ''}</p>
+                    <p>Statut : <span className="font-semibold text-cyan-600">{inc.status}</span></p>
+                  </div>
+                  {!inc.escalatedToNeighborhood ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="text-xs h-7 gap-1 font-semibold text-indigo-600 dark:text-indigo-400 border border-indigo-500/30"
+                      onClick={() => handleEscalateIncident(inc)}
+                      title="Transmettre ce problème au Chef de Quartier avec notification par email"
+                    >
+                      <ArrowUpRight className="size-3.5" />
+                      Transmettre au Chef de Quartier
+                    </Button>
+                  ) : (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px] flex items-center gap-1">
+                      <CheckCircle2 className="size-3.5" />
+                      Email transmis à la Chefferie
+                    </span>
+                  )}
                 </div>
               </Card>
             ))}

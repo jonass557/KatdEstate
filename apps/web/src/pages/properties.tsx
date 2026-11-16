@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -761,6 +761,14 @@ export function PropertyFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
   const effectiveInitial = existing.data || localInitial;
 
+  if (mode === 'edit' && existing.isLoading && !localInitial) {
+    return (
+      <div className="p-12 text-center text-sm text-muted-foreground animate-pulse">
+        Chargement des informations de la propriété…
+      </div>
+    );
+  }
+
   const mutation = useMutation({
     mutationFn: async (input: PropertyInput & { customPropertyType?: string }) => {
       let createdProp: Property | null = null;
@@ -1025,6 +1033,39 @@ function PropertyForm({
   }));
   const [geoValid, setGeoValid] = useState(true);
   const [geoError, setGeoError] = useState<string | null>(null);
+
+  // Synchronisation dynamique si initial change ou est chargé asynchronement
+  useEffect(() => {
+    if (!initial) return;
+    setSelectedType(initial.type ?? 'BUILDING');
+    setIsCustomType(Boolean(initial.customPropertyType));
+    setCustomTypeInput(initial.customPropertyType ?? '');
+    setChambreSimple(initial.chambreSimpleCount ?? 0);
+    setChambreModerne(initial.chambreModerneCount ?? 0);
+    setStudioSimple(initial.studioSimpleCount ?? 0);
+    setStudioModerne(initial.studioModerneCount ?? 0);
+    setAppartement(initial.appartementCount ?? 0);
+    setOtherName(initial.otherCustomType ?? '');
+    setOtherCount(initial.otherCustomCount ?? 0);
+    setGeoValue({
+      geoOwnerId: initial.geoOwnerId,
+      neighborhoodId: initial.neighborhoodId,
+      blockId: initial.blockId,
+      geoUniqueId: initial.geoUniqueId,
+      region: initial.region,
+      department: initial.department,
+      arrondissement: initial.arrondissement,
+      neighborhoodName: initial.neighborhoodName,
+      sectorName: initial.sectorName,
+      neighborhoodLeaderName: initial.neighborhoodLeaderName,
+      blockLeaderName: initial.blockLeaderName,
+      latitude: initial.latitude,
+      longitude: initial.longitude,
+      location: initial.location,
+      boundary: initial.boundary,
+      geoDerogation: initial.geoDerogation,
+    });
+  }, [initial]);
 
   const totalCalculated =
     Number(chambreSimple || 0) +
@@ -1619,7 +1660,15 @@ export function PropertyDetailPage() {
                 Géolocalisation & Rattachement Territorial
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                to={`/properties/${p._id}/edit`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition"
+                title="Modifier les coordonnées GPS ou la parcelle"
+              >
+                <Edit className="size-3.5" />
+                <span>Modifier la position</span>
+              </Link>
               {typeof p.latitude === 'number' && typeof p.longitude === 'number' && (
                 <Button
                   size="sm"

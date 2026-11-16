@@ -196,6 +196,11 @@ export function createQuartierRouter(config: AppConfig) {
     requirePermission('quartier.manageIncidents'),
     respond(security.updateIncidentStatus),
   );
+  router.post(
+    '/incidents/:id/escalate',
+    requirePermission('quartier.manageIncidents'),
+    respond(security.escalateIncidentToNeighborhood),
+  );
   router.get(
     '/emergency-contacts',
     requirePermission('quartier.view'),

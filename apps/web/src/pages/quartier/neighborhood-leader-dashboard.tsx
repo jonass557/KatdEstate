@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   Award,
   Building,
   CheckCircle2,
@@ -66,6 +67,7 @@ export function NeighborhoodLeaderDashboard() {
     | 'broadcast'
     | 'rapport'
     | 'cartographie'
+    | 'incidents'
   >('annonces');
 
   // Local data states
@@ -77,6 +79,10 @@ export function NeighborhoodLeaderDashboard() {
     getOfficialCertificates(),
   );
   const [incidents] = useState(() => getStoredIncidents());
+  const escalatedIncidents = useMemo(
+    () => incidents.filter((i) => i.escalatedToNeighborhood || i.reportedByRole === 'CHEF_DE_BLOC'),
+    [incidents],
+  );
 
   const refreshAll = () => {
     setBlocks(getStoredBlocks());
@@ -506,6 +512,19 @@ export function NeighborhoodLeaderDashboard() {
         >
           <MapPin className="h-4 w-4" />
           <span>Cartographie & Zones Blocs</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('incidents')}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
+            activeTab === 'incidents'
+              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          }`}
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <span>Alertes & Incidents ({escalatedIncidents.length})</span>
         </button>
       </div>
 
@@ -1206,6 +1225,60 @@ export function NeighborhoodLeaderDashboard() {
       {/* ONGLET 9 : CARTOGRAPHIE & DÉLIMITATION DES ZONES DE BLOCS (NIVEAU 1) */}
       {/* ========================================================================= */}
       {activeTab === 'cartographie' && <NeighborhoodGeoPanel onDataChanged={refreshAll} />}
+
+      {/* ========================================================================= */}
+      {/* ONGLET 10 : ALERTES & INCIDENTS TRANSMIS PAR LES CHEFS DE BLOC */}
+      {/* ========================================================================= */}
+      {activeTab === 'incidents' && (
+        <div className="space-y-4">
+          <div className="bg-muted/20 p-4 rounded-2xl border border-border">
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <AlertTriangle className="size-4 text-amber-500" />
+              Signalements Escaladés par vos Chefs de Bloc ({escalatedIncidents.length})
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Ces incidents et litiges territoriaux ont été transmis directement par vos Chefs de Bloc pour arbitrage coutumier.
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            {escalatedIncidents.length === 0 ? (
+              <Card className="p-8 text-center text-xs text-muted-foreground">
+                Aucun incident n’a été transmis par vos Chefs de Bloc pour le moment.
+              </Card>
+            ) : (
+              escalatedIncidents.map((inc) => (
+                <Card key={inc.id} className="p-4 space-y-2 border-border">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-bold text-sm text-foreground">{inc.title}</span>
+                      <span className="rounded bg-red-500/20 text-red-600 px-2 py-0.5 text-[10px] font-bold">
+                        {inc.category}
+                      </span>
+                      <span className="rounded bg-amber-500/20 text-amber-600 px-2 py-0.5 text-[10px] font-bold">
+                        Gravité : {inc.severity}
+                      </span>
+                      <span className="rounded bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 px-2 py-0.5 text-[10px] font-bold">
+                        Bloc : {inc.blockName}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      {new Date(inc.createdAt).toLocaleString('fr-FR')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{inc.description}</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border text-[11px] text-muted-foreground">
+                    <span>
+                      Transmis par : <strong className="text-foreground">{inc.escalatedBy || 'Chef de Bloc'}</strong> · Origine : {inc.reportedBy}
+                    </span>
+                    <span className="font-semibold text-emerald-600">Statut : {inc.status}</span>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* MODAL : NOMMER UN CHEF DE BLOC */}
       <Modal open={newLeaderModalOpen} onOpenChange={setNewLeaderModalOpen} title="Nommer un Chef de Bloc">
