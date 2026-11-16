@@ -672,60 +672,35 @@ export function GeoMapCanvas({
 
   return (
     <div
-      className={`relative isolate w-full overflow-hidden rounded-2xl border border-border bg-slate-900 shadow-sm transition-all duration-300 ${
-        isFullscreen ? 'fixed inset-0 z-[9999] rounded-none h-screen w-screen' : heightClassName
+      className={`flex flex-col w-full gap-2.5 transition-all duration-300 ${
+        isFullscreen
+          ? 'fixed inset-0 z-[9999] bg-background p-4 h-screen w-screen'
+          : ''
       }`}
     >
-      {/* 1. HUD DE NAVIGATION GPS EN TEMPS RÉEL */}
-      {navState && navState.isNavigating && (
-        <GpsNavigationHUD
-          state={navState}
-          destinationName={navDestinationName}
-          isVoiceMuted={isVoiceMuted}
-          onToggleVoice={() => {
-            const muted = voiceNavigator.toggleMute();
-            setIsVoiceMuted(muted);
-          }}
-          onRecenter={() => {
-            if (navState.currentPosition && mapInstanceRef.current) {
-              mapInstanceRef.current.setView(
-                [navState.currentPosition.lat, navState.currentPosition.lng],
-                17,
-                { animate: true },
-              );
-            }
-          }}
-          onStopNavigation={stopGpsNavigation}
-          onModeChange={(mode) => {
-            setNavTransportMode(mode);
-            if (navTrackerRef.current) {
-              void navTrackerRef.current.setTransportMode(mode);
-            }
-          }}
-          currentMode={navTransportMode}
-        />
-      )}
-
-      {/* 2. Barre d'outils supérieure : Titre + Sélecteur de Tuiles + Recherche OSM (z-[1000] pour toujours rester au-dessus de Leaflet) */}
-      <div className="absolute left-3 right-3 top-3 z-[1000] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-        <div className="flex items-center gap-2 pointer-events-auto">
+      {/* 1. PANNEAU DE CONTRÔLES HORS DE LA CARTE (Titre / Positionnement mondial, styles satellite, recherche & tracé) */}
+      <div className="flex flex-col gap-2.5 rounded-2xl border border-border/80 bg-card p-3 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          {/* Titre & Positionnement mondial */}
           {title && (
-            <div className="rounded-xl border border-border/80 bg-background/95 px-3 py-1.5 shadow-md backdrop-blur">
-              <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <MapPin className="size-3.5 text-primary" />
-                {title}
-              </p>
-              {subtitle && <p className="text-[10px] text-muted-foreground">{subtitle}</p>}
+            <div className="flex items-center gap-2">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+                <MapPin className="size-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-foreground leading-tight">{title}</p>
+                {subtitle && <p className="text-[10px] text-muted-foreground leading-tight">{subtitle}</p>}
+              </div>
             </div>
           )}
 
-          {/* Sélecteur de style de tuiles (OSM / Satellite / Hybride / Sombre) */}
-          <div className="flex rounded-xl border border-border/80 bg-background/95 p-0.5 shadow-md backdrop-blur">
+          {/* Sélecteur de style de tuiles (Plan Rues / Satellite HD / Hybride / Nuit) */}
+          <div className="flex rounded-xl border border-border bg-muted/40 p-0.5 shadow-xs">
             <button
               type="button"
               className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                 activeTileId === 'osm'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => setActiveTileId('osm')}
@@ -736,7 +711,7 @@ export function GeoMapCanvas({
               type="button"
               className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                 activeTileId === 'satellite'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => setActiveTileId('satellite')}
@@ -747,7 +722,7 @@ export function GeoMapCanvas({
               type="button"
               className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                 activeTileId === 'hybrid'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => setActiveTileId('hybrid')}
@@ -758,7 +733,7 @@ export function GeoMapCanvas({
               type="button"
               className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                 activeTileId === 'dark'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => setActiveTileId('dark')}
@@ -766,189 +741,229 @@ export function GeoMapCanvas({
               Nuit
             </button>
           </div>
+
+          {/* Formulaire de recherche mondiale d'adresses (Nominatim OSM) */}
+          <div className="relative min-w-[240px] max-w-sm flex-1">
+            <form onSubmit={handleSearch} className="flex items-center gap-1.5">
+              <div className="relative w-full">
+                <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Rechercher ville, quartier, pays..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 rounded-xl pl-8 pr-3 text-xs bg-background border-input text-foreground"
+                />
+              </div>
+              <Button
+                type="submit"
+                size="sm"
+                variant="secondary"
+                className="h-8 px-2.5 text-xs font-semibold shrink-0"
+                disabled={isSearching}
+              >
+                {isSearching ? '...' : 'Chercher'}
+              </Button>
+            </form>
+
+            {/* Suggestions de recherche */}
+            {searchResults.length > 0 && (
+              <div className="absolute left-0 right-0 top-10 z-[1200] max-h-56 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-xl">
+                {searchResults.map((res, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="w-full text-left rounded-lg p-2 text-xs hover:bg-accent transition text-foreground"
+                    onClick={() => handleSelectSearchResult(res)}
+                  >
+                    <p className="font-semibold line-clamp-1">{res.address}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {[res.neighborhood, res.city, res.country].filter(Boolean).join(' • ')}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Barre de recherche d'adresses mondiale (Nominatim OSM) */}
-        <div className="relative pointer-events-auto min-w-[240px] max-w-sm flex-1">
-          <form onSubmit={handleSearch} className="flex items-center gap-1">
-            <div className="relative w-full">
-              <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Rechercher ville, quartier, pays..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 rounded-xl pl-8 pr-3 text-xs bg-background/95 border-border/80 shadow-md backdrop-blur text-foreground"
-              />
+        {/* Contrôles de dessin de polygone (placés hors de la carte) */}
+        {allowPolygonDraw && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+              <PenTool className="size-3.5 text-primary" />
+              <span>{drawingPoints.length} point{drawingPoints.length > 1 ? 's' : ''} tracé{drawingPoints.length > 1 ? 's' : ''}</span>
+              {currentAreaM2 > 0 && (
+                <span className="text-muted-foreground font-normal">
+                  ({currentAreaM2 >= 10000 ? `${(currentAreaM2 / 10000).toFixed(2)} ha` : `${currentAreaM2.toLocaleString('fr-FR')} m²`})
+                </span>
+              )}
             </div>
-            <Button
-              type="submit"
-              size="sm"
-              variant="secondary"
-              className="h-8 px-2 text-xs font-semibold shrink-0"
-              disabled={isSearching}
-            >
-              {isSearching ? '...' : 'Chercher'}
-            </Button>
-          </form>
 
-          {/* Suggestions de recherche Nominatim */}
-          {searchResults.length > 0 && (
-            <div className="absolute left-0 right-0 top-10 z-[1100] max-h-56 overflow-y-auto rounded-xl border border-border bg-popover/95 p-1 shadow-xl backdrop-blur">
-              {searchResults.map((res, i) => (
-                <button
-                  key={i}
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-xs"
+                onClick={handleUndoPoint}
+                disabled={drawingPoints.length === 0}
+              >
+                <Undo2 className="size-3 mr-1" />
+                Annuler point
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2.5 text-xs text-destructive hover:bg-destructive/10"
+                onClick={handleClearDraw}
+                disabled={drawingPoints.length === 0}
+              >
+                <Trash2 className="size-3 mr-1" />
+                Effacer tracé
+              </Button>
+
+              {onBoundaryValidate && (
+                <Button
                   type="button"
-                  className="w-full text-left rounded-lg p-2 text-xs hover:bg-accent transition text-foreground"
-                  onClick={() => handleSelectSearchResult(res)}
+                  size="sm"
+                  className="h-7 px-3 text-xs font-bold bg-primary hover:bg-primary/90 text-primary-foreground"
+                  onClick={handleValidateDraw}
+                  disabled={drawingPoints.length < 3}
                 >
-                  <p className="font-semibold line-clamp-1">{res.address}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {[res.neighborhood, res.city, res.country].filter(Boolean).join(' • ')}
-                  </p>
-                </button>
-              ))}
+                  <CheckCircle2 className="size-3 mr-1" />
+                  Valider le contour
+                </Button>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Messages d'état GPS et de validation géométrique (hors de la carte) */}
+        {gpsStatus && (
+          <div className="rounded-xl border border-primary/40 bg-primary/10 p-2 text-xs text-primary flex items-center gap-2">
+            <LocateFixed className="size-4 shrink-0 text-primary animate-pulse" />
+            <span className="font-semibold">{gpsStatus}</span>
+          </div>
+        )}
+
+        {validationError && !gpsStatus && (
+          <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive flex items-center gap-2">
+            <AlertTriangle className="size-4 shrink-0" />
+            <span>{validationError}</span>
+          </div>
+        )}
+
+        {validationSuccess && !validationError && !gpsStatus && (
+          <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-2 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+            <CheckCircle2 className="size-4 shrink-0" />
+            <span>{validationSuccess}</span>
+          </div>
+        )}
       </div>
 
-      {/* 3. Contrôles de Dessin de Polygone (Niveaux 1, 2, 3) */}
-      {allowPolygonDraw && (
-        <div className="absolute bottom-4 left-4 z-[1000] flex flex-wrap items-center gap-2 rounded-2xl border border-border/80 bg-background/95 p-2 shadow-xl backdrop-blur">
-          <div className="flex items-center gap-1.5 px-2 text-xs font-bold text-foreground">
-            <PenTool className="size-3.5 text-primary" />
-            <span>{drawingPoints.length} point{drawingPoints.length > 1 ? 's' : ''}</span>
-            {currentAreaM2 > 0 && (
-              <span className="text-muted-foreground font-normal">
-                ({currentAreaM2 >= 10000 ? `${(currentAreaM2 / 10000).toFixed(2)} ha` : `${currentAreaM2.toLocaleString('fr-FR')} m²`})
-              </span>
-            )}
+      {/* 2. CONTENEUR CARTE LEAFLET - TOTALEMENT DÉGAGÉ, PROPRE ET ULTRA-LISIBLE */}
+      <div
+        className={`relative isolate w-full overflow-hidden rounded-2xl border border-border bg-slate-900 shadow-sm transition-all duration-300 ${
+          isFullscreen ? 'flex-1 h-full' : heightClassName
+        }`}
+      >
+        {/* HUD de Navigation GPS en temps réel (uniquement lors du guidage actif) */}
+        {navState && navState.isNavigating && (
+          <GpsNavigationHUD
+            state={navState}
+            destinationName={navDestinationName}
+            isVoiceMuted={isVoiceMuted}
+            onToggleVoice={() => {
+              const muted = voiceNavigator.toggleMute();
+              setIsVoiceMuted(muted);
+            }}
+            onRecenter={() => {
+              if (navState.currentPosition && mapInstanceRef.current) {
+                mapInstanceRef.current.setView(
+                  [navState.currentPosition.lat, navState.currentPosition.lng],
+                  17,
+                  { animate: true },
+                );
+              }
+            }}
+            onStopNavigation={stopGpsNavigation}
+            onModeChange={(mode) => {
+              setNavTransportMode(mode);
+              if (navTrackerRef.current) {
+                void navTrackerRef.current.setTransportMode(mode);
+              }
+            }}
+            currentMode={navTransportMode}
+          />
+        )}
+
+        {/* Boutons d'actions minimalistes en bas à droite (Zoom, Ma Position, Plein Écran) */}
+        <div className="absolute bottom-4 right-4 z-[1000] flex flex-col gap-1.5 pointer-events-auto">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="size-9 p-0 rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur flex items-center justify-center hover:bg-accent"
+            onClick={handleLocateMe}
+            disabled={isLocating}
+            title="Ma position GPS actuelle (Haute précision & réseau)"
+          >
+            <LocateFixed className={`size-4 text-primary ${isLocating ? 'animate-spin' : ''}`} />
+          </Button>
+
+          <div className="flex flex-col rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur overflow-hidden">
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center text-foreground hover:bg-muted transition"
+              onClick={() => mapInstanceRef.current?.zoomIn()}
+              title="Zoom avant"
+            >
+              <ZoomIn className="size-4" />
+            </button>
+            <div className="h-px bg-border/60" />
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center text-foreground hover:bg-muted transition"
+              onClick={() => mapInstanceRef.current?.zoomOut()}
+              title="Zoom arrière"
+            >
+              <ZoomOut className="size-4" />
+            </button>
           </div>
 
           <Button
             type="button"
             size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs"
-            onClick={handleUndoPoint}
-            disabled={drawingPoints.length === 0}
+            variant="secondary"
+            className="size-9 p-0 rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur flex items-center justify-center hover:bg-accent"
+            onClick={() => {
+              setIsFullscreen((prev) => !prev);
+              setTimeout(() => mapInstanceRef.current?.invalidateSize(), 300);
+            }}
+            title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
           >
-            <Undo2 className="size-3 mr-1" />
-            Annuler point
+            {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
           </Button>
-
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
-            onClick={handleClearDraw}
-            disabled={drawingPoints.length === 0}
-          >
-            <Trash2 className="size-3 mr-1" />
-            Effacer
-          </Button>
-
-          {onBoundaryValidate && (
-            <Button
-              type="button"
-              size="sm"
-              className="h-7 px-3 text-xs font-bold bg-primary hover:bg-primary/90"
-              onClick={handleValidateDraw}
-              disabled={drawingPoints.length < 3}
-            >
-              <CheckCircle2 className="size-3 mr-1" />
-              Valider le tracé
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* 4. Messages d'état GPS, erreurs et succès de validation géométrique */}
-      {gpsStatus && (
-        <div className="absolute left-4 top-14 z-[1000] max-w-md rounded-xl border border-primary/40 bg-background/95 p-2.5 text-xs text-primary shadow-xl backdrop-blur flex items-center gap-2 animate-in fade-in">
-          <LocateFixed className="size-4 shrink-0 text-primary animate-pulse" />
-          <span className="font-semibold">{gpsStatus}</span>
-        </div>
-      )}
-
-      {validationError && !gpsStatus && (
-        <div className="absolute left-4 top-14 z-[1000] max-w-md rounded-xl border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive shadow-lg backdrop-blur flex items-center gap-2">
-          <AlertTriangle className="size-4 shrink-0" />
-          <span>{validationError}</span>
-        </div>
-      )}
-      {validationSuccess && !validationError && !gpsStatus && (
-        <div className="absolute left-4 top-14 z-[1000] max-w-md rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 shadow-lg backdrop-blur flex items-center gap-2">
-          <CheckCircle2 className="size-4 shrink-0" />
-          <span>{validationSuccess}</span>
-        </div>
-      )}
-
-      {/* 5. Boutons d'actions latérales (Zoom, Ma Position, Plein Écran) */}
-      <div className="absolute bottom-4 right-4 z-[1000] flex flex-col gap-1.5">
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          className="size-9 p-0 rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur flex items-center justify-center"
-          onClick={handleLocateMe}
-          disabled={isLocating}
-          title="Ma position GPS actuelle (Haute précision & réseau)"
-        >
-          <LocateFixed className={`size-4 text-primary ${isLocating ? 'animate-spin' : ''}`} />
-        </Button>
-
-        <div className="flex flex-col rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur overflow-hidden">
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center text-foreground hover:bg-muted transition"
-            onClick={() => mapInstanceRef.current?.zoomIn()}
-            title="Zoom avant"
-          >
-            <ZoomIn className="size-4" />
-          </button>
-          <div className="h-px bg-border/60" />
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center text-foreground hover:bg-muted transition"
-            onClick={() => mapInstanceRef.current?.zoomOut()}
-            title="Zoom arrière"
-          >
-            <ZoomOut className="size-4" />
-          </button>
         </div>
 
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          className="size-9 p-0 rounded-xl border border-border/80 bg-background/95 shadow-md backdrop-blur flex items-center justify-center"
-          onClick={() => {
-            setIsFullscreen((prev) => !prev);
-            setTimeout(() => mapInstanceRef.current?.invalidateSize(), 300);
-          }}
-          title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
-        >
-          {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-        </Button>
+        {/* Légende discrète en bas à gauche */}
+        {legendItems && legendItems.length > 0 && (
+          <div className="absolute bottom-4 left-4 z-[990] hidden sm:flex items-center gap-3 rounded-xl border border-border/80 bg-background/95 px-3 py-1.5 text-[11px] shadow-md backdrop-blur pointer-events-none">
+            {legendItems.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-muted-foreground">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Canvas DOM Leaflet */}
+        <div ref={mapContainerRef} className="h-full w-full bg-slate-900" />
       </div>
-
-      {/* 6. Légende de la carte */}
-      {legendItems && legendItems.length > 0 && (
-        <div className="absolute bottom-4 left-4 z-[990] hidden sm:flex items-center gap-3 rounded-xl border border-border/80 bg-background/95 px-3 py-1.5 text-[11px] shadow-md backdrop-blur">
-          {legendItems.map((item, idx) => (
-            <div key={idx} className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-              <span className="text-muted-foreground">{item.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 7. Conteneur DOM Leaflet */}
-      <div ref={mapContainerRef} className="h-full w-full bg-slate-900" />
     </div>
   );
 }

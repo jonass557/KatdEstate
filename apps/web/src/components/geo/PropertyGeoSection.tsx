@@ -75,6 +75,23 @@ export function PropertyGeoSection({
   const blocks = useMemo(() => getStoredBlocks(), []);
   const owners = useMemo(() => getBlockOwners(), []);
 
+  // Détection du rattachement créé par un Chef de Bloc
+  const emailNorm = user?.email?.trim().toLowerCase();
+  const matchedOwnerRecord = useMemo(() => {
+    if (!emailNorm && !value.geoOwnerId) return undefined;
+    return owners.find(
+      (o) =>
+        (emailNorm && o.email?.trim().toLowerCase() === emailNorm) ||
+        (value.geoOwnerId && o.id === value.geoOwnerId),
+    );
+  }, [owners, emailNorm, value.geoOwnerId]);
+
+  // Si le propriétaire a été créé par un Chef de Bloc, son compte et ses secteurs sont certifiés coutumièrement
+  const isCreatedByBlockLeader = Boolean(matchedOwnerRecord);
+
+  // Modifiable UNIQUEMENT si l'utilisateur est admin OU si le propriétaire s'est inscrit de lui-même sans intervention de chef de bloc
+  const canEditTerritory = isAdmin || !isCreatedByBlockLeader;
+
   const [latInput, setLatInput] = useState<string>(() => (typeof value.latitude === 'number' ? value.latitude.toString() : ''));
   const [lngInput, setLngInput] = useState<string>(() => (typeof value.longitude === 'number' ? value.longitude.toString() : ''));
   const [isLocatingGps, setIsLocatingGps] = useState(false);
@@ -213,8 +230,9 @@ export function PropertyGeoSection({
     [owners, value.geoOwnerId],
   );
 
-  // Synchroniser noms de chefs & quartier si sélection change
+  // Synchroniser noms de chefs & quartier si sélection change (autorisé uniquement si canEditTerritory)
   const handleSelectNeighborhood = (neighId: string) => {
+    if (!canEditTerritory) return;
     const neigh = neighborhoods.find((n) => n.id === neighId);
     const childBlock = blocks.find((b) => b.neighborhoodId === neighId);
     onChange({
@@ -232,6 +250,7 @@ export function PropertyGeoSection({
   };
 
   const handleSelectBlock = (blockId: string) => {
+    if (!canEditTerritory) return;
     const blk = blocks.find((b) => b.id === blockId);
     const parentNeigh = blk ? neighborhoods.find((n) => n.id === blk.neighborhoodId) : undefined;
     onChange({
@@ -246,6 +265,7 @@ export function PropertyGeoSection({
   };
 
   const handleSelectOwner = (ownerId: string) => {
+    if (!canEditTerritory) return;
     const own = owners.find((o) => o.id === ownerId);
     const blk = own ? blocks.find((b) => b.id === own.blockId) : undefined;
     const neigh = blk ? neighborhoods.find((n) => n.id === blk.neighborhoodId) : undefined;
@@ -462,14 +482,48 @@ export function PropertyGeoSection({
         )}
       </div>
 
+      {/* Alerte de statut : Créé par Chef de Bloc (Verrouillé) ou Inscription autonome (Modifiable) */}
+      {!canEditTerritory ? (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+          <ShieldAlert className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-bold flex items-center gap-1.5">
+              <span>🔒 Rattachement territorial certifié par votre Chef de Bloc</span>
+              <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] uppercase font-semibold text-amber-700 dark:text-amber-300">
+                Verrouillé
+              </span>
+            </p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Votre compte propriétaire a été créé par le Chef de Bloc du secteur{' '}
+              <strong className="text-foreground">{matchedOwnerRecord?.blockName || 'attribué'}</strong>.
+              Les champs <strong>Quartier (Niveau 1)</strong>, <strong>Bloc / Secteur (Niveau 2)</strong> et <strong>Secteur Propriétaire attribué</strong> sont certifiés et verrouillés.
+              Contactez votre Chef de Bloc ou l’administration pour toute modification de zone.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+          <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <p className="text-[11px] leading-relaxed">
+            <strong className="font-semibold">Inscription directe sans intermédiaire :</strong> Vous pouvez librement sélectionner et modifier votre Quartier (Niveau 1), votre Bloc (Niveau 2) et votre Secteur Propriétaire.
+          </p>
+        </div>
+      )}
+
       {/* Rattachement hiérarchique Quartier -> Bloc -> Secteur Propriétaire */}
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="block space-y-1 text-xs">
-          <span className="font-semibold text-foreground">Quartier (Niveau 1)</span>
+          <span className="font-semibold text-foreground flex items-center justify-between">
+            <span>Quartier (Niveau 1)</span>
+            {!canEditTerritory && <span className="text-[10px] text-amber-600 font-mono">🔒 Bloqué</span>}
+          </span>
           <select
             value={value.neighborhoodId ?? ''}
             onChange={(e) => handleSelectNeighborhood(e.target.value)}
-            className="h-9 w-full rounded-xl border border-input bg-background px-3 text-xs"
+            disabled={!canEditTerritory}
+            className={`h-9 w-full rounded-xl border border-input bg-background px-3 text-xs transition ${
+              !canEditTerritory ? 'opacity-70 cursor-not-allowed bg-muted/60 text-muted-foreground' : ''
+            }`}
           >
             {neighborhoods.map((n) => (
               <option key={n.id} value={n.id}>
@@ -480,11 +534,17 @@ export function PropertyGeoSection({
         </label>
 
         <label className="block space-y-1 text-xs">
-          <span className="font-semibold text-foreground">Bloc / Secteur (Niveau 2)</span>
+          <span className="font-semibold text-foreground flex items-center justify-between">
+            <span>Bloc / Secteur (Niveau 2)</span>
+            {!canEditTerritory && <span className="text-[10px] text-amber-600 font-mono">🔒 Bloqué</span>}
+          </span>
           <select
             value={value.blockId ?? ''}
             onChange={(e) => handleSelectBlock(e.target.value)}
-            className="h-9 w-full rounded-xl border border-input bg-background px-3 text-xs"
+            disabled={!canEditTerritory}
+            className={`h-9 w-full rounded-xl border border-input bg-background px-3 text-xs transition ${
+              !canEditTerritory ? 'opacity-70 cursor-not-allowed bg-muted/60 text-muted-foreground' : ''
+            }`}
           >
             {blocks
               .filter((b) => !value.neighborhoodId || b.neighborhoodId === value.neighborhoodId)
@@ -497,14 +557,20 @@ export function PropertyGeoSection({
         </label>
 
         <label className="block space-y-1 text-xs">
-          <span className="font-semibold text-foreground flex items-center gap-1">
-            <UserCheck className="size-3.5 text-emerald-500" />
-            Secteur Propriétaire attribué
+          <span className="font-semibold text-foreground flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <UserCheck className="size-3.5 text-emerald-500" />
+              Secteur Propriétaire attribué
+            </span>
+            {!canEditTerritory && <span className="text-[10px] text-amber-600 font-mono">🔒 Bloqué</span>}
           </span>
           <select
             value={value.geoOwnerId ?? ''}
             onChange={(e) => handleSelectOwner(e.target.value)}
-            className="h-9 w-full rounded-xl border border-input bg-background px-3 text-xs"
+            disabled={!canEditTerritory}
+            className={`h-9 w-full rounded-xl border border-input bg-background px-3 text-xs transition ${
+              !canEditTerritory ? 'opacity-70 cursor-not-allowed bg-muted/60 text-muted-foreground' : ''
+            }`}
           >
             <option value="">— Sélectionner un secteur propriétaire —</option>
             {owners
