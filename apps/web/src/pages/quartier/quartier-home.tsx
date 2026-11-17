@@ -38,10 +38,14 @@ export function QuartierHomePage() {
   useEffect(() => {
     if (isolatedTab && userRole === 'NEIGHBORHOOD_LEADER') {
       setActiveView('neighborhood-leader');
+    } else if (isolatedTab && userRole === 'BLOCK_LEADER') {
+      setActiveView('block-leader');
     }
   }, [isolatedTab, userRole]);
 
-  const hideTopSwitchers = Boolean(isolatedTab && userRole === 'NEIGHBORHOOD_LEADER');
+  const hideTopSwitchers = Boolean(
+    isolatedTab && (userRole === 'NEIGHBORHOOD_LEADER' || userRole === 'BLOCK_LEADER'),
+  );
 
   return (
     <div className="space-y-6">

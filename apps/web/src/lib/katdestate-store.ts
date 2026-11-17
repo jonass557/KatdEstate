@@ -744,6 +744,7 @@ export interface BlockRecord {
   color?: string | undefined;
   isActive?: boolean | undefined;
   boundary?: GeoJsonBoundary | undefined;
+  targetAreaM2?: number | undefined;
   totalResidences: number;
   totalHabitants: number;
   createdAt: string;
@@ -752,6 +753,9 @@ export interface BlockRecord {
 export interface NeighborhoodGeoRecord {
   id: string;
   name: string;
+  country?: string | undefined;
+  city?: string | undefined;
+  neighborhoodLabel?: string | undefined;
   region?: string | undefined;
   department?: string | undefined;
   arrondissement?: string | undefined;
@@ -1761,6 +1765,51 @@ export function appendGeoAuditLogLocal(entry: Omit<GeoAuditRecord, 'id' | 'creat
       const list = getGeoAuditLogsLocal();
       list.unshift(full);
       localStorage.setItem(STORAGE_GEO_AUDIT_KEY, JSON.stringify(list.slice(0, 200)));
+    } catch {}
+  }
+  return full;
+}
+
+export interface DirectHierarchyMessage {
+  id: string;
+  senderEmail: string;
+  senderName: string;
+  senderRole: 'BLOCK_LEADER' | 'OWNER' | 'NEIGHBORHOOD_LEADER';
+  recipientType: 'ALL_BLOCK_OWNERS' | 'OWNER' | 'BLOCK_LEADER' | 'NEIGHBORHOOD_LEADER';
+  recipientEmail?: string | undefined;
+  recipientName?: string | undefined;
+  blockId?: string | undefined;
+  blockName?: string | undefined;
+  subject: string;
+  body: string;
+  createdAt: string;
+}
+
+export const STORAGE_HIERARCHY_MESSAGES_KEY = 'katdestate_hierarchy_messages';
+
+export function getHierarchyMessages(): DirectHierarchyMessage[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_HIERARCHY_MESSAGES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function sendHierarchyMessage(
+  msg: Omit<DirectHierarchyMessage, 'id' | 'createdAt'>,
+): DirectHierarchyMessage {
+  const full: DirectHierarchyMessage = {
+    ...msg,
+    id: `hmsg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    createdAt: new Date().toISOString(),
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      const list = getHierarchyMessages();
+      list.unshift(full);
+      localStorage.setItem(STORAGE_HIERARCHY_MESSAGES_KEY, JSON.stringify(list.slice(0, 300)));
     } catch {}
   }
   return full;

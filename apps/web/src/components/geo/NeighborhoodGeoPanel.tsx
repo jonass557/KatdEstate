@@ -22,7 +22,11 @@ import {
   type GeoJsonBoundary,
 } from '@rentflow/shared';
 import { getPreciseUserLocation } from '../../lib/geo/geolocation-helper';
-import { reverseGeocodeWithNominatim } from '../../lib/geo/nominatim-geocoder';
+import {
+  reverseGeocodeWithNominatim,
+  searchAddressWithNominatim,
+} from '../../lib/geo/nominatim-geocoder';
+import { getBlockLeaders } from '../../lib/katdestate-store';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
@@ -73,7 +77,13 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
     activeNeighborhood.boundary ?? null,
   );
 
-  // Champs administratifs du quartier
+  // Champs administratifs & hiérarchie géographique du quartier (Pays -> Ville -> Quartier -> Nom de Zone)
+  const [countryName, setCountryName] = useState(activeNeighborhood.country ?? 'Côte d’Ivoire');
+  const [cityName, setCityName] = useState(activeNeighborhood.city ?? 'Abidjan');
+  const [neighborhoodLabel, setNeighborhoodLabel] = useState(
+    activeNeighborhood.neighborhoodLabel ?? 'Cocody',
+  );
+  const [zoneCustomName, setZoneCustomName] = useState(activeNeighborhood.name ?? '');
   const [adminAddress, setAdminAddress] = useState(activeNeighborhood.administrativeAddress ?? '');
   const [regionName, setRegionName] = useState(activeNeighborhood.region ?? '');
   const [departmentName, setDepartmentName] = useState(activeNeighborhood.department ?? '');
@@ -81,10 +91,13 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
     activeNeighborhood.arrondissement ?? '',
   );
 
-  // Formulaire bloc
+  // Formulaire bloc (Nom, Code, Superficie, Chef de Bloc assigné)
+  const availableLeaders = useMemo(() => getBlockLeaders(), [blocks]);
   const [newBlockName, setNewBlockName] = useState('');
   const [newBlockCode, setNewBlockCode] = useState('');
+  const [blockTargetArea, setBlockTargetArea] = useState('');
   const [newBlockColor, setNewBlockColor] = useState(BLOCK_COLORS[0]!);
+  const [selectedLeaderId, setSelectedLeaderId] = useState('');
   const [leaderName, setLeaderName] = useState('');
   const [leaderPhone, setLeaderPhone] = useState('+225 ');
   const [leaderEmail, setLeaderEmail] = useState('');
@@ -99,8 +112,26 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
   const [autoRadiusMeters, setAutoRadiusMeters] = useState<number>(350);
   const [gpsFocusTarget, setGpsFocusTarget] = useState<{
     boundary?: GeoJsonBoundary | null;
+    lat?: number;
+    lng?: number;
+    zoom?: number;
     key: string;
   } | null>(null);
+
+  const focusMapOnQuery = async (query: string, zoom: number) => {
+    if (!query.trim()) return;
+    try {
+      const results = await searchAddressWithNominatim(query, 1);
+      if (results.length > 0 && results[0]) {
+        setGpsFocusTarget({
+          lat: results[0].lat,
+          lng: results[0].lng,
+          zoom,
+          key: `geo-zoom-${Date.now()}`,
+        });
+      }
+    } catch {}
+  };
   const [isRecordingWalk, setIsRecordingWalk] = useState(false);
   const [walkPoints, setWalkPoints] = useState<Array<{ lat: number; lng: number }>>([]);
   const walkWatchRef = useRef<number | null>(null);
@@ -138,6 +169,12 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
       } catch {}
 
       if (targetMode === 'EDIT_NEIGHBORHOOD' && geocode) {
+        if (geocode.country) setCountryName(geocode.country);
+        if (geocode.city) setCityName(geocode.city);
+        if (geocode.neighborhood) {
+          setNeighborhoodLabel(geocode.neighborhood);
+          setZoneCustomName(geocode.neighborhood);
+        }
         if (geocode.address) setAdminAddress(geocode.address);
         if (geocode.region) setRegionName(geocode.region);
         if (geocode.department) setDepartmentName(geocode.department);
@@ -322,10 +359,11 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
     blocks.forEach((blk, idx) => {
       if (!blk.boundary) return;
       if (mapMode === 'EDIT_BLOCK' && blk.id === selectedBlockId) return;
+      const areaM2 = blk.targetAreaM2 || Math.round(computePolygonAreaM2(blk.boundary));
       list.push({
         id: blk.id,
         level: 'BLOCK',
-        label: blk.name,
+        label: `${blk.name} (${areaM2.toLocaleString('fr-FR')} m²)`,
         sublabel: blk.leaderName ? `Chef : ${blk.leaderName}` : 'Sans chef assigné',
         boundary: blk.boundary,
         color: blk.color || BLOCK_COLORS[idx % BLOCK_COLORS.length]!,
@@ -334,6 +372,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
         metadata: {
           type: 'Zone Chef de Bloc',
           code: blk.code,
+          superficie: `${areaM2.toLocaleString('fr-FR')} m²`,
           responsable: blk.leaderName || 'Non assigné',
           telephone: blk.leaderPhone || '-',
           email: blk.leaderEmail || '-',
@@ -376,8 +415,13 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
       }).catch(() => null);
 
       const previousBoundary = activeNeighborhood.boundary;
+      const finalZoneName = zoneCustomName.trim() || neighborhoodLabel.trim() || activeNeighborhood.name;
       saveNeighborhoodGeo({
         ...activeNeighborhood,
+        name: finalZoneName,
+        country: countryName.trim() || undefined,
+        city: cityName.trim() || undefined,
+        neighborhoodLabel: neighborhoodLabel.trim() || undefined,
         boundary: draftBoundary,
         administrativeAddress: adminAddress,
         region: regionName,
@@ -436,6 +480,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
           },
         }).catch(() => null);
 
+        const computedArea = Math.round(computePolygonAreaM2(draftBoundary));
         const created: BlockRecord = {
           id: `block-${Date.now()}`,
           code,
@@ -448,6 +493,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
           color: newBlockColor,
           isActive: true,
           boundary: draftBoundary,
+          targetAreaM2: Number(blockTargetArea) || computedArea,
           totalResidences: 0,
           totalHabitants: 0,
           createdAt: new Date().toISOString(),
@@ -657,10 +703,108 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
 
       {/* Formulaire contextuel selon le mode d'édition */}
       {mapMode === 'EDIT_NEIGHBORHOOD' && (
-        <Card className="p-4 border-purple-500/30 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">
-            A. Coordonnées administratives et contour GeoJSON du quartier
-          </h3>
+        <Card className="p-4 border-purple-500/30 space-y-4">
+          <div>
+            <h3 className="text-sm font-bold text-foreground">
+              A. Localisation hiérarchique (Pays → Ville → Quartier → Nom de la Zone)
+            </h3>
+            <p className="text-[11px] text-muted-foreground">
+              Sélectionnez votre pays, votre ville et votre quartier pour positionner automatiquement la carte, puis nommez votre zone et tracez ses limites (manuellement ou via GPS).
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1 text-xs">
+              <label className="font-semibold text-foreground">1. Pays *</label>
+              <div className="flex gap-1">
+                <select
+                  value={countryName}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCountryName(val);
+                    void focusMapOnQuery(val, 6);
+                  }}
+                  className="h-9 w-full rounded-xl border border-input bg-background px-2.5 text-xs font-medium"
+                >
+                  <option value="Côte d’Ivoire">Côte d’Ivoire</option>
+                  <option value="Cameroun">Cameroun</option>
+                  <option value="Sénégal">Sénégal</option>
+                  <option value="Burkina Faso">Burkina Faso</option>
+                  <option value="Mali">Mali</option>
+                  <option value="Bénin">Bénin</option>
+                  <option value="Togo">Togo</option>
+                  <option value="Gabon">Gabon</option>
+                  <option value="Congo">Congo</option>
+                  <option value="RD Congo">RD Congo</option>
+                  <option value="France">France</option>
+                  <option value="Maroc">Maroc</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1 text-xs">
+              <label className="font-semibold text-foreground">2. Ville *</label>
+              <div className="flex gap-1">
+                <Input
+                  placeholder="Ex: Abidjan, Douala, Dakar..."
+                  value={cityName}
+                  onChange={(e) => setCityName(e.target.value)}
+                  onBlur={() => {
+                    if (cityName.trim()) void focusMapOnQuery(`${cityName}, ${countryName}`, 12);
+                  }}
+                  className="h-9 text-xs"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-9 px-2.5 text-[11px] shrink-0"
+                  onClick={() => void focusMapOnQuery(`${cityName}, ${countryName}`, 12)}
+                >
+                  Zoom
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1 text-xs">
+              <label className="font-semibold text-foreground">3. Quartier de la ville *</label>
+              <div className="flex gap-1">
+                <Input
+                  placeholder="Ex: Cocody, Bonamoussadi, Plateau..."
+                  value={neighborhoodLabel}
+                  onChange={(e) => setNeighborhoodLabel(e.target.value)}
+                  onBlur={() => {
+                    if (neighborhoodLabel.trim()) {
+                      void focusMapOnQuery(`${neighborhoodLabel}, ${cityName}, ${countryName}`, 14);
+                    }
+                  }}
+                  className="h-9 text-xs"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-9 px-2.5 text-[11px] shrink-0"
+                  onClick={() =>
+                    void focusMapOnQuery(`${neighborhoodLabel}, ${cityName}, ${countryName}`, 14)
+                  }
+                >
+                  Zoom
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1 text-xs">
+              <label className="font-semibold text-foreground">4. Nom de votre zone *</label>
+              <Input
+                placeholder="Ex: Zone Riviera Palmeraie"
+                value={zoneCustomName}
+                onChange={(e) => setZoneCustomName(e.target.value)}
+                className="h-9 text-xs"
+              />
+            </div>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Input
               placeholder="Adresse administrative"
@@ -699,12 +843,19 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
 
       {(mapMode === 'CREATE_BLOCK' || mapMode === 'EDIT_BLOCK') && (
         <Card className="p-4 border-cyan-500/30 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">
-            {mapMode === 'CREATE_BLOCK'
-              ? 'B. Attribuer une nouvelle zone géographique à un Chef de Bloc'
-              : 'Modifier la zone géographique du Chef de Bloc'}
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-bold text-foreground">
+              {mapMode === 'CREATE_BLOCK'
+                ? 'B. Délimiter une zone de Bloc et attribuer un Chef de Bloc'
+                : 'Modifier la zone géographique du Chef de Bloc'}
+            </h3>
+            {draftBoundary && (
+              <span className="rounded-full bg-cyan-500/15 border border-cyan-500/30 px-3 py-0.5 text-xs font-bold text-cyan-600">
+                Superficie tracée : {Math.round(computePolygonAreaM2(draftBoundary)).toLocaleString('fr-FR')} m²
+              </span>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-4">
             <Input
               placeholder="Nom de la zone / Bloc *"
               value={newBlockName}
@@ -714,6 +865,12 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
               placeholder="Code bloc (ex: BLOC-PALM-5)"
               value={newBlockCode}
               onChange={(e) => setNewBlockCode(e.target.value)}
+            />
+            <Input
+              type="number"
+              placeholder="Superficie prévue (m²)"
+              value={blockTargetArea}
+              onChange={(e) => setBlockTargetArea(e.target.value)}
             />
             <div className="flex items-center gap-2">
               <label className="text-xs text-muted-foreground">Couleur :</label>
@@ -732,22 +889,49 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
               </div>
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Input
-              placeholder="Nom du Chef de Bloc responsable"
-              value={leaderName}
-              onChange={(e) => setLeaderName(e.target.value)}
-            />
-            <Input
-              placeholder="Téléphone du Chef de Bloc"
-              value={leaderPhone}
-              onChange={(e) => setLeaderPhone(e.target.value)}
-            />
-            <Input
-              placeholder="Email de connexion"
-              value={leaderEmail}
-              onChange={(e) => setLeaderEmail(e.target.value)}
-            />
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-foreground block">
+              Attribuer un Chef de Bloc existant ou saisir un responsable :
+            </label>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <select
+                value={selectedLeaderId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSelectedLeaderId(id);
+                  const found = availableLeaders.find((l) => l.id === id);
+                  if (found) {
+                    setLeaderName(found.name);
+                    setLeaderPhone(found.phone);
+                    setLeaderEmail(found.email);
+                  }
+                }}
+                className="h-9 rounded-xl border border-input bg-background px-2.5 text-xs"
+              >
+                <option value="">— Choisir un Chef de Bloc créé —</option>
+                {availableLeaders.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name} ({l.email})
+                  </option>
+                ))}
+              </select>
+              <Input
+                placeholder="Nom du Chef de Bloc responsable"
+                value={leaderName}
+                onChange={(e) => setLeaderName(e.target.value)}
+              />
+              <Input
+                placeholder="Téléphone du Chef de Bloc"
+                value={leaderPhone}
+                onChange={(e) => setLeaderPhone(e.target.value)}
+              />
+              <Input
+                placeholder="Email de connexion"
+                value={leaderEmail}
+                onChange={(e) => setLeaderEmail(e.target.value)}
+              />
+            </div>
           </div>
 
           {isAdmin && (

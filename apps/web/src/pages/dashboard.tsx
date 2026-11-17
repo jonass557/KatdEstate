@@ -13,7 +13,6 @@ import {
   Users,
   Briefcase,
   FileText,
-  FileCheck,
   Send,
   Flame,
   UserCheck,
@@ -45,6 +44,13 @@ import { useOrgQuery } from '../lib/query';
 import { IkeepayModal } from '../components/payments/ikeepay-modal';
 import { IkeepaySettingsModal } from '../components/admin/ikeepay-settings-modal';
 import { OwnerReportProblemModal } from '../components/quartier/OwnerReportProblemModal';
+import { Modal } from '../components/ui/dialog';
+import {
+  getBlockOwners,
+  getStoredBlocks,
+  getHierarchyMessages,
+  sendHierarchyMessage,
+} from '../lib/katdestate-store';
 
 interface Overview {
   incomeMinor: number;
@@ -97,6 +103,24 @@ export function DashboardPage() {
   const [ikeepayPayinOpen, setIkeepayPayinOpen] = useState(false);
   const [ikeepaySettingsOpen, setIkeepaySettingsOpen] = useState(false);
   const [ownerProblemModalOpen, setOwnerProblemModalOpen] = useState(false);
+  const [ownerMsgModalOpen, setOwnerMsgModalOpen] = useState(false);
+  const [ownerMsgSubject, setOwnerMsgSubject] = useState('');
+  const [ownerMsgBody, setOwnerMsgBody] = useState('');
+  const [ownerMsgSentNotice, setOwnerMsgSentNotice] = useState(false);
+
+  // Distinction stricte : Propriétaire créé par un Chef de Bloc vs Propriétaire indépendant
+  const normalizedUserEmail = user?.email?.trim().toLowerCase();
+  const matchedBlockOwner = normalizedUserEmail
+    ? getBlockOwners().find(
+        (o) =>
+          o.email?.trim().toLowerCase() === normalizedUserEmail &&
+          o.createdByBlockLeader === true,
+      )
+    : undefined;
+  const isCreatedByBlockLeader = Boolean(matchedBlockOwner);
+  const assignedLeaderBlock = matchedBlockOwner
+    ? getStoredBlocks().find((b) => b.id === matchedBlockOwner.blockId)
+    : undefined;
 
   // Build categorized button sections according to the active role
   const getSectionsForRole = (role: string): AppSection[] => {
@@ -456,123 +480,86 @@ export function DashboardPage() {
       case 'BLOCK_LEADER':
         return [
           {
-            title: 'VÉRIFICATION TERRAIN DES ANNONCES DE MON BLOC',
-            subtitle: 'Validation terrain vers APPROUVÉ BLOC, correction ou refus avec motif explicite',
+            title: 'SECTEUR, PROPRIÉTAIRES & RAPPORT FINANCIER',
+            subtitle: 'Carte du secteur assigné, création/suivi des propriétaires et paiements locatifs mensuels',
             buttons: [
-              {
-                title: 'Annonces\nde mon Bloc',
-                icon: FileCheck,
-                colorClass: 'bg-gradient-to-tr from-cyan-600 to-blue-700 text-white',
-                glowClass: 'shadow-cyan-500/25',
-                to: '/quartier',
-                badge: 'VÉRIF. TERRAIN',
-                badgeBg: 'bg-yellow-400 text-black',
-              },
-              {
-                title: 'Approuver\nAnnonce Bloc',
-                icon: ShieldCheck,
-                colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-700 text-white',
-                glowClass: 'shadow-emerald-500/25',
-                to: '/quartier',
-                badge: 'APPROUVER',
-                badgeBg: 'bg-emerald-400 text-black',
-              },
-            ],
-          },
-          {
-            title: 'HABITANTS & PROPRIÉTAIRES DE MON BLOC',
-            subtitle: 'Recensement terrain, création des comptes propriétaires et suivi des cotisations',
-            buttons: [
-              {
-                title: 'Habitants &\nCotisations',
-                icon: Users,
-                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
-                glowClass: 'shadow-blue-500/25',
-                to: '/quartier',
-                badge: 'MARQUER PAYÉ',
-                badgeBg: 'bg-blue-300 text-black',
-              },
-              {
-                title: 'Créer un\nPropriétaire',
-                icon: UserCheck,
-                colorClass: 'bg-gradient-to-tr from-teal-600 to-cyan-700 text-white',
-                glowClass: 'shadow-teal-500/25',
-                to: '/quartier',
-                badge: 'IDENTIFIANTS',
-                badgeBg: 'bg-teal-300 text-black',
-              },
-              {
-                title: 'Ajouter une\nMaison / Habitant',
-                icon: Home,
-                colorClass: 'bg-gradient-to-tr from-indigo-600 to-violet-700 text-white',
-                glowClass: 'shadow-indigo-500/25',
-                to: '/quartier',
-                badge: '+ AJOUTER',
-                badgeBg: 'bg-indigo-300 text-black',
-              },
-            ],
-          },
-          {
-            title: 'SÉCURITÉ, SIGNALEMENTS & MESSAGERIE DU BLOC',
-            subtitle: 'Signalements de proximité et communication directe avec les habitants du bloc',
-            buttons: [
-              {
-                title: 'Signalements\nde mon Bloc',
-                icon: Flame,
-                colorClass: 'bg-gradient-to-tr from-red-600 to-rose-700 text-white',
-                glowClass: 'shadow-red-500/25',
-                to: '/quartier',
-                badge: 'SÉCURITÉ',
-                badgeBg: 'bg-red-500 text-white',
-              },
-              {
-                title: 'Signaler un\nIncident SOS',
-                icon: AlertTriangle,
-                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
-                glowClass: 'shadow-amber-500/25',
-                to: '/quartier',
-                badge: 'SOS',
-                badgeBg: 'bg-amber-400 text-black',
-              },
-              {
-                title: 'Message aux\nHabitants du Bloc',
-                icon: MessageSquare,
-                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
-                glowClass: 'shadow-purple-500/25',
-                to: '/quartier',
-                badge: 'DIFFUSION',
-                badgeBg: 'bg-purple-300 text-black',
-              },
               {
                 title: 'Carte du\nSecteur',
                 icon: Globe,
                 colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
                 glowClass: 'shadow-slate-500/25',
-                to: '/geo-map',
-                badge: 'CARTE',
+                to: '/quartier?tab=cartographie',
+                badge: 'MON BLOC',
                 badgeBg: 'bg-cyan-400 text-black',
+              },
+              {
+                title: 'Gestion des\nPropriétaires',
+                icon: UserCheck,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-cyan-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/quartier?tab=proprietaires',
+                badge: 'STATS & ID',
+                badgeBg: 'bg-teal-300 text-black',
+              },
+              {
+                title: 'Rapport Financier\ndes Propriétaires',
+                icon: Wallet,
+                colorClass: 'bg-gradient-to-tr from-emerald-600 to-green-700 text-white',
+                glowClass: 'shadow-emerald-500/25',
+                to: '/quartier?tab=rapport-financier',
+                badge: 'MENSUEL',
+                badgeBg: 'bg-emerald-300 text-black',
+              },
+              {
+                title: 'Habitants &\nCotisations',
+                icon: Users,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/quartier?tab=habitants',
+                badge: 'RECENSEMENT',
+                badgeBg: 'bg-blue-300 text-black',
               },
             ],
           },
           {
-            title: 'COMMUNICATION, COTISATIONS & COMMERCE',
-            subtitle: 'Messagerie du bloc, paiements Ikeepay et marketplace',
+            title: 'COMMUNICATION, SIGNALEMENT & PUBLICATIONS',
+            subtitle: 'Messagerie aux propriétaires, communication avec le Chef de Quartier et publications par catégorie',
             buttons: [
               {
-                title: 'Messagerie &\nRésidents',
+                title: 'Messagerie aux\nPropriétaires',
                 icon: MessageSquare,
-                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
-                glowClass: 'shadow-blue-500/25',
-                to: '/messages',
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/quartier?tab=messagerie-proprietaires',
+                badge: 'GROUPE / PRIVÉ',
+                badgeBg: 'bg-purple-300 text-black',
               },
               {
-                title: 'Cotisation\nIkeepay H2H',
-                icon: CreditCard,
-                colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
-                glowClass: 'shadow-emerald-500/30',
-                onClick: () => setIkeepayPayinOpen(true),
-                badge: 'MOBILE MONEY',
-                badgeBg: 'bg-emerald-400 text-black',
+                title: 'Message au\nChef de Quartier',
+                icon: Crown,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-purple-700 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/quartier?tab=messagerie-quartier',
+                badge: 'CHEFFERIE',
+                badgeBg: 'bg-indigo-300 text-black',
+              },
+              {
+                title: 'Signalement\nde mon Bloc',
+                icon: Flame,
+                colorClass: 'bg-gradient-to-tr from-red-600 to-rose-700 text-white',
+                glowClass: 'shadow-red-500/25',
+                to: '/quartier?tab=incidents',
+                badge: 'CHEF QUARTIER',
+                badgeBg: 'bg-red-400 text-white',
+              },
+              {
+                title: 'Publier une\nAnnonce',
+                icon: Plus,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-blue-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/quartier?tab=publier-annonce',
+                badge: 'CATÉGORIES',
+                badgeBg: 'bg-yellow-400 text-black',
               },
               {
                 title: 'Marketplace\nLocale',
@@ -580,13 +567,6 @@ export function DashboardPage() {
                 colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
                 glowClass: 'shadow-amber-500/25',
                 to: '/marketplace',
-              },
-              {
-                title: 'Notifications\ndu Bloc',
-                icon: Bell,
-                colorClass: 'bg-gradient-to-tr from-violet-600 to-fuchsia-700 text-white',
-                glowClass: 'shadow-violet-500/25',
-                to: '/notifications',
               },
             ],
           },
@@ -1301,13 +1281,28 @@ export function DashboardPage() {
                 glowClass: 'shadow-cyan-500/25',
                 to: '/utilities',
               },
-              {
-                title: 'Chefferie &\nQuartier',
-                icon: Crown,
-                colorClass: 'bg-gradient-to-tr from-purple-600 to-indigo-700 text-white',
-                glowClass: 'shadow-purple-500/25',
-                to: '/quartier',
-              },
+              ...(isCreatedByBlockLeader
+                ? [
+                    {
+                      title: 'Signaler Problème\nau Chef de Bloc',
+                      icon: AlertTriangle,
+                      colorClass: 'bg-gradient-to-tr from-red-600 to-rose-700 text-white',
+                      glowClass: 'shadow-red-500/25',
+                      onClick: () => setOwnerProblemModalOpen(true),
+                      badge: 'SECTEUR',
+                      badgeBg: 'bg-red-300 text-black',
+                    },
+                    {
+                      title: 'Messagerie avec\nChef de Bloc',
+                      icon: ShieldCheck,
+                      colorClass: 'bg-gradient-to-tr from-cyan-600 to-teal-700 text-white',
+                      glowClass: 'shadow-cyan-500/25',
+                      onClick: () => setOwnerMsgModalOpen(true),
+                      badge: 'DIRECT',
+                      badgeBg: 'bg-cyan-300 text-black',
+                    },
+                  ]
+                : []),
               {
                 title: 'Notifications\nde Gestion',
                 icon: Bell,
@@ -1649,6 +1644,101 @@ export function DashboardPage() {
         isOpen={ownerProblemModalOpen}
         onClose={() => setOwnerProblemModalOpen(false)}
       />
+
+      {/* Modal Messagerie Propriétaire -> Chef de Bloc */}
+      <Modal
+        open={ownerMsgModalOpen}
+        onOpenChange={(open) => {
+          setOwnerMsgModalOpen(open);
+          if (!open) setOwnerMsgSentNotice(false);
+        }}
+        title={`Messagerie avec mon Chef de Bloc (${assignedLeaderBlock?.leaderName || 'Chef de Bloc'})`}
+      >
+        <div className="space-y-4 text-xs">
+          <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3 space-y-0.5">
+            <p className="font-bold text-foreground">
+              Destinataire : {assignedLeaderBlock?.leaderName || 'Votre Chef de Bloc'}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Secteur : {assignedLeaderBlock?.name || matchedBlockOwner?.blockName || 'Bloc attribué'} • Email : {assignedLeaderBlock?.leaderEmail || 'chef.bloc@katdestate.immo'}
+            </p>
+          </div>
+
+          {/* Messages échangés */}
+          <div className="max-h-44 overflow-y-auto space-y-2 border border-border rounded-xl p-2.5 bg-muted/20">
+            {getHierarchyMessages()
+              .filter(
+                (m) =>
+                  (m.senderEmail === normalizedUserEmail && m.recipientType === 'BLOCK_LEADER') ||
+                  (m.recipientType === 'ALL_BLOCK_OWNERS' && m.blockId === matchedBlockOwner?.blockId) ||
+                  (m.recipientType === 'OWNER' && m.recipientEmail === normalizedUserEmail),
+              )
+              .map((m) => (
+                <div key={m.id} className="rounded-lg border border-border bg-background p-2 space-y-0.5">
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <strong className="text-foreground">{m.senderName}</strong>
+                    <span>{new Date(m.createdAt).toLocaleString('fr-FR')}</span>
+                  </div>
+                  <p className="font-semibold text-primary">{m.subject}</p>
+                  <p className="text-foreground">{m.body}</p>
+                </div>
+              ))}
+          </div>
+
+          {ownerMsgSentNotice && (
+            <p className="text-emerald-600 font-bold text-xs">
+              ✅ Message transmis à votre Chef de Bloc !
+            </p>
+          )}
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!ownerMsgBody.trim()) return;
+              sendHierarchyMessage({
+                senderEmail: normalizedUserEmail || '',
+                senderName: user?.displayName || matchedBlockOwner?.fullName || 'Propriétaire',
+                senderRole: 'OWNER',
+                recipientType: 'BLOCK_LEADER',
+                recipientEmail: assignedLeaderBlock?.leaderEmail || 'chef.bloc@katdestate.immo',
+                recipientName: assignedLeaderBlock?.leaderName || 'Chef de Bloc',
+                blockId: matchedBlockOwner?.blockId,
+                blockName: assignedLeaderBlock?.name || matchedBlockOwner?.blockName,
+                subject: ownerMsgSubject.trim() || 'Message du propriétaire',
+                body: ownerMsgBody.trim(),
+              });
+              setOwnerMsgSubject('');
+              setOwnerMsgBody('');
+              setOwnerMsgSentNotice(true);
+            }}
+            className="space-y-2.5"
+          >
+            <input
+              type="text"
+              placeholder="Objet du message..."
+              value={ownerMsgSubject}
+              onChange={(e) => setOwnerMsgSubject(e.target.value)}
+              className="w-full h-9 rounded-xl border border-input bg-background px-3 text-xs"
+            />
+            <textarea
+              rows={3}
+              required
+              placeholder="Écrivez votre message à votre Chef de Bloc..."
+              value={ownerMsgBody}
+              onChange={(e) => setOwnerMsgBody(e.target.value)}
+              className="w-full rounded-xl border border-input bg-background p-2.5 text-xs"
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOwnerMsgModalOpen(false)}>
+                Fermer
+              </Button>
+              <Button type="submit" size="sm" className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold">
+                Envoyer au Chef de Bloc
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
 
       <IkeepayModal
         isOpen={ikeepayPayinOpen}
