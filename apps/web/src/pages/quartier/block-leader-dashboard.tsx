@@ -493,10 +493,11 @@ export function BlockLeaderDashboard() {
     }
     const newItem: WorkflowListingItem = {
       _id: `lst-blk-${Date.now()}`,
-      title: pubTitle.trim(),
+      title: `[${pubCategory}] ${pubTitle.trim()}`,
       description: pubDescription.trim() || `${pubCategory} disponible dans le secteur ${activeBlock.name}`,
       category: pubCategory === 'Maison en Carabot' ? 'CARABOT' : 'CLASSIQUE',
-      listingType: pubCategory === 'Terrain' ? 'TERRAIN' : 'LOCATION',
+      propertyType: pubCategory,
+      transactionType: pubCategory === 'Terrain' ? 'SALE' : 'RENT',
       priceMinor: Number(pubPrice) || 50000,
       currency: 'FCFA',
       surfaceM2: Number(pubSurface) || 30,
