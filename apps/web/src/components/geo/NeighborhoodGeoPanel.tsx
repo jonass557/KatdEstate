@@ -23,6 +23,7 @@ import {
 } from '@rentflow/shared';
 import { getPreciseUserLocation } from '../../lib/geo/geolocation-helper';
 import {
+  fetchRealPlaceBoundary,
   reverseGeocodeWithNominatim,
   searchAddressWithNominatim,
 } from '../../lib/geo/nominatim-geocoder';
@@ -162,43 +163,108 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
   const handleAutoDelimitFromGps = async (targetMode: 'EDIT_NEIGHBORHOOD' | 'CREATE_BLOCK') => {
     setIsAutoDelimitingGps(true);
     try {
-      const loc = await getPreciseUserLocation();
+      const loc = await getPreciseUserLocation({ requireRealGps: true });
       let geocode: any = null;
       try {
         geocode = await reverseGeocodeWithNominatim(loc.lat, loc.lng);
       } catch {}
 
+      const detectedCity = geocode?.city || '';
+      const detectedNeigh = geocode?.neighborhood || '';
+
       if (targetMode === 'EDIT_NEIGHBORHOOD' && geocode) {
         if (geocode.country) setCountryName(geocode.country);
-        if (geocode.city) setCityName(geocode.city);
-        if (geocode.neighborhood) {
-          setNeighborhoodLabel(geocode.neighborhood);
-          setZoneCustomName(geocode.neighborhood);
+        if (detectedCity) setCityName(detectedCity);
+        if (detectedNeigh) {
+          setNeighborhoodLabel(detectedNeigh);
+          setZoneCustomName(detectedNeigh);
+        } else if (detectedCity) {
+          setNeighborhoodLabel(detectedCity);
+          setZoneCustomName(detectedCity);
         }
         if (geocode.address) setAdminAddress(geocode.address);
         if (geocode.region) setRegionName(geocode.region);
         if (geocode.department) setDepartmentName(geocode.department);
-        if (geocode.arrondissement || geocode.city) {
-          setArrondissementName(geocode.arrondissement || geocode.city);
+        if (geocode.arrondissement || detectedCity) {
+          setArrondissementName(geocode.arrondissement || detectedCity);
         }
       }
 
-      const radius = targetMode === 'EDIT_NEIGHBORHOOD' ? Math.max(autoRadiusMeters, 300) : Math.min(autoRadiusMeters, 350);
+      const radius =
+        targetMode === 'EDIT_NEIGHBORHOOD'
+          ? Math.max(autoRadiusMeters, 300)
+          : Math.min(autoRadiusMeters, 350);
       const poly = buildAutoPolygonAroundPoint(loc.lat, loc.lng, radius);
       setMapMode(targetMode);
       setDraftBoundary(poly);
-      setGpsFocusTarget({ boundary: poly, key: `gps-auto-${Date.now()}` });
-
-      toast({
-        title: 'GPS acquis & délimitation automatique générée !',
-        description: `Coordonnées : ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)} (rayon ±${radius} m). Vous pouvez ajuster ou enregistrer les limites.`,
-        variant: 'success',
+      setGpsFocusTarget({
+        boundary: poly,
+        lat: loc.lat,
+        lng: loc.lng,
+        zoom: 16,
+        key: `gps-auto-${Date.now()}`,
       });
+
+      const isCoarseNetwork = (loc.accuracy || 0) > 2500;
+      if (isCoarseNetwork) {
+        toast({
+          title: `Position réseau approximative (±${loc.accuracy} m)`,
+          description: `Votre appareil sans GPS satellite a renvoyé le nœud réseau (${detectedCity || `${loc.lat}, ${loc.lng}`}). Activez le GPS sur téléphone ou saisissez votre ville (ex: Mbanga) ci-dessous puis cliquez sur « Délimiter cette zone ».`,
+          variant: 'info',
+        });
+      } else {
+        toast({
+          title: `GPS réel acquis (${detectedCity || 'Position exacte'}) !`,
+          description: `Position : ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)} (précision ±${loc.accuracy ?? 15} m). Délimitation générée sur votre position réelle.`,
+          variant: 'success',
+        });
+      }
     } catch (err: any) {
       toast({
-        title: 'Erreur GPS',
-        description: err?.message || 'Impossible de récupérer votre position GPS en temps réel.',
+        title: 'GPS réel indisponible',
+        description:
+          err?.message ||
+          'Impossible d’obtenir le signal GPS réel. Utilisez les champs Pays → Ville → Quartier pour délimiter votre zone réelle.',
         variant: 'error',
+      });
+    } finally {
+      setIsAutoDelimitingGps(false);
+    }
+  };
+
+  const handleAutoDelimitByEnteredPlace = async () => {
+    const queryParts = [neighborhoodLabel.trim(), cityName.trim(), countryName.trim()].filter(Boolean);
+    if (queryParts.length === 0) return;
+    setIsAutoDelimitingGps(true);
+    try {
+      const real = await fetchRealPlaceBoundary(queryParts.join(', '));
+      if (!real) {
+        toast({
+          title: 'Zone introuvable sur OpenStreetMap',
+          description: 'Vérifiez l’orthographe de la ville ou du quartier.',
+          variant: 'error',
+        });
+        return;
+      }
+      setMapMode('EDIT_NEIGHBORHOOD');
+      setDraftBoundary(real.boundary);
+      setGpsFocusTarget({
+        boundary: real.boundary,
+        lat: real.center.lat,
+        lng: real.center.lng,
+        zoom: 14,
+        key: `osm-real-${Date.now()}`,
+      });
+      if (real.geocode.department) setDepartmentName(real.geocode.department);
+      if (real.geocode.region) setRegionName(real.geocode.region);
+      if (real.geocode.address) setAdminAddress(real.geocode.address);
+      if (!zoneCustomName.trim()) {
+        setZoneCustomName(neighborhoodLabel.trim() || cityName.trim());
+      }
+      toast({
+        title: `Limites réelles chargées pour « ${queryParts[0]} » !`,
+        description: `Polygone réel OpenStreetMap affiché sur la carte (${real.center.lat.toFixed(4)}, ${real.center.lng.toFixed(4)}).`,
+        variant: 'success',
       });
     } finally {
       setIsAutoDelimitingGps(false);
@@ -827,7 +893,18 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
               onChange={(e) => setArrondissementName(e.target.value)}
             />
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={isAutoDelimitingGps}
+              onClick={() => void handleAutoDelimitByEnteredPlace()}
+              className="gap-1.5"
+            >
+              <LocateFixed className="size-4 text-emerald-500" />
+              Délimiter automatiquement cette ville / quartier
+            </Button>
             <Button
               size="sm"
               disabled={!draftBoundary || Boolean(validation.error) || saving}
