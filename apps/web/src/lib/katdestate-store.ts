@@ -793,6 +793,7 @@ export interface BlockOwnerRecord {
   status: 'ACTIVE' | 'INACTIVE';
   paymentStatus: 'PAID' | 'PENDING' | 'OVERDUE';
   createdAt: string;
+  createdByBlockLeader?: boolean | undefined;
 }
 
 export interface HabitantRecord {
@@ -1130,6 +1131,7 @@ const INITIAL_BLOCK_OWNERS: BlockOwnerRecord[] = [
     blockId: 'block-1',
     blockName: 'Bloc Riviera Palmeraie 2',
     neighborhoodId: 'neigh-cocody',
+    createdByBlockLeader: true,
     assignedBoundary: toGeoJsonPolygon([
       { lat: 5.362, lng: -3.988 },
       { lat: 5.362, lng: -3.983 },

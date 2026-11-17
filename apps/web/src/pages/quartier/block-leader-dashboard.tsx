@@ -275,6 +275,7 @@ export function BlockLeaderDashboard() {
       status: 'ACTIVE',
       paymentStatus: 'PAID',
       createdAt: new Date().toISOString(),
+      createdByBlockLeader: true,
     };
     saveBlockOwner(newO);
     refreshAll();

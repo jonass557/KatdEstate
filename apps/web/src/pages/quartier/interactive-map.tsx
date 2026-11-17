@@ -453,40 +453,50 @@ export function InteractiveQuartierMap() {
   const mapMarkers = useMemo<GeoMarkerOverlay[]>(() => {
     if (!showProperties) return [];
     return filteredProperties
-      .filter((p) => typeof p.latitude === 'number' && typeof p.longitude === 'number')
-      .map((p) => ({
-        id: p._id,
-        level: 'PROPERTY' as const,
-        title: p.name,
-        subtitle: p.geoUniqueId || p.address,
-        position: { lat: p.latitude!, lng: p.longitude! },
-        color: '#f59e0b',
-        propertyDetails: {
-          propertyId: p._id,
-          name: p.name,
-          type: p.customPropertyType || p.type || 'Bien Immobilier',
-          address: p.address,
-          city: p.city,
-          neighborhood: p.neighborhoodName || p.zone || undefined,
-          roomsCount: p.roomsCount || (p.chambreSimpleCount || 0) + (p.chambreModerneCount || 0) || undefined,
-          status: p.status,
-          currency: 'FCFA',
-        },
-        metadata: {
-          type: 'Bien Immobilier Géolocalisé',
-          identifiantGeo: p.geoUniqueId || p._id,
-          adresse: `${p.address}, ${p.city}`,
-          quartier: p.neighborhoodName || p.zone || '-',
-          bloc: p.sectorName || '-',
-          chefQuartier: p.neighborhoodLeaderName || '-',
-          chefBloc: p.blockLeaderName || '-',
-          coordonnees: `${p.latitude?.toFixed(6)}, ${p.longitude?.toFixed(6)}`,
-          statut: p.status,
-          propertyId: p._id,
-          latitude: p.latitude,
-          longitude: p.longitude,
-        },
-      }));
+      .filter((p) => {
+        const lat = typeof p.latitude === 'number' ? p.latitude : p.location?.coordinates?.[1];
+        const lng = typeof p.longitude === 'number' ? p.longitude : p.location?.coordinates?.[0];
+        return typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng);
+      })
+      .map((p) => {
+        const lat = typeof p.latitude === 'number' ? p.latitude : p.location!.coordinates[1];
+        const lng = typeof p.longitude === 'number' ? p.longitude : p.location!.coordinates[0];
+        return {
+          id: p._id,
+          level: 'PROPERTY' as const,
+          title: p.name,
+          subtitle: p.geoUniqueId || p.address,
+          position: { lat, lng },
+          color: '#f59e0b',
+          propertyDetails: {
+            propertyId: p._id,
+            name: p.name,
+            type: p.customPropertyType || p.type || 'Bien Immobilier',
+            address: p.address,
+            city: p.city,
+            country: p.country,
+            neighborhood: p.neighborhoodName || p.zone || undefined,
+            roomsCount: p.roomsCount || (p.chambreSimpleCount || 0) + (p.chambreModerneCount || 0) || undefined,
+            status: p.status,
+            photoUrl: (p as any).mainPhotoUrl || (p as any).photos?.[0],
+            currency: 'FCFA',
+          },
+          metadata: {
+            type: 'Bien Immobilier Géolocalisé',
+            identifiantGeo: p.geoUniqueId || p._id,
+            adresse: `${p.address}, ${p.city}`,
+            quartier: p.neighborhoodName || p.zone || '-',
+            bloc: p.sectorName || '-',
+            chefQuartier: p.neighborhoodLeaderName || '-',
+            chefBloc: p.blockLeaderName || '-',
+            coordonnees: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+            statut: p.status,
+            propertyId: p._id,
+            latitude: lat,
+            longitude: lng,
+          },
+        };
+      });
   }, [filteredProperties, showProperties]);
 
   const auditLogs: GeoAuditRecord[] = useMemo(() => getGeoAuditLogsLocal().slice(0, 15), []);

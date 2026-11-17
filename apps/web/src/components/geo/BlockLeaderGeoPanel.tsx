@@ -353,6 +353,7 @@ export function BlockLeaderGeoPanel({ activeBlockId, onDataChanged }: BlockLeade
           status: 'ACTIVE',
           paymentStatus: 'PAID',
           createdAt: new Date().toISOString(),
+          createdByBlockLeader: true,
         };
         saveBlockOwner(created);
         setLastCreatedOwner(created);

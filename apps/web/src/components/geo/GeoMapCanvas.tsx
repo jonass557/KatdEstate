@@ -366,10 +366,10 @@ export function GeoMapCanvas({
       // Popup Leaflet complet conforme aux exigences
       const propId = propertyDetails?.propertyId || markerOverlay.id;
       const popupContent = document.createElement('div');
-      popupContent.className = 'p-1 space-y-2 text-xs font-sans max-w-[260px]';
+      popupContent.className = 'p-1 space-y-2 text-xs font-sans max-w-[270px]';
 
       const photoHtml = propertyDetails?.photoUrl
-        ? `<img src="${propertyDetails.photoUrl}" alt="${mTitle}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-bottom: 6px;" />`
+        ? `<img src="${propertyDetails.photoUrl}" alt="${mTitle}" style="width: 100%; height: 115px; object-fit: cover; border-radius: 8px; margin-bottom: 6px;" />`
         : `<div style="width: 100%; height: 60px; background: #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 11px; margin-bottom: 6px;">Propriété DOMORA</div>`;
 
       const priceHtml = propertyDetails?.priceMinor
@@ -380,16 +380,26 @@ export function GeoMapCanvas({
         ? `<span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${propertyDetails.roomsCount} pièces</span>`
         : '';
 
+      const geoInfo = [propertyDetails?.neighborhood, propertyDetails?.city, propertyDetails?.country]
+        .filter(Boolean)
+        .join(' • ');
+
+      const statusBadge = propertyDetails?.status
+        ? `<span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">${propertyDetails.status}</span>`
+        : '';
+
       popupContent.innerHTML = `
         ${photoHtml}
         <div>
-          <div style="font-weight: 700; font-size: 13px; color: #0f172a; line-height: 1.2;">${mTitle}</div>
+          <div style="font-weight: 800; font-size: 13px; color: #0f172a; line-height: 1.2;">${mTitle}</div>
           <div style="color: #64748b; font-size: 11px; margin-top: 2px;">${mSubtitle || propertyDetails?.address || ''}</div>
+          ${geoInfo ? `<div style="color: #059669; font-size: 10px; font-weight: 600; margin-top: 2px;">📍 ${geoInfo}</div>` : ''}
         </div>
         ${priceHtml}
-        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
           ${roomsHtml}
-          ${propertyDetails?.type ? `<span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 10px;">${propertyDetails.type}</span>` : ''}
+          ${propertyDetails?.type ? `<span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 500;">${propertyDetails.type}</span>` : ''}
+          ${statusBadge}
         </div>
         <div style="display: flex; gap: 6px; padding-top: 6px; border-top: 1px solid #e2e8f0;">
           <button id="btn-details-${propId}" style="flex: 1; padding: 6px 8px; font-size: 11px; font-weight: 600; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; color: #334155;">

@@ -169,7 +169,7 @@ export function PropertiesPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
-  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [view, setView] = useState<'grid' | 'list' | 'map'>('grid');
   const [page, setPage] = useState(1);
   const [delegatingProperty, setDelegatingProperty] = useState<Property | null>(null);
   const [deletingProperty, setDeletingProperty] = useState<Property | null>(null);
@@ -224,6 +224,14 @@ export function PropertiesPage() {
 
     return result;
   }, [data?.data, localProps, search, status, selectedZone]);
+
+  const propertiesWithCoords = useMemo(() => {
+    return allProperties.filter((p) => {
+      const lat = typeof p.latitude === 'number' ? p.latitude : p.location?.coordinates?.[1];
+      const lng = typeof p.longitude === 'number' ? p.longitude : p.location?.coordinates?.[0];
+      return typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng);
+    });
+  }, [allProperties]);
 
   // Statistiques de composition et de zones calculées en temps réel
   const stats = useMemo(() => {
@@ -530,7 +538,17 @@ export function PropertiesPage() {
           </Button>
         )}
 
-        <div className="ml-auto flex gap-1">
+        <div className="ml-auto flex items-center gap-1">
+          <Button
+            variant={view === 'map' ? 'secondary' : 'ghost'}
+            onClick={() => setView('map')}
+            aria-label="Vue carte"
+            title="Afficher mes propriétés géolocalisées sur la carte interactive"
+            className="gap-1.5"
+          >
+            <MapPin className="size-4 text-amber-500" />
+            <span className="hidden sm:inline text-xs font-semibold">Carte ({propertiesWithCoords.length})</span>
+          </Button>
           <Button
             variant={view === 'list' ? 'secondary' : 'ghost'}
             onClick={() => setView('list')}
@@ -548,18 +566,66 @@ export function PropertiesPage() {
         </div>
       </div>
 
-      {isLoading && allProperties.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Chargement…</p>
-      ) : null}
+      {view === 'map' ? (
+        <div className="space-y-3">
+          <Card className="p-4 border-border bg-card">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                  <MapPin className="size-4 text-amber-500" />
+                  Cartographie de vos biens immobiliers ({propertiesWithCoords.length} géolocalisé{propertiesWithCoords.length > 1 ? 's' : ''})
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Cliquez sur n'importe quel point orange pour ouvrir sa fiche complète (nom, localisation, pièces, prix) et démarrer la navigation GPS « Y aller ».
+                </p>
+              </div>
+            </div>
+            <GeoMapCanvas
+              title="Patrimoine immobilier géolocalisé"
+              subtitle="OpenStreetMap & Satellite — Cliquez sur un point pour ouvrir la popup avec photo, adresse et calcul d'itinéraire"
+              heightClassName="h-[520px]"
+              markers={propertiesWithCoords.map((p) => {
+                const lat = typeof p.latitude === 'number' ? p.latitude : p.location!.coordinates[1];
+                const lng = typeof p.longitude === 'number' ? p.longitude : p.location!.coordinates[0];
+                return {
+                  id: p._id,
+                  level: 'PROPERTY' as const,
+                  title: p.name,
+                  subtitle: [p.neighborhoodName, p.city, p.country].filter(Boolean).join(' • ') || p.address,
+                  position: { lat, lng },
+                  color: '#f59e0b',
+                  propertyDetails: {
+                    propertyId: p._id,
+                    name: p.name,
+                    type: p.customPropertyType || p.type || 'Bien Immobilier',
+                    address: p.address,
+                    city: p.city,
+                    country: p.country,
+                    neighborhood: p.neighborhoodName || p.zone,
+                    roomsCount: p.roomsCount || (p.chambreSimpleCount || 0) + (p.chambreModerneCount || 0),
+                    status: p.status,
+                    photoUrl: (p as any).mainPhotoUrl || (p as any).photos?.[0],
+                    currency: 'FCFA',
+                  },
+                };
+              })}
+            />
+          </Card>
+        </div>
+      ) : (
+        <>
+          {isLoading && allProperties.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Chargement…</p>
+          ) : null}
 
-      {!isLoading && allProperties.length === 0 ? (
-        <EmptyState
-          title="Aucune propriété trouvée"
-          description="Enregistrez votre première propriété avec sa composition détaillée (chambres, studios, appartements)."
-        />
-      ) : null}
+          {!isLoading && allProperties.length === 0 ? (
+            <EmptyState
+              title="Aucune propriété trouvée"
+              description="Enregistrez votre première propriété avec sa composition détaillée (chambres, studios, appartements)."
+            />
+          ) : null}
 
-      <div className={view === 'grid' ? 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'space-y-3'}>
+          <div className={view === 'grid' ? 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'space-y-3'}>
         {allProperties.map((property) => {
           const chSimple = property.chambreSimpleCount ?? property.roomsCount ?? 0;
           const chModerne = property.chambreModerneCount ?? 0;
@@ -688,6 +754,8 @@ export function PropertiesPage() {
           );
         })}
       </div>
+      </>
+      )}
 
       {/* Modal Délégation */}
       {delegatingProperty && (
@@ -1725,12 +1793,47 @@ export function PropertyDetailPage() {
             </div>
           </div>
 
-          {(typeof p.latitude === 'number' || p.boundary) && (
+          {(typeof p.latitude === 'number' || typeof p.location?.coordinates?.[1] === 'number' || p.boundary) && (
             <GeoMapCanvas
-              heightClassName="h-[300px]"
+              title={`Cartographie de ${p.name}`}
+              subtitle="Cliquez sur le point GPS orange pour afficher la fiche complète et lancer le guidage GPS"
+              heightClassName="h-[340px]"
+              markers={
+                (typeof p.latitude === 'number' && typeof p.longitude === 'number') ||
+                (p.location?.coordinates && p.location.coordinates.length === 2)
+                  ? [
+                      {
+                        id: p._id,
+                        level: 'PROPERTY',
+                        title: p.name,
+                        subtitle: [p.neighborhoodName, p.city, p.country].filter(Boolean).join(' • ') || p.address,
+                        position: {
+                          lat: typeof p.latitude === 'number' ? p.latitude : p.location!.coordinates[1],
+                          lng: typeof p.longitude === 'number' ? p.longitude : p.location!.coordinates[0],
+                        },
+                        color: '#f59e0b',
+                        propertyDetails: {
+                          propertyId: p._id,
+                          name: p.name,
+                          type: p.customPropertyType || p.type || 'Bien Immobilier',
+                          address: p.address,
+                          city: p.city,
+                          country: p.country,
+                          neighborhood: p.neighborhoodName || p.zone,
+                          roomsCount: p.roomsCount || (p.chambreSimpleCount || 0) + (p.chambreModerneCount || 0),
+                          status: p.status,
+                          photoUrl: (p as any).mainPhotoUrl || (p as any).photos?.[0],
+                          currency: 'FCFA',
+                        },
+                      },
+                    ]
+                  : []
+              }
               activeMarker={
                 typeof p.latitude === 'number' && typeof p.longitude === 'number'
                   ? { lat: p.latitude, lng: p.longitude }
+                  : p.location?.coordinates
+                  ? { lat: p.location.coordinates[1], lng: p.location.coordinates[0] }
                   : null
               }
               overlays={[

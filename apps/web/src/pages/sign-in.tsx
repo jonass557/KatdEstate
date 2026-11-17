@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { loginSchema } from '@rentflow/shared';
 import {
@@ -79,7 +79,6 @@ const TEST_ACCOUNTS = [
 export function SignInPage() {
   const { signIn } = useSession();
   const navigate = useNavigate();
-  const location = useLocation();
   const [formError, setFormError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState, setError, setValue } = useForm<SignInValues>({
@@ -91,19 +90,8 @@ export function SignInPage() {
     setFormError(null);
 
     try {
-      const memberships = await signIn({ email: values.email, password: values.password });
-
-      const isTenant = memberships.some((m) => m.role === 'TENANT');
-      const isSuperAdmin = memberships.some((m) => (m as any).role === 'SUPER_ADMIN');
-
-      let destination = '/dashboard';
-      if (isTenant) destination = '/portal';
-      else if (isSuperAdmin) destination = '/dashboard';
-
-      const state = location.state as { from?: string } | null;
-      const validFrom =
-        state?.from && !['/', '/sign-in', '/register'].includes(state.from) ? state.from : null;
-      navigate(validFrom || destination, { replace: true });
+      await signIn({ email: values.email, password: values.password });
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         for (const detail of error.details ?? []) {
@@ -129,9 +117,8 @@ export function SignInPage() {
     setValue('password', 'Password123!');
     setFormError(null);
     try {
-      const memberships = await signIn({ email, password: 'Password123!' });
-      const isTenant = memberships.some((m) => m.role === 'TENANT');
-      navigate(isTenant ? '/portal' : '/dashboard', { replace: true });
+      await signIn({ email, password: 'Password123!' });
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
       setFormError(err?.message || 'Erreur de connexion');
     }

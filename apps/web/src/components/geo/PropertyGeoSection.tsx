@@ -76,20 +76,19 @@ export function PropertyGeoSection({
   const owners = useMemo(() => getBlockOwners(), []);
 
   // Détection du rattachement créé par un Chef de Bloc
+  // Un propriétaire est considéré créé par un chef de bloc UNIQUEMENT si son compte utilisateur a été certifié/enregistré par un chef de bloc
   const emailNorm = user?.email?.trim().toLowerCase();
-  const matchedOwnerRecord = useMemo(() => {
-    if (!emailNorm && !value.geoOwnerId) return undefined;
+  const blockLeaderOwnerRecord = useMemo(() => {
+    if (!emailNorm) return undefined;
     return owners.find(
-      (o) =>
-        (emailNorm && o.email?.trim().toLowerCase() === emailNorm) ||
-        (value.geoOwnerId && o.id === value.geoOwnerId),
+      (o) => o.email?.trim().toLowerCase() === emailNorm && o.createdByBlockLeader === true,
     );
-  }, [owners, emailNorm, value.geoOwnerId]);
+  }, [owners, emailNorm]);
 
   // Si le propriétaire a été créé par un Chef de Bloc, son compte et ses secteurs sont certifiés coutumièrement
-  const isCreatedByBlockLeader = Boolean(matchedOwnerRecord);
+  const isCreatedByBlockLeader = Boolean(blockLeaderOwnerRecord);
 
-  // Modifiable UNIQUEMENT si l'utilisateur est admin OU si le propriétaire s'est inscrit de lui-même sans intervention de chef de bloc
+  // Modifiable si l'utilisateur est admin OU si le propriétaire s'est inscrit de lui-même sans intervention de chef de bloc
   const canEditTerritory = isAdmin || !isCreatedByBlockLeader;
 
   const [latInput, setLatInput] = useState<string>(() => (typeof value.latitude === 'number' ? value.latitude.toString() : ''));
@@ -266,12 +265,19 @@ export function PropertyGeoSection({
 
   const handleSelectOwner = (ownerId: string) => {
     if (!canEditTerritory) return;
+    if (!ownerId) {
+      onChange({
+        ...value,
+        geoOwnerId: undefined,
+      });
+      return;
+    }
     const own = owners.find((o) => o.id === ownerId);
     const blk = own ? blocks.find((b) => b.id === own.blockId) : undefined;
     const neigh = blk ? neighborhoods.find((n) => n.id === blk.neighborhoodId) : undefined;
     onChange({
       ...value,
-      geoOwnerId: ownerId || undefined,
+      geoOwnerId: ownerId,
       blockId: blk?.id ?? value.blockId,
       sectorName: blk?.name ?? value.sectorName,
       blockLeaderName: blk?.leaderName ?? value.blockLeaderName,
@@ -293,19 +299,30 @@ export function PropertyGeoSection({
 
     if (hasCoords) {
       const pt: [number, number] = [value.longitude!, value.latitude!];
-      if (selectedOwner?.assignedBoundary) {
-        if (!isPointInsideBoundary(pt, selectedOwner.assignedBoundary, true)) {
-          outOfBoundsError = `La position du bien est hors du secteur attribué au propriétaire (${selectedOwner.fullName}).`;
+
+      // Règle stricte : si le propriétaire a été créé par un Chef de Bloc, sa position GPS doit obligatoirement coïncider avec le secteur enregistré
+      if (isCreatedByBlockLeader && blockLeaderOwnerRecord) {
+        if (blockLeaderOwnerRecord.assignedBoundary && !isPointInsideBoundary(pt, blockLeaderOwnerRecord.assignedBoundary, true)) {
+          outOfBoundsError = `Position GPS non conforme : En tant que propriétaire rattaché par votre Chef de Bloc, la position GPS doit obligatoirement coïncider avec votre secteur attribué (${blockLeaderOwnerRecord.blockName}).`;
+        } else if (selectedBlock?.boundary && !isPointInsideBoundary(pt, selectedBlock.boundary, true)) {
+          outOfBoundsError = `Position GPS non conforme : La position du bien sort des limites du bloc (${selectedBlock.name}) enregistré par votre Chef de Bloc.`;
         }
-      }
-      if (!outOfBoundsError && selectedBlock?.boundary) {
-        if (!isPointInsideBoundary(pt, selectedBlock.boundary, true)) {
-          outOfBoundsError = `La position du bien sort des limites du bloc (${selectedBlock.name}).`;
+      } else {
+        // Propriétaire autonome : validation selon secteur optionnellement choisi ou bloc
+        if (selectedOwner?.assignedBoundary) {
+          if (!isPointInsideBoundary(pt, selectedOwner.assignedBoundary, true)) {
+            outOfBoundsError = `La position du bien est hors du secteur sélectionné (${selectedOwner.fullName}).`;
+          }
         }
-      }
-      if (!outOfBoundsError && selectedNeighborhood?.boundary) {
-        if (!isPointInsideBoundary(pt, selectedNeighborhood.boundary, true)) {
-          outOfBoundsError = `La position du bien sort des limites du quartier (${selectedNeighborhood.name}).`;
+        if (!outOfBoundsError && selectedBlock?.boundary) {
+          if (!isPointInsideBoundary(pt, selectedBlock.boundary, true)) {
+            outOfBoundsError = `La position du bien sort des limites du bloc (${selectedBlock.name}).`;
+          }
+        }
+        if (!outOfBoundsError && selectedNeighborhood?.boundary) {
+          if (!isPointInsideBoundary(pt, selectedNeighborhood.boundary, true)) {
+            outOfBoundsError = `La position du bien sort des limites du quartier (${selectedNeighborhood.name}).`;
+          }
         }
       }
     }
@@ -482,8 +499,8 @@ export function PropertyGeoSection({
         )}
       </div>
 
-      {/* Alerte de statut : Créé par Chef de Bloc (Verrouillé) ou Inscription autonome (Modifiable) */}
-      {!canEditTerritory ? (
+      {/* Alerte de statut : Affichée UNIQUEMENT si le propriétaire a été créé par un Chef de Bloc (Verrouillé) */}
+      {!canEditTerritory && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
           <ShieldAlert className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
           <div className="space-y-0.5">
@@ -494,19 +511,11 @@ export function PropertyGeoSection({
               </span>
             </p>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Votre compte propriétaire a été créé par le Chef de Bloc du secteur{' '}
-              <strong className="text-foreground">{matchedOwnerRecord?.blockName || 'attribué'}</strong>.
-              Les champs <strong>Quartier (Niveau 1)</strong>, <strong>Bloc / Secteur (Niveau 2)</strong> et <strong>Secteur Propriétaire attribué</strong> sont certifiés et verrouillés.
-              Contactez votre Chef de Bloc ou l’administration pour toute modification de zone.
+              Votre compte propriétaire a été créé et rattaché au secteur{' '}
+              <strong className="text-foreground">{blockLeaderOwnerRecord?.blockName || 'attribué'}</strong> par votre Chef de Bloc.
+              Les champs <strong>Quartier (Niveau 1)</strong>, <strong>Bloc / Secteur (Niveau 2)</strong> et <strong>Secteur Propriétaire attribué</strong> sont verrouillés et votre position GPS doit obligatoirement coïncider avec ce secteur.
             </p>
           </div>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
-          <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          <p className="text-[11px] leading-relaxed">
-            <strong className="font-semibold">Inscription directe sans intermédiaire :</strong> Vous pouvez librement sélectionner et modifier votre Quartier (Niveau 1), votre Bloc (Niveau 2) et votre Secteur Propriétaire.
-          </p>
         </div>
       )}
 
@@ -572,7 +581,7 @@ export function PropertyGeoSection({
               !canEditTerritory ? 'opacity-70 cursor-not-allowed bg-muted/60 text-muted-foreground' : ''
             }`}
           >
-            <option value="">— Sélectionner un secteur propriétaire —</option>
+            <option value="">— Aucun (Optionnel / Propriétaire indépendant) —</option>
             {owners
               .filter((o) => !value.blockId || o.blockId === value.blockId)
               .map((o) => (
