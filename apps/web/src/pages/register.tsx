@@ -143,7 +143,7 @@ export function RegisterPage() {
     ROLES_LIST.some((r) => r.id === initialRole) ? initialRole : 'OWNER',
   );
   const [formError, setFormError] = useState<string | null>(null);
-  const { registerUser } = useSession();
+  const { registerUser, signOut } = useSession();
   const navigate = useNavigate();
 
   const { register, handleSubmit, formState, setError } = useForm<RegisterFormValues>({
@@ -168,20 +168,12 @@ export function RegisterPage() {
         role: selectedRole,
       });
 
-      // Redirection selon le rôle sélectionné
-      if (selectedRole === 'TENANT') {
-        navigate('/portal', { replace: true });
-      } else if (selectedRole === 'AGENT') {
-        navigate('/agent', { replace: true });
-      } else if (
-        selectedRole === 'NEIGHBORHOOD_LEADER' ||
-        selectedRole === 'BLOCK_LEADER' ||
-        selectedRole === 'RESIDENT'
-      ) {
-        navigate('/dashboard', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      // Déconnecter l'éventuelle session automatique afin que l'utilisateur se connecte explicitement sur la page login
+      await signOut();
+
+      navigate(`/sign-in?registered=1&email=${encodeURIComponent(values.email.trim())}`, {
+        replace: true,
+      });
     } catch (error) {
       if (error instanceof ApiError) {
         for (const detail of error.details ?? []) {

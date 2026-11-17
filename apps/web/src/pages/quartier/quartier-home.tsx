@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSession } from '../../app/session';
 import { BackButton } from '../../components/ui/back-button';
 import { ResidentPortal } from './resident-portal';
@@ -11,6 +12,8 @@ import { AdminQuartierPage } from './admin-quartier';
 export function QuartierHomePage() {
   const { user, memberships } = useSession();
   const userRole = memberships?.[0]?.role || (user as any)?.platformRole || 'RESIDENT';
+  const [searchParams] = useSearchParams();
+  const isolatedTab = searchParams.get('tab');
 
   const getDefaultView = (
     role: string,
@@ -31,6 +34,14 @@ export function QuartierHomePage() {
   const [activeView, setActiveView] = useState<
     'resident' | 'block-leader' | 'neighborhood-leader' | 'chefferie' | 'map' | 'admin'
   >(() => getDefaultView(userRole));
+
+  useEffect(() => {
+    if (isolatedTab && userRole === 'NEIGHBORHOOD_LEADER') {
+      setActiveView('neighborhood-leader');
+    }
+  }, [isolatedTab, userRole]);
+
+  const hideTopSwitchers = Boolean(isolatedTab && userRole === 'NEIGHBORHOOD_LEADER');
 
   return (
     <div className="space-y-6">
@@ -55,8 +66,9 @@ export function QuartierHomePage() {
           </p>
         </div>
 
-        {/* View Switcher Pills - Strictly filtered by role permissions */}
-        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border bg-card/80 p-1.5 text-xs shadow-sm">
+        {/* View Switcher Pills - Strictly hidden in isolated feature mode */}
+        {!hideTopSwitchers && (
+          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border bg-card/80 p-1.5 text-xs shadow-sm">
           {/* Chefferie & Foncier: Only for Super Admin & Neighborhood Leader */}
           {(userRole === 'SUPER_ADMIN' || userRole === 'NEIGHBORHOOD_LEADER') && (
             <button
@@ -155,6 +167,7 @@ export function QuartierHomePage() {
             </button>
           )}
         </div>
+        )}
       </div>
 
       {/* Render selected view */}

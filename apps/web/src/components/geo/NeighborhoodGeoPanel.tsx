@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   CheckCircle2,
+  Compass,
   Edit3,
   History,
   Layers,
+  LocateFixed,
+  Navigation,
   Plus,
   Power,
   ShieldAlert,
@@ -14,9 +17,12 @@ import {
   computePolygonAreaM2,
   doPolygonsOverlap,
   isPolygonInsidePolygon,
+  toGeoJsonPolygon,
   validatePolygonGeometry,
   type GeoJsonBoundary,
 } from '@rentflow/shared';
+import { getPreciseUserLocation } from '../../lib/geo/geolocation-helper';
+import { reverseGeocodeWithNominatim } from '../../lib/geo/nominatim-geocoder';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
@@ -87,6 +93,133 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
   const [saving, setSaving] = useState(false);
 
   const [clickedOverlay, setClickedOverlay] = useState<GeoPolygonOverlay | null>(null);
+
+  // États GPS Temps Réel & Délimitation Automatique
+  const [isAutoDelimitingGps, setIsAutoDelimitingGps] = useState(false);
+  const [autoRadiusMeters, setAutoRadiusMeters] = useState<number>(350);
+  const [gpsFocusTarget, setGpsFocusTarget] = useState<{
+    boundary?: GeoJsonBoundary | null;
+    key: string;
+  } | null>(null);
+  const [isRecordingWalk, setIsRecordingWalk] = useState(false);
+  const [walkPoints, setWalkPoints] = useState<Array<{ lat: number; lng: number }>>([]);
+  const walkWatchRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (walkWatchRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(walkWatchRef.current);
+      }
+    };
+  }, []);
+
+  const buildAutoPolygonAroundPoint = (lat: number, lng: number, radiusMeters: number): GeoJsonBoundary => {
+    const dLat = radiusMeters / 111320;
+    const dLng = radiusMeters / (111320 * Math.max(0.1, Math.cos((lat * Math.PI) / 180)));
+    const sides = 8;
+    const pts: Array<{ lat: number; lng: number }> = [];
+    for (let i = 0; i < sides; i++) {
+      const angle = (i * 2 * Math.PI) / sides;
+      pts.push({
+        lat: Number((lat + dLat * Math.sin(angle)).toFixed(6)),
+        lng: Number((lng + dLng * Math.cos(angle)).toFixed(6)),
+      });
+    }
+    return toGeoJsonPolygon(pts);
+  };
+
+  const handleAutoDelimitFromGps = async (targetMode: 'EDIT_NEIGHBORHOOD' | 'CREATE_BLOCK') => {
+    setIsAutoDelimitingGps(true);
+    try {
+      const loc = await getPreciseUserLocation();
+      let geocode: any = null;
+      try {
+        geocode = await reverseGeocodeWithNominatim(loc.lat, loc.lng);
+      } catch {}
+
+      if (targetMode === 'EDIT_NEIGHBORHOOD' && geocode) {
+        if (geocode.address) setAdminAddress(geocode.address);
+        if (geocode.region) setRegionName(geocode.region);
+        if (geocode.department) setDepartmentName(geocode.department);
+        if (geocode.arrondissement || geocode.city) {
+          setArrondissementName(geocode.arrondissement || geocode.city);
+        }
+      }
+
+      const radius = targetMode === 'EDIT_NEIGHBORHOOD' ? Math.max(autoRadiusMeters, 300) : Math.min(autoRadiusMeters, 350);
+      const poly = buildAutoPolygonAroundPoint(loc.lat, loc.lng, radius);
+      setMapMode(targetMode);
+      setDraftBoundary(poly);
+      setGpsFocusTarget({ boundary: poly, key: `gps-auto-${Date.now()}` });
+
+      toast({
+        title: 'GPS acquis & délimitation automatique générée !',
+        description: `Coordonnées : ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)} (rayon ±${radius} m). Vous pouvez ajuster ou enregistrer les limites.`,
+        variant: 'success',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Erreur GPS',
+        description: err?.message || 'Impossible de récupérer votre position GPS en temps réel.',
+        variant: 'error',
+      });
+    } finally {
+      setIsAutoDelimitingGps(false);
+    }
+  };
+
+  const toggleLiveGpsWalk = () => {
+    if (isRecordingWalk) {
+      if (walkWatchRef.current !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(walkWatchRef.current);
+        walkWatchRef.current = null;
+      }
+      setIsRecordingWalk(false);
+      toast({
+        title: 'Tracé GPS en temps réel arrêté',
+        description: `${walkPoints.length} point(s) enregistré(s) sur la carte.`,
+        variant: 'success',
+      });
+      return;
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      toast({ title: 'GPS non supporté sur cet appareil', variant: 'error' });
+      return;
+    }
+
+    if (mapMode === 'VIEW') {
+      setMapMode('EDIT_NEIGHBORHOOD');
+    }
+    setWalkPoints([]);
+    setIsRecordingWalk(true);
+    toast({
+      title: 'Mode Tracé GPS en marchant activé',
+      description: 'Déplacez-vous le long des limites de la zone : les points s’ajoutent automatiquement en temps réel.',
+    });
+
+    walkWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setWalkPoints((prev) => {
+          const last = prev[prev.length - 1];
+          if (last) {
+            const dist = Math.hypot((pt.lat - last.lat) * 111320, (pt.lng - last.lng) * 111320);
+            if (dist < 6) return prev;
+          }
+          const next = [...prev, pt];
+          if (next.length >= 3) {
+            const poly = toGeoJsonPolygon(next);
+            setDraftBoundary(poly);
+            setGpsFocusTarget({ boundary: poly, key: `walk-${next.length}` });
+          }
+          return next;
+        });
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 },
+    );
+  };
 
   const refreshLocal = () => {
     setNeighborhoods(getStoredNeighborhoods());
@@ -473,6 +606,55 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
         </div>
       </Card>
 
+      {/* Barre GPS Temps Réel & Délimitation Automatique */}
+      <Card className="p-3.5 border-emerald-500/30 bg-emerald-500/5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs">
+          <LocateFixed className="size-4 text-emerald-500 shrink-0" />
+          <div>
+            <p className="font-bold text-foreground">Délimitation GPS en Temps Réel & Automatique</p>
+            <p className="text-[11px] text-muted-foreground">
+              Activez votre GPS pour récupérer automatiquement les coordonnées de votre quartier et générer sa délimitation avec précision.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={autoRadiusMeters}
+            onChange={(e) => setAutoRadiusMeters(Number(e.target.value))}
+            className="h-8 rounded-lg border border-input bg-background px-2 text-xs font-semibold"
+            title="Rayon de délimitation automatique"
+          >
+            <option value={150}>Rayon 150 m (Bloc)</option>
+            <option value={350}>Rayon 350 m (Secteur)</option>
+            <option value={600}>Rayon 600 m (Quartier)</option>
+            <option value={1000}>Rayon 1 km (Grand Quartier)</option>
+          </select>
+
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={isAutoDelimitingGps}
+            onClick={() => void handleAutoDelimitFromGps(mapMode === 'CREATE_BLOCK' ? 'CREATE_BLOCK' : 'EDIT_NEIGHBORHOOD')}
+            className="h-8 text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white"
+          >
+            <Compass className={`size-3.5 ${isAutoDelimitingGps ? 'animate-spin' : ''}`} />
+            {isAutoDelimitingGps ? 'Localisation GPS...' : 'Activer GPS & Délimiter auto'}
+          </Button>
+
+          <Button
+            size="sm"
+            variant={isRecordingWalk ? 'danger' : 'outline'}
+            onClick={toggleLiveGpsWalk}
+            className="h-8 text-xs font-semibold gap-1.5"
+          >
+            <Navigation className={`size-3.5 ${isRecordingWalk ? 'animate-pulse' : ''}`} />
+            {isRecordingWalk
+              ? `Arrêter tracé GPS (${walkPoints.length} pts)`
+              : 'Tracé en marchant (Temps réel)'}
+          </Button>
+        </div>
+      </Card>
+
       {/* Formulaire contextuel selon le mode d'édition */}
       {mapMode === 'EDIT_NEIGHBORHOOD' && (
         <Card className="p-4 border-purple-500/30 space-y-3">
@@ -616,10 +798,12 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
         validationSuccess={validation.success}
         legendItems={legendItems}
         onOverlayClick={(overlay) => setClickedOverlay(overlay)}
-        focusTarget={{
-          boundary: activeNeighborhood.boundary ?? null,
-          key: `${activeNeighborhood.id}-${mapMode}`,
-        }}
+        focusTarget={
+          gpsFocusTarget ?? {
+            boundary: activeNeighborhood.boundary ?? null,
+            key: `${activeNeighborhood.id}-${mapMode}`,
+          }
+        }
       />
 
       {/* Fiche de détails au clic sur une zone */}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { loginSchema } from '@rentflow/shared';
 import {
@@ -79,11 +79,14 @@ const TEST_ACCOUNTS = [
 export function SignInPage() {
   const { signIn } = useSession();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const justRegistered = searchParams.get('registered') === '1';
+  const prefillEmail = searchParams.get('email') || '';
   const [formError, setFormError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState, setError, setValue } = useForm<SignInValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: prefillEmail, password: '' },
   });
 
   const onSubmit = handleSubmit(async (values) => {
@@ -160,6 +163,15 @@ export function SignInPage() {
 
         {/* Form Container */}
         <div className="rounded-3xl border border-slate-800 bg-slate-900/90 backdrop-blur-xl p-6 sm:p-8 shadow-2xl space-y-5">
+          {justRegistered && (
+            <div className="flex items-start gap-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 p-3.5 text-xs text-emerald-300">
+              <ShieldCheck className="size-4 shrink-0 text-emerald-400 mt-0.5" />
+              <span>
+                Compte créé avec succès ! Veuillez vous connecter avec vos identifiants pour accéder à votre tableau de bord.
+              </span>
+            </div>
+          )}
+
           {formError && (
             <div className="flex items-start gap-2.5 rounded-xl bg-destructive/15 border border-destructive/30 p-3.5 text-xs text-rose-300">
               <AlertCircle className="size-4 shrink-0 text-rose-400 mt-0.5" />

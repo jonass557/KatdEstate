@@ -1,15 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Award,
   Building,
-  CheckCircle2,
+  Building2,
   Copy,
   Crown,
   Download,
-  Edit3,
-  FileCheck,
-  FileText,
+  Home,
   KeyRound,
   MapPin,
   MessageSquare,
@@ -21,8 +20,8 @@ import {
   UserCheck,
   Users,
   Wallet,
-  XCircle,
 } from 'lucide-react';
+import type { GeoJsonBoundary } from '@rentflow/shared';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -30,49 +29,74 @@ import { Modal } from '../../components/ui/dialog';
 import { useToast } from '../../components/ui/toast';
 import { useSession } from '../../app/session';
 import { NeighborhoodGeoPanel } from '../../components/geo/NeighborhoodGeoPanel';
+import { GeoMapCanvas } from '../../components/geo/GeoMapCanvas';
+import { getLocalProperties, type Property } from '../properties';
 import {
   getBlockLeaders,
+  getBlockOwners,
   saveBlockLeader,
+  saveRegisteredUser,
   deleteBlockLeader,
   getStoredBlocks,
   createBlock,
+  updateStoredBlock,
   getStoredHabitants,
   reassignHabitantBlock,
   getWorkflowListings,
-  updateListingWorkflow,
-  deleteWorkflowListingPermanently,
-  saveWorkflowListings,
   getOfficialCertificates,
   saveOfficialCertificate,
   getStoredIncidents,
   type BlockLeaderRecord,
+  type BlockOwnerRecord,
   type BlockRecord,
   type HabitantRecord,
   type WorkflowListingItem,
   type OfficialCertificateRecord,
 } from '../../lib/katdestate-store';
 
+type LeaderTab =
+  | 'blocks'
+  | 'leaders'
+  | 'habitants'
+  | 'finances'
+  | 'attestations'
+  | 'broadcast'
+  | 'cartographie'
+  | 'incidents';
+
+const VALID_TABS: LeaderTab[] = [
+  'blocks',
+  'leaders',
+  'habitants',
+  'finances',
+  'attestations',
+  'broadcast',
+  'cartographie',
+  'incidents',
+];
+
 export function NeighborhoodLeaderDashboard() {
   const { user } = useSession();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab') as LeaderTab | null;
+  const isIsolatedMode = Boolean(urlTab && VALID_TABS.includes(urlTab));
 
-  const [activeTab, setActiveTab] = useState<
-    | 'overview'
-    | 'blocks'
-    | 'leaders'
-    | 'annonces'
-    | 'habitants'
-    | 'finances'
-    | 'attestations'
-    | 'broadcast'
-    | 'rapport'
-    | 'cartographie'
-    | 'incidents'
-  >('annonces');
+  const [activeTab, setActiveTab] = useState<LeaderTab>(() =>
+    urlTab && VALID_TABS.includes(urlTab) ? urlTab : 'leaders',
+  );
+
+  useEffect(() => {
+    if (urlTab && VALID_TABS.includes(urlTab)) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab]);
 
   // Local data states
   const [blocks, setBlocks] = useState<BlockRecord[]>(() => getStoredBlocks());
   const [leaders, setLeaders] = useState<BlockLeaderRecord[]>(() => getBlockLeaders());
+  const [owners, setOwners] = useState<BlockOwnerRecord[]>(() => getBlockOwners());
+  const [properties, setProperties] = useState<Property[]>(() => getLocalProperties());
   const [habitants, setHabitants] = useState<HabitantRecord[]>(() => getStoredHabitants());
   const [listings, setListings] = useState<WorkflowListingItem[]>(() => getWorkflowListings());
   const [certificates, setCertificates] = useState<OfficialCertificateRecord[]>(() =>
@@ -87,6 +111,8 @@ export function NeighborhoodLeaderDashboard() {
   const refreshAll = () => {
     setBlocks(getStoredBlocks());
     setLeaders(getBlockLeaders());
+    setOwners(getBlockOwners());
+    setProperties(getLocalProperties());
     setHabitants(getStoredHabitants());
     setListings(getWorkflowListings());
     setCertificates(getOfficialCertificates());
@@ -96,22 +122,20 @@ export function NeighborhoodLeaderDashboard() {
   const [newLeaderModalOpen, setNewLeaderModalOpen] = useState(false);
   const [newBlockModalOpen, setNewBlockModalOpen] = useState(false);
   const [newCertModalOpen, setNewCertModalOpen] = useState(false);
-  const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [editListingModalOpen, setEditListingModalOpen] = useState(false);
   const [reassignModalOpen, setReassignModalOpen] = useState(false);
 
   // Selected item states
-  const [selectedListing, setSelectedListing] = useState<WorkflowListingItem | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
   const [selectedHabitant, setSelectedHabitant] = useState<HabitantRecord | null>(null);
   const [reassignBlockId, setReassignBlockId] = useState('');
 
-  // Form states for new Leader
+  // Form states for new Leader (+ délimitation de zone sur carte)
   const [leaderName, setLeaderName] = useState('');
   const [leaderEmail, setLeaderEmail] = useState('');
   const [leaderPhone, setLeaderPhone] = useState('+225 ');
   const [leaderPassword, setLeaderPassword] = useState('ChefBloc2026!');
   const [leaderBlockId, setLeaderBlockId] = useState(blocks[0]?.id || 'block-1');
+  const [leaderNewZoneName, setLeaderNewZoneName] = useState('');
+  const [leaderBoundary, setLeaderBoundary] = useState<GeoJsonBoundary | null>(null);
 
   // Form states for new Block
   const [blockName, setBlockName] = useState('');
@@ -127,42 +151,87 @@ export function NeighborhoodLeaderDashboard() {
   const [plotNumber, setPlotNumber] = useState('');
   const [certSurface, setCertSurface] = useState(300);
 
-  // Form states for editing listing
-  const [editTitle, setEditTitle] = useState('');
-  const [editPrice, setEditPrice] = useState(0);
-  const [editSurface, setEditSurface] = useState(25);
-  const [editBedrooms, setEditBedrooms] = useState(1);
-  const [editDesc, setEditDesc] = useState('');
-
-  // Broadcast state
+  // Broadcast state (Envoi groupé à tous les blocs OU bloc précis)
+  const [broadcastTarget, setBroadcastTarget] = useState<string>('ALL');
   const [globalMessage, setGlobalMessage] = useState('');
+  const [sentBroadcasts, setSentBroadcasts] = useState<
+    Array<{ id: string; targetLabel: string; message: string; sentAt: string }>
+  >([]);
 
-  // 1. Action: Créer un Chef de Bloc
+  // 1. Action: Créer un Chef de Bloc (+ Identifiants + Zone délimitée sur la carte)
   const handleCreateLeader = (e: React.FormEvent) => {
     e.preventDefault();
     if (!leaderName.trim() || !leaderEmail.trim() || !leaderPassword.trim()) {
       toast({ title: 'Veuillez remplir le nom, email et mot de passe.', variant: 'error' });
       return;
     }
-    const b = blocks.find((item) => item.id === leaderBlockId) || blocks[0];
+
+    const emailClean = leaderEmail.trim().toLowerCase();
+    const passwordClean = leaderPassword.trim();
+
+    let targetBlock: BlockRecord | undefined;
+    if (leaderBlockId === '__new__') {
+      if (!leaderNewZoneName.trim()) {
+        toast({ title: 'Veuillez indiquer le nom de la nouvelle zone / bloc.', variant: 'error' });
+        return;
+      }
+      targetBlock = createBlock({
+        name: leaderNewZoneName.trim(),
+        code: `BLOC-${Math.floor(100 + Math.random() * 900)}`,
+        neighborhoodId: 'neigh-cocody',
+        neighborhoodName: 'Cocody Riviera Palmeraie',
+        leaderName: leaderName.trim(),
+        leaderEmail: emailClean,
+        leaderPhone: leaderPhone.trim(),
+        totalResidences: 0,
+        totalHabitants: 0,
+        boundary: leaderBoundary ?? undefined,
+      });
+    } else {
+      targetBlock = blocks.find((item) => item.id === leaderBlockId) || blocks[0];
+      if (targetBlock) {
+        updateStoredBlock(targetBlock.id, {
+          leaderName: leaderName.trim(),
+          leaderEmail: emailClean,
+          leaderPhone: leaderPhone.trim(),
+          ...(leaderBoundary ? { boundary: leaderBoundary } : {}),
+        });
+      }
+    }
+
     const newLdr: BlockLeaderRecord = {
       id: `ldr-${Date.now()}`,
       name: leaderName.trim(),
-      email: leaderEmail.trim().toLowerCase(),
+      email: emailClean,
       phone: leaderPhone.trim(),
-      password: leaderPassword.trim(),
-      blockId: b?.id || 'block-1',
-      blockName: b?.name || 'Bloc Riviera Palmeraie 2',
+      password: passwordClean,
+      blockId: targetBlock?.id || 'block-1',
+      blockName: targetBlock?.name || 'Bloc Riviera Palmeraie 2',
       neighborhoodId: 'neigh-cocody',
       neighborhoodName: 'Cocody',
       createdAt: new Date().toISOString(),
     };
     saveBlockLeader(newLdr);
+
+    // Enregistrer automatiquement les identifiants pour la connexion via /sign-in
+    saveRegisteredUser({
+      email: emailClean,
+      password: passwordClean,
+      displayName: leaderName.trim(),
+      role: 'BLOCK_LEADER',
+      phone: leaderPhone.trim(),
+      createdAt: new Date().toISOString(),
+    });
+
     refreshAll();
     setNewLeaderModalOpen(false);
+    setLeaderName('');
+    setLeaderEmail('');
+    setLeaderNewZoneName('');
+    setLeaderBoundary(null);
     toast({
-      title: 'Chef de Bloc créé avec succès !',
-      description: `${newLdr.name} peut se connecter avec ${newLdr.email} / ${newLdr.password}`,
+      title: 'Chef de Bloc créé avec ses identifiants !',
+      description: `${newLdr.name} peut se connecter sur /sign-in avec ${newLdr.email} / ${newLdr.password}`,
       variant: 'success',
     });
   };
@@ -198,93 +267,7 @@ export function NeighborhoodLeaderDashboard() {
     toast({ title: 'Nouveau bloc créé avec succès !', variant: 'success' });
   };
 
-  // 4. Action: Valider & Publier définitivement une annonce (APPROUVE_BLOC -> PUBLIE)
-  const handlePublishListing = (listingId: string) => {
-    updateListingWorkflow(listingId, {
-      workflowStatus: 'PUBLIE',
-      actorRole: 'NEIGHBORHOOD_LEADER',
-      actorName: user?.displayName || 'Nanan Kouamé N’Guessan (Chef de Quartier)',
-    });
-    refreshAll();
-    toast({
-      title: 'Annonce publiée en ligne !',
-      description:
-        'Le bien est désormais actif et visible par tous les visiteurs sur le site web et la Marketplace KatdEstate.',
-      variant: 'success',
-    });
-  };
-
-  // 5. Action: Refuser une annonce avec motif visible par l'habitant
-  const handleConfirmReject = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedListing || !rejectionReason.trim()) {
-      toast({ title: 'Veuillez préciser le motif du refus.', variant: 'error' });
-      return;
-    }
-    updateListingWorkflow(selectedListing._id, {
-      workflowStatus: 'REFUSE',
-      rejectionReason: rejectionReason.trim(),
-      actorRole: 'NEIGHBORHOOD_LEADER',
-      actorName: user?.displayName || 'Nanan Kouamé N’Guessan (Chef de Quartier)',
-    });
-    refreshAll();
-    setRejectModalOpen(false);
-    setRejectionReason('');
-    setSelectedListing(null);
-    toast({
-      title: 'Annonce rejetée',
-      description: 'Le motif de rejet est visible par l’habitant pour correction.',
-      variant: 'error',
-    });
-  };
-
-  // 6. Action: Modifier toute annonce du quartier
-  const handleOpenEdit = (listing: WorkflowListingItem) => {
-    setSelectedListing(listing);
-    setEditTitle(listing.title);
-    setEditPrice(listing.priceMinor);
-    setEditSurface(listing.surfaceM2 || 25);
-    setEditBedrooms(listing.bedrooms || 1);
-    setEditDesc(listing.description);
-    setEditListingModalOpen(true);
-  };
-
-  const handleSaveListingCorrection = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedListing) return;
-
-    const all = getWorkflowListings();
-    const idx = all.findIndex((l) => l._id === selectedListing._id);
-    if (idx >= 0 && all[idx]) {
-      const cur = all[idx]!;
-      all[idx] = {
-        ...cur,
-        title: editTitle.trim(),
-        priceMinor: Number(editPrice) || cur.priceMinor,
-        surfaceM2: Number(editSurface) || cur.surfaceM2,
-        bedrooms: Number(editBedrooms) || cur.bedrooms,
-        description: editDesc.trim(),
-        updatedAt: new Date().toISOString(),
-      };
-      saveWorkflowListings(all);
-      refreshAll();
-      setEditListingModalOpen(false);
-      toast({ title: 'Annonce mise à jour par la Chefferie', variant: 'success' });
-    }
-  };
-
-  // 7. Action: Supprimer / Archiver définitivement une annonce frauduleuse
-  const handleDeleteListing = (listingId: string, title: string) => {
-    if (
-      confirm(`Supprimer définitivement l’annonce "${title}" pour fraude ou fausse déclaration ?`)
-    ) {
-      deleteWorkflowListingPermanently(listingId);
-      refreshAll();
-      toast({ title: 'Annonce frauduleuse supprimée du système', variant: 'info' });
-    }
-  };
-
-  // 8. Action: Réassigner un habitant à un autre bloc
+  // 4. Action: Réassigner un habitant à un autre bloc
   const handleConfirmReassign = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedHabitant || !reassignBlockId) return;
@@ -301,7 +284,7 @@ export function NeighborhoodLeaderDashboard() {
     });
   };
 
-  // 9. Action: Créer une attestation / certificat officiel avec QR Code
+  // 5. Action: Créer une attestation / certificat officiel avec QR Code
   const handleCreateCertificate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!beneficiaryName.trim()) {
@@ -344,24 +327,76 @@ export function NeighborhoodLeaderDashboard() {
     });
   };
 
-  // 10. Action: Message global à tout le quartier
+  // 6. Action: Message groupé à tous les blocs OU ciblé vers un bloc précis
   const handleSendGlobalMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!globalMessage.trim()) return;
+
+    const targetBlock = blocks.find((b) => b.id === broadcastTarget);
+    const targetLabel =
+      broadcastTarget === 'ALL'
+        ? `Tous les blocs du quartier (${blocks.length} blocs)`
+        : `${targetBlock?.name || 'Bloc sélectionné'} (Chef : ${targetBlock?.leaderName || 'Non assigné'})`;
+
+    setSentBroadcasts((prev) => [
+      {
+        id: `msg-${Date.now()}`,
+        targetLabel,
+        message: globalMessage.trim(),
+        sentAt: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+
     toast({
-      title: 'Message diffusé à l’ensemble du Quartier !',
-      description: `Transmis à tous les ${blocks.length} blocs et ${habitants.length} habitants.`,
+      title: broadcastTarget === 'ALL' ? 'Message groupé diffusé à tous les blocs !' : `Message envoyé au ${targetBlock?.name || 'bloc'} !`,
+      description: `Destinataire : ${targetLabel}`,
       variant: 'success',
     });
     setGlobalMessage('');
   };
 
-  // Calculs financiers
-  const totalCotisations = habitants.reduce((sum, h) => sum + h.rentOrCotisationAmount, 0);
-  const totalPaid = habitants
-    .filter((h) => h.isPaid)
-    .reduce((sum, h) => sum + h.rentOrCotisationAmount, 0);
-  const totalUnpaid = totalCotisations - totalPaid;
+  // Calculs financiers : Loyers mensuels payés par les propriétaires de chaque chef de bloc
+  const totalOwnersRentExpected = owners.reduce((sum, o) => sum + (o.monthlyRentOrDues || 0), 0);
+  const totalOwnersRentPaid = owners
+    .filter((o) => o.paymentStatus === 'PAID')
+    .reduce((sum, o) => sum + (o.monthlyRentOrDues || 0), 0);
+  const totalOwnersRentPending = totalOwnersRentExpected - totalOwnersRentPaid;
+
+  const tabTitles: Record<LeaderTab, { title: string; subtitle: string }> = {
+    leaders: {
+      title: 'Gestion des Chefs de Bloc',
+      subtitle: 'Créez des chefs de bloc, délimitez leur zone d’intervention, générez leurs identifiants et consultez leurs propriétaires et propriétés.',
+    },
+    blocks: {
+      title: 'Blocs du Quartier',
+      subtitle: 'Liste des blocs et secteurs délimités dans le quartier.',
+    },
+    habitants: {
+      title: 'Habitants & Réassignation',
+      subtitle: 'Consultez les habitants recensés et réassignez-les entre les blocs du quartier.',
+    },
+    finances: {
+      title: 'Finances & Cotisations (Loyers des Propriétaires)',
+      subtitle: 'Suivi exclusif des loyers mensuels payés par les propriétaires de chaque Chef de Bloc.',
+    },
+    attestations: {
+      title: 'Attestations Coutumières QR',
+      subtitle: 'Délivrance, téléchargement et impression des actes coutumiers infalsifiables.',
+    },
+    broadcast: {
+      title: 'Message Global Quartier',
+      subtitle: 'Envoyez un message groupé à tous les blocs ou ciblez un bloc précis.',
+    },
+    cartographie: {
+      title: 'Cartographie & Zones Blocs (Temps Réel GPS)',
+      subtitle: 'Délimitez votre quartier par GPS automatique et tracez/affectez les zones de chaque bloc.',
+    },
+    incidents: {
+      title: 'Alertes & Incidents Escaladés',
+      subtitle: 'Signalements transmis par les Chefs de Bloc pour arbitrage coutumier.',
+    },
+  };
 
   return (
     <div className="space-y-6">
@@ -373,332 +408,116 @@ export function NeighborhoodLeaderDashboard() {
               👑
             </span>
             <h1 className="text-xl font-black tracking-tight text-foreground">
-              Dashboard Chef de Quartier (Autorité Coutumière)
+              {tabTitles[activeTab]?.title || 'Espace Chef de Quartier'}
             </h1>
             <span className="rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-bold text-purple-600 dark:text-purple-400 border border-purple-500/30">
-              Juridiction : TOUS LES BLOCS ({blocks.length} blocs)
+              {blocks.length} bloc(s) sous juridiction
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Supervision territoriale intégrale : Nomination des chefs de bloc, validation finale
-            des annonces, réassignation, délivrance des attestations et rapports.
+            {tabTitles[activeTab]?.subtitle}
           </p>
         </div>
 
-        {/* Rappel des permissions Chef de Quartier */}
         <div className="flex items-center gap-2 bg-muted/40 p-2.5 rounded-xl border border-border text-[11px] text-muted-foreground">
           <Shield className="h-4 w-4 text-purple-500 shrink-0" />
-          <span>
-            Périmètre étendu : Vous avez pleine autorité sur l'ensemble des blocs de votre
-            quartier.
-          </span>
+          <span>Périmètre : Autorité Coutumière du Quartier</span>
         </div>
       </div>
 
-      {/* Navigation Onglets */}
-      <div className="flex flex-wrap gap-2 border-b border-border pb-2 text-xs">
-        <button
-          type="button"
-          onClick={() => setActiveTab('annonces')}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
-            activeTab === 'annonces'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          <FileCheck className="h-4 w-4" />
-          <span>Validation des Annonces ({listings.length})</span>
-        </button>
+      {/* Navigation Onglets : MASQUÉE en mode isolé (lorsqu'on clique sur un bouton du dashboard) */}
+      {!isIsolatedMode && (
+        <div className="flex flex-wrap gap-2 border-b border-border pb-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab('leaders')}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
+              activeTab === 'leaders'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            <UserCheck className="h-4 w-4" />
+            <span>Chefs de Bloc ({leaders.length})</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('blocks')}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
-            activeTab === 'blocks'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          <Building className="h-4 w-4" />
-          <span>Tous les Blocs ({blocks.length})</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('cartographie')}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
+              activeTab === 'cartographie'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            <MapPin className="h-4 w-4" />
+            <span>Cartographie & Zones Blocs</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('leaders')}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
-            activeTab === 'leaders'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          <UserCheck className="h-4 w-4" />
-          <span>Chefs de Bloc ({leaders.length})</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('habitants')}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
+              activeTab === 'habitants'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span>Habitants & Réassignation ({habitants.length})</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('habitants')}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
-            activeTab === 'habitants'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          <Users className="h-4 w-4" />
-          <span>Habitants & Réassignation ({habitants.length})</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('finances')}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
+              activeTab === 'finances'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            <Wallet className="h-4 w-4" />
+            <span>Finances & Cotisations</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('finances')}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
-            activeTab === 'finances'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          <Wallet className="h-4 w-4" />
-          <span>Finances & Cotisations</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('attestations')}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
+              activeTab === 'attestations'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            <Award className="h-4 w-4" />
+            <span>Attestations Coutumières ({certificates.length})</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('attestations')}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
-            activeTab === 'attestations'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          <Award className="h-4 w-4" />
-          <span>Attestations Coutumières ({certificates.length})</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('broadcast')}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
+              activeTab === 'broadcast'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            <Send className="h-4 w-4" />
+            <span>Message Global Quartier</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('broadcast')}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
-            activeTab === 'broadcast'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          <Send className="h-4 w-4" />
-          <span>Message au Quartier</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('rapport')}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
-            activeTab === 'rapport'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          <FileText className="h-4 w-4" />
-          <span>Rapport Mensuel PDF</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('cartographie')}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
-            activeTab === 'cartographie'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          <MapPin className="h-4 w-4" />
-          <span>Cartographie & Zones Blocs</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('incidents')}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
-            activeTab === 'incidents'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          <AlertTriangle className="h-4 w-4" />
-          <span>Alertes & Incidents ({escalatedIncidents.length})</span>
-        </button>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* ONGLET 1 : VALIDATION FINALE DES ANNONCES DU QUARTIER */}
-      {/* ========================================================================= */}
-      {activeTab === 'annonces' && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/20 p-4 rounded-2xl border border-border">
-            <div>
-              <h2 className="text-sm font-bold text-foreground">
-                Validation Finale des Annonces du Quartier (Tous les Blocs)
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Passez les annonces approuvées par les chefs de bloc au statut{' '}
-                <strong className="text-emerald-500">PUBLIÉ</strong> pour mise en ligne sur le
-                site web, ou supprimez définitivement les annonces frauduleuses.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-lg bg-cyan-500/10 text-cyan-600 px-2.5 py-1 font-bold border border-cyan-500/20">
-                Prêtes pour publication ({listings.filter((l) => l.workflowStatus === 'APPROUVE_BLOC').length})
-              </span>
-              <span className="rounded-lg bg-emerald-500/10 text-emerald-600 px-2.5 py-1 font-bold border border-emerald-500/20">
-                En ligne ({listings.filter((l) => l.workflowStatus === 'PUBLIE').length})
-              </span>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((l) => {
-              const isCarabot = l.category === 'CARABOT';
-              return (
-                <Card
-                  key={l._id}
-                  className="overflow-hidden border border-border bg-card flex flex-col justify-between text-xs"
-                >
-                  <div className="space-y-2.5 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
-                          l.workflowStatus === 'EN_ATTENTE'
-                            ? 'bg-amber-500/20 text-amber-600 border border-amber-500/30'
-                            : l.workflowStatus === 'APPROUVE_BLOC'
-                              ? 'bg-cyan-500/20 text-cyan-600 border border-cyan-500/30'
-                              : l.workflowStatus === 'PUBLIE'
-                                ? 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/30'
-                                : 'bg-red-500/20 text-red-600 border border-red-500/30'
-                        }`}
-                      >
-                        {l.workflowStatus === 'EN_ATTENTE' && '⏳ En attente vérif terrain'}
-                        {l.workflowStatus === 'APPROUVE_BLOC' && '🛡️ Approuvé Bloc (À publier)'}
-                        {l.workflowStatus === 'PUBLIE' && '✅ Publié sur le site web'}
-                        {l.workflowStatus === 'REFUSE' && '❌ Rejeté'}
-                      </span>
-
-                      {isCarabot && (
-                        <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold text-amber-500 border border-amber-400/40">
-                          Maison en carabot
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Photos Preview */}
-                    <div className="grid grid-cols-2 gap-2 h-28">
-                      {l.photos?.slice(0, 2).map((p, idx) => (
-                        <div
-                          key={idx}
-                          className="relative h-full overflow-hidden rounded-xl bg-muted"
-                        >
-                          <img
-                            src={p.url}
-                            alt={l.title}
-                            className="h-full w-full object-cover"
-                          />
-                          <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-bold text-white">
-                            {p.label || (idx === 0 ? 'Extérieur' : 'Intérieur')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <h3 className="font-bold text-sm text-foreground line-clamp-1">{l.title}</h3>
-                    <p className="font-black text-purple-600 text-sm">
-                      {l.priceMinor.toLocaleString('fr-FR')} {l.currency}
-                      <span className="text-[10px] font-normal text-muted-foreground"> / mois</span>
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                      <span>Bloc : <strong>{l.location.blockName || 'Bloc Palmeraie 2'}</strong></span>
-                      <span>•</span>
-                      <span>Superficie : <strong>{l.surfaceM2 || 25} m²</strong></span>
-                      <span>•</span>
-                      <span>Chambres : <strong>{l.bedrooms || 1}</strong></span>
-                    </div>
-
-                    <p className="text-muted-foreground line-clamp-2 text-[11px]">
-                      {l.description}
-                    </p>
-
-                    <div className="pt-2 border-t border-border text-[11px] text-muted-foreground">
-                      <p>
-                        Déposant : <strong>{l.authorName || l.contact?.name}</strong>
-                      </p>
-                      {l.approvedByBlockLeaderName && (
-                        <p className="text-cyan-600">
-                          Terrain vérifié par : {l.approvedByBlockLeaderName}
-                        </p>
-                      )}
-                    </div>
-
-                    {l.workflowStatus === 'REFUSE' && l.rejectionReason && (
-                      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-2.5 text-[11px] text-red-500">
-                        <strong>Motif de rejet :</strong> {l.rejectionReason}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions Chef de Quartier */}
-                  <div className="p-3 border-t border-border bg-muted/10 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {l.workflowStatus !== 'PUBLIE' && (
-                        <Button
-                          size="sm"
-                          onClick={() => handlePublishListing(l._id)}
-                          className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-8 text-xs"
-                        >
-                          <CheckCircle2 className="size-3.5 mr-1" />
-                          Valider & Publier sur site
-                        </Button>
-                      )}
-
-                      {l.workflowStatus !== 'REFUSE' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedListing(l);
-                            setRejectModalOpen(true);
-                          }}
-                          className="text-red-500 border-red-500/30 hover:bg-red-500/10 h-8 text-xs"
-                        >
-                          <XCircle className="size-3.5 mr-1" />
-                          Refuser
-                        </Button>
-                      )}
-
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleOpenEdit(l)}
-                        className="h-8 text-xs inline-flex items-center gap-1"
-                      >
-                        <Edit3 className="size-3.5" />
-                        Modifier
-                      </Button>
-
-                      {/* Suppression définitive autorisée pour le Chef de Quartier */}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDeleteListing(l._id, l.title)}
-                        className="text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs inline-flex items-center gap-1"
-                        title="Suppression définitive réservée au Chef de Quartier"
-                      >
-                        <Trash2 className="size-3.5" />
-                        Supprimer
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('incidents')}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all ${
+              activeTab === 'incidents'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            <AlertTriangle className="h-4 w-4" />
+            <span>Alertes & Incidents ({escalatedIncidents.length})</span>
+          </button>
         </div>
       )}
 
@@ -774,80 +593,186 @@ export function NeighborhoodLeaderDashboard() {
             </Button>
           </div>
 
-          <div className="space-y-3">
-            {leaders.map((ldr) => (
-              <Card
-                key={ldr.id}
-                className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs border-purple-500/30 bg-purple-500/5"
-              >
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-foreground">{ldr.name}</span>
-                    <span className="rounded bg-purple-500/20 text-purple-600 px-2 py-0.5 text-[10px] font-bold">
-                      CHEF DE BLOC ACTIF
-                    </span>
+          <div className="space-y-4">
+            {leaders.map((ldr) => {
+              const blockOwnersList = owners.filter((o) => o.blockId === ldr.blockId);
+              const blockPropertiesList = properties.filter(
+                (p) =>
+                  p.blockId === ldr.blockId ||
+                  blockOwnersList.some((o) => o.id === p.geoOwnerId),
+              );
+              const blockListingsList = listings.filter(
+                (l) =>
+                  l.location?.blockId === ldr.blockId ||
+                  blockOwnersList.some((o) => o.id === l.authorId),
+              );
+
+              return (
+                <Card
+                  key={ldr.id}
+                  className="p-4 space-y-4 text-xs border-purple-500/30 bg-purple-500/5"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-foreground">{ldr.name}</span>
+                        <span className="rounded bg-purple-500/20 text-purple-600 px-2 py-0.5 text-[10px] font-bold">
+                          CHEF DE BLOC ACTIF
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground">
+                        Secteur sous responsabilité :{' '}
+                        <strong className="text-foreground">{ldr.blockName}</strong> • Tél :{' '}
+                        <strong>{ldr.phone}</strong>
+                      </p>
+
+                      <div className="inline-flex flex-wrap items-center gap-2 rounded-lg border border-purple-500/30 bg-background px-3 py-1.5 text-[11px]">
+                        <KeyRound className="size-3.5 text-purple-500" />
+                        <span>
+                          Email : <strong className="font-mono">{ldr.email}</strong>
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Mot de passe : <strong className="font-mono">{ldr.password}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 text-xs inline-flex items-center gap-1"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(
+                            `Identifiants Chef de Bloc KatdEstate\nEmail : ${ldr.email}\nMot de passe : ${ldr.password}\nSecteur : ${ldr.blockName}\nConnexion : ${window.location.origin}/sign-in`,
+                          );
+                          toast({ title: 'Identifiants copiés !', variant: 'success' });
+                        }}
+                      >
+                        <Copy className="size-3.5" />
+                        Copier
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white inline-flex items-center gap-1"
+                        onClick={() => {
+                          const cleanPhone = (ldr.phone || '').replace(/\D/g, '');
+                          const text = encodeURIComponent(
+                            `Bonjour ${ldr.name}, vous avez été nommé Chef de Bloc KatdEstate pour le ${ldr.blockName}.\n\nVos identifiants de connexion :\n- Email : ${ldr.email}\n- Mot de passe : ${ldr.password}\n- Lien : ${window.location.origin}/sign-in`,
+                          );
+                          window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+                        }}
+                      >
+                        <MessageSquare className="size-3.5" />
+                        WhatsApp
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteLeader(ldr.id, ldr.name)}
+                        className="text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs inline-flex items-center gap-1"
+                      >
+                        <Trash2 className="size-3.5" />
+                        Révoquer
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-muted-foreground">
-                    Secteur sous responsabilité :{' '}
-                    <strong className="text-foreground">{ldr.blockName}</strong> • Tél :{' '}
-                    <strong>{ldr.phone}</strong>
-                  </p>
 
-                  <div className="inline-flex flex-wrap items-center gap-2 rounded-lg border border-purple-500/30 bg-background px-3 py-1.5 text-[11px]">
-                    <KeyRound className="size-3.5 text-purple-500" />
-                    <span>
-                      Email : <strong className="font-mono">{ldr.email}</strong>
-                    </span>
-                    <span>•</span>
-                    <span>
-                      Mot de passe : <strong className="font-mono">{ldr.password}</strong>
-                    </span>
+                  {/* Propriétaires rattachés à ce Chef de Bloc & Propriétés publiées */}
+                  <div className="grid gap-3 md:grid-cols-2 border-t border-purple-500/20 pt-3">
+                    <div className="rounded-xl border border-border bg-background/80 p-3 space-y-2">
+                      <p className="font-bold text-foreground flex items-center gap-1.5">
+                        <Users className="size-3.5 text-cyan-500" />
+                        Propriétaires du bloc ({blockOwnersList.length})
+                      </p>
+                      {blockOwnersList.length === 0 ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Aucun propriétaire enregistré dans ce bloc pour le moment.
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                          {blockOwnersList.map((own) => (
+                            <div
+                              key={own.id}
+                              className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 p-2 text-[11px]"
+                            >
+                              <div>
+                                <p className="font-semibold text-foreground">{own.fullName}</p>
+                                <p className="text-muted-foreground">
+                                  {own.propertyName || 'Bien'} • {own.phone}
+                                </p>
+                              </div>
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  own.paymentStatus === 'PAID'
+                                    ? 'bg-emerald-500/20 text-emerald-600'
+                                    : 'bg-amber-500/20 text-amber-600'
+                                }`}
+                              >
+                                {own.paymentStatus === 'PAID' ? 'Payé' : 'En attente'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-background/80 p-3 space-y-2">
+                      <p className="font-bold text-foreground flex items-center gap-1.5">
+                        <Building2 className="size-3.5 text-amber-500" />
+                        Propriétés publiées par les propriétaires ({blockPropertiesList.length + blockListingsList.length})
+                      </p>
+                      {blockPropertiesList.length === 0 && blockListingsList.length === 0 ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Aucune propriété publiée dans ce bloc pour le moment.
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                          {blockPropertiesList.map((prop) => (
+                            <div
+                              key={prop._id}
+                              className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 p-2 text-[11px]"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Home className="size-3.5 text-amber-500 shrink-0" />
+                                <div className="truncate">
+                                  <p className="font-semibold text-foreground truncate">{prop.name}</p>
+                                  <p className="text-muted-foreground truncate">
+                                    {prop.address}, {prop.city}
+                                  </p>
+                                </div>
+                              </div>
+                              <Link
+                                to={`/properties/${prop._id}`}
+                                className="shrink-0 text-[10px] font-bold text-primary hover:underline ml-2"
+                              >
+                                Voir →
+                              </Link>
+                            </div>
+                          ))}
+                          {blockListingsList.map((lst) => (
+                            <div
+                              key={lst._id}
+                              className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 p-2 text-[11px]"
+                            >
+                              <div className="truncate">
+                                <p className="font-semibold text-foreground truncate">{lst.title}</p>
+                                <p className="text-muted-foreground truncate">
+                                  {lst.priceMinor.toLocaleString('fr-FR')} {lst.currency} • {lst.workflowStatus}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="h-8 text-xs inline-flex items-center gap-1"
-                    onClick={() => {
-                      void navigator.clipboard.writeText(
-                        `Identifiants Chef de Bloc KatdEstate\nEmail : ${ldr.email}\nMot de passe : ${ldr.password}\nSecteur : ${ldr.blockName}\nConnexion : ${window.location.origin}/sign-in`,
-                      );
-                      toast({ title: 'Identifiants copiés !', variant: 'success' });
-                    }}
-                  >
-                    <Copy className="size-3.5" />
-                    Copier
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white inline-flex items-center gap-1"
-                    onClick={() => {
-                      const cleanPhone = (ldr.phone || '').replace(/\D/g, '');
-                      const text = encodeURIComponent(
-                        `Bonjour ${ldr.name}, vous avez été nommé Chef de Bloc KatdEstate pour le ${ldr.blockName}.\n\nVos identifiants de connexion :\n- Email : ${ldr.email}\n- Mot de passe : ${ldr.password}\n- Lien : ${window.location.origin}/sign-in`,
-                      );
-                      window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
-                    }}
-                  >
-                    <MessageSquare className="size-3.5" />
-                    WhatsApp
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDeleteLeader(ldr.id, ldr.name)}
-                    className="text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs inline-flex items-center gap-1"
-                  >
-                    <Trash2 className="size-3.5" />
-                    Révoquer
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
@@ -917,68 +842,112 @@ export function NeighborhoodLeaderDashboard() {
       )}
 
       {/* ========================================================================= */}
-      {/* ONGLET 5 : FINANCES GLOBALES DU QUARTIER */}
+      {/* ONGLET 5 : FINANCES & COTISATIONS (LOYERS MENSUELS DES PROPRIÉTAIRES PAR CHEF DE BLOC) */}
       {/* ========================================================================= */}
       {activeTab === 'finances' && (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <Card className="p-4 border-border">
-              <p className="text-xs text-muted-foreground">Total Cotisations & Loyers Attendus</p>
+              <p className="text-xs text-muted-foreground">Total Loyers Mensuels Attendus (Propriétaires)</p>
               <p className="text-xl font-black text-foreground mt-1">
-                {totalCotisations.toLocaleString('fr-FR')} FCFA
+                {totalOwnersRentExpected.toLocaleString('fr-FR')} FCFA
               </p>
             </Card>
 
             <Card className="p-4 border-emerald-500/30 bg-emerald-500/5">
-              <p className="text-xs text-emerald-600 font-bold">Total Encaissé / Payé</p>
+              <p className="text-xs text-emerald-600 font-bold">Total Loyers Payés par les Propriétaires</p>
               <p className="text-xl font-black text-emerald-600 mt-1">
-                {totalPaid.toLocaleString('fr-FR')} FCFA
+                {totalOwnersRentPaid.toLocaleString('fr-FR')} FCFA
               </p>
             </Card>
 
             <Card className="p-4 border-amber-500/30 bg-amber-500/5">
-              <p className="text-xs text-amber-600 font-bold">Total En Retard / Impayé</p>
+              <p className="text-xs text-amber-600 font-bold">Reste à Percevoir</p>
               <p className="text-xl font-black text-amber-600 mt-1">
-                {totalUnpaid.toLocaleString('fr-FR')} FCFA
+                {totalOwnersRentPending.toLocaleString('fr-FR')} FCFA
               </p>
             </Card>
           </div>
 
-          <Card className="p-5 space-y-3">
-            <h3 className="text-sm font-bold text-foreground">
-              Ventilation par Bloc du Quartier
-            </h3>
-            <div className="space-y-2 text-xs">
-              {blocks.map((b) => {
-                const bHabitants = habitants.filter((h) => h.blockId === b.id);
-                const bTotal = bHabitants.reduce((s, h) => s + h.rentOrCotisationAmount, 0);
-                const bPaid = bHabitants
-                  .filter((h) => h.isPaid)
-                  .reduce((s, h) => s + h.rentOrCotisationAmount, 0);
-                return (
-                  <div
-                    key={b.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border"
-                  >
+          <div className="space-y-4">
+            {blocks.map((b) => {
+              const blockOwnersList = owners.filter((o) => o.blockId === b.id);
+              const blockLeader = leaders.find((l) => l.blockId === b.id);
+              const blockPaidTotal = blockOwnersList
+                .filter((o) => o.paymentStatus === 'PAID')
+                .reduce((s, o) => s + (o.monthlyRentOrDues || 0), 0);
+              const blockExpectedTotal = blockOwnersList.reduce(
+                (s, o) => s + (o.monthlyRentOrDues || 0),
+                0,
+              );
+
+              return (
+                <Card key={b.id} className="p-4 space-y-3 border-border">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2.5">
                     <div>
-                      <p className="font-bold text-foreground">{b.name}</p>
-                      <p className="text-muted-foreground text-[11px]">
-                        Chef : {b.leaderName || 'Non assigné'} • {bHabitants.length} habitants
+                      <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                        <Building className="size-4 text-purple-500" />
+                        {b.name} ({b.code})
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Chef de Bloc : <strong className="text-foreground">{blockLeader?.name || b.leaderName || 'Non assigné'}</strong> • {blockOwnersList.length} propriétaire(s)
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right text-xs">
                       <p className="font-black text-emerald-600">
-                        {bPaid.toLocaleString('fr-FR')} FCFA encaissés
+                        {blockPaidTotal.toLocaleString('fr-FR')} FCFA payés
                       </p>
                       <p className="text-[11px] text-muted-foreground">
-                        sur {bTotal.toLocaleString('fr-FR')} FCFA
+                        sur {blockExpectedTotal.toLocaleString('fr-FR')} FCFA attendus
                       </p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </Card>
+
+                  {blockOwnersList.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Aucun propriétaire enregistré pour ce Chef de Bloc.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {blockOwnersList.map((o) => (
+                        <div
+                          key={o.id}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-muted/20 p-2.5 text-xs"
+                        >
+                          <div>
+                            <p className="font-bold text-foreground">{o.fullName}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Bien : {o.propertyName || o.propertyType || 'Propriété'} • Tél : {o.phone}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-black text-foreground">
+                              {(o.monthlyRentOrDues || 0).toLocaleString('fr-FR')} FCFA / mois
+                            </span>
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                o.paymentStatus === 'PAID'
+                                  ? 'bg-emerald-500/20 text-emerald-600'
+                                  : o.paymentStatus === 'OVERDUE'
+                                    ? 'bg-red-500/20 text-red-600'
+                                    : 'bg-amber-500/20 text-amber-600'
+                              }`}
+                            >
+                              {o.paymentStatus === 'PAID'
+                                ? '✅ Payé'
+                                : o.paymentStatus === 'OVERDUE'
+                                  ? '❌ En retard'
+                                  : '⏳ En attente'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -1082,143 +1051,84 @@ export function NeighborhoodLeaderDashboard() {
       )}
 
       {/* ========================================================================= */}
-      {/* ONGLET 7 : MESSAGE GLOBAL À TOUT LE QUARTIER */}
+      {/* ONGLET 7 : MESSAGE GLOBAL OU CIBLÉ PAR BLOC */}
       {/* ========================================================================= */}
       {activeTab === 'broadcast' && (
-        <Card className="max-w-xl mx-auto p-5 space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <Crown className="size-4 text-purple-600" />
-              Communication Officielle du Chef de Quartier
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Ce message sera notifié à l'ensemble des chefs de bloc et des habitants de tous les
-              secteurs du quartier.
-            </p>
-          </div>
-
-          <form onSubmit={handleSendGlobalMessage} className="space-y-3 text-xs">
-            <textarea
-              rows={4}
-              value={globalMessage}
-              onChange={(e) => setGlobalMessage(e.target.value)}
-              placeholder="Ex : Chers administrés, suite aux travaux d'assainissement initiés par la mairie, une grande opération de salubrité publique aura lieu samedi..."
-              required
-              className="w-full rounded-xl border border-input bg-background p-3 text-xs"
-            />
-            <Button
-              type="submit"
-              disabled={!globalMessage.trim()}
-              className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold"
-            >
-              <Send className="size-4 mr-1.5" />
-              Diffuser à l'ensemble du quartier
-            </Button>
-          </form>
-        </Card>
-      )}
-
-      {/* ========================================================================= */}
-      {/* ONGLET 8 : RAPPORT MENSUEL PDF DU QUARTIER */}
-      {/* ========================================================================= */}
-      {activeTab === 'rapport' && (
-        <Card className="p-6 max-w-3xl mx-auto space-y-6 border-purple-500/30">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
-            <div>
-              <h2 className="text-lg font-black text-foreground">
-                Rapport Mensuel Officiel de la Chefferie Coutumière
+        <div className="max-w-2xl mx-auto space-y-4">
+          <Card className="p-5 space-y-4">
+            <div className="space-y-1">
+              <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Crown className="size-4 text-purple-600" />
+                Communication Officielle du Chef de Quartier
               </h2>
               <p className="text-xs text-muted-foreground">
-                Période : Novembre 2026 • Quartier Cocody
+                Envoyez un message groupé à tous les blocs que vous avez créés ou sélectionnez un bloc précis pour une instruction ciblée.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+
+            <form onSubmit={handleSendGlobalMessage} className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label className="font-semibold text-foreground">Destinataire(s) :</label>
+                <select
+                  value={broadcastTarget}
+                  onChange={(e) => setBroadcastTarget(e.target.value)}
+                  className="h-9 w-full rounded-xl border border-input bg-background px-3 text-xs font-medium"
+                >
+                  <option value="ALL">
+                    📢 Tous les blocs du quartier ({blocks.length} blocs — Envoi groupé)
+                  </option>
+                  {blocks.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      📌 {b.name} ({b.code}) — Chef : {b.leaderName || 'Non assigné'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-foreground">Contenu du message :</label>
+                <textarea
+                  rows={4}
+                  value={globalMessage}
+                  onChange={(e) => setGlobalMessage(e.target.value)}
+                  placeholder="Ex : Chers Chefs de Bloc et administrés, merci de prendre note des instructions suivantes..."
+                  required
+                  className="w-full rounded-xl border border-input bg-background p-3 text-xs"
+                />
+              </div>
+
               <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  const content = [
-                    'RAPPORT MENSUEL OFFICIEL DE LA CHEFFERIE COUTUMIÈRE',
-                    `Période : Novembre 2026`,
-                    `Blocs sous gestion : ${blocks.length}`,
-                    `Habitants recensés : ${habitants.length}`,
-                    `Annonces publiées : ${listings.filter((l) => l.status === 'PUBLISHED').length}`,
-                    `Attestations délivrées : ${certificates.length}`,
-                  ].join('\n');
-                  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = `rapport-mensuel-quartier-${new Date().toISOString().slice(0, 7)}.txt`;
-                  document.body.appendChild(link);
-                  link.click();
-                  link.remove();
-                  URL.revokeObjectURL(url);
-                }}
-                className="text-xs inline-flex items-center gap-1.5"
+                type="submit"
+                disabled={!globalMessage.trim()}
+                className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold"
               >
-                <Download className="size-4" />
-                Télécharger Rapport
+                <Send className="size-4 mr-1.5" />
+                {broadcastTarget === 'ALL'
+                  ? 'Diffuser le message groupé à tous les blocs'
+                  : 'Envoyer au bloc sélectionné'}
               </Button>
-              <Button
-                size="sm"
-                onClick={() => window.print()}
-                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs inline-flex items-center gap-1.5"
-              >
-                <Printer className="size-4" />
-                Imprimer / Enregistrer en PDF
-              </Button>
-            </div>
-          </div>
+            </form>
+          </Card>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
-            <div className="p-3 rounded-xl bg-muted/20 border border-border">
-              <p className="text-muted-foreground">Blocs Sous Gestion</p>
-              <p className="text-lg font-black text-foreground mt-0.5">{blocks.length}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-muted/20 border border-border">
-              <p className="text-muted-foreground">Habitants Recensés</p>
-              <p className="text-lg font-black text-foreground mt-0.5">{habitants.length}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-muted/20 border border-border">
-              <p className="text-muted-foreground">Annonces Publiées</p>
-              <p className="text-lg font-black text-foreground mt-0.5">
-                {listings.filter((l) => l.workflowStatus === 'PUBLIE').length}
-              </p>
-            </div>
-            <div className="p-3 rounded-xl bg-muted/20 border border-border">
-              <p className="text-muted-foreground">Incidents Enregistrés</p>
-              <p className="text-lg font-black text-foreground mt-0.5">{incidents.length}</p>
-            </div>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <h4 className="font-bold text-foreground">Bilan Financier et Cotisations</h4>
-            <div className="p-3 rounded-xl bg-muted/20 border border-border space-y-1">
-              <p>
-                Total des cotisations et loyers encaissés :{' '}
-                <strong className="text-emerald-600">{totalPaid.toLocaleString('fr-FR')} FCFA</strong>
-              </p>
-              <p>
-                Reste à recouvrer :{' '}
-                <strong className="text-amber-600">{totalUnpaid.toLocaleString('fr-FR')} FCFA</strong>
-              </p>
-              <p>
-                Taux de recouvrement du quartier :{' '}
-                <strong>
-                  {totalCotisations > 0
-                    ? `${Math.round((totalPaid / totalCotisations) * 100)}%`
-                    : '100%'}
-                </strong>
-              </p>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-border flex justify-between text-[11px] text-muted-foreground">
-            <span>Visé par la Chefferie Coutumière</span>
-            <span>Signature & Sceau du Chef de Quartier</span>
-          </div>
-        </Card>
+          {sentBroadcasts.length > 0 && (
+            <Card className="p-4 space-y-2.5 border-border">
+              <h3 className="text-xs font-bold text-foreground">Messages envoyés récemment</h3>
+              <div className="space-y-2">
+                {sentBroadcasts.map((m) => (
+                  <div key={m.id} className="rounded-xl border border-border bg-muted/20 p-3 text-xs space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-purple-600">{m.targetLabel}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(m.sentAt).toLocaleString('fr-FR')}
+                      </span>
+                    </div>
+                    <p className="text-foreground">{m.message}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* ========================================================================= */}
@@ -1336,7 +1246,7 @@ export function NeighborhoodLeaderDashboard() {
             </div>
           </div>
           <div>
-            <label className="font-semibold block mb-1">Bloc assigné *</label>
+            <label className="font-semibold block mb-1">Zone / Bloc d'intervention *</label>
             <select
               value={leaderBlockId}
               onChange={(e) => setLeaderBlockId(e.target.value)}
@@ -1344,17 +1254,56 @@ export function NeighborhoodLeaderDashboard() {
             >
               {blocks.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name} ({b.code})
+                  {b.name} ({b.code}) {b.boundary ? '• Zone délimitée' : ''}
                 </option>
               ))}
+              <option value="__new__">+ Créer & délimiter une nouvelle zone de bloc sur la carte</option>
             </select>
           </div>
+
+          {leaderBlockId === '__new__' && (
+            <div>
+              <label className="font-semibold block mb-1">Nom de la nouvelle zone / bloc *</label>
+              <Input
+                value={leaderNewZoneName}
+                onChange={(e) => setLeaderNewZoneName(e.target.value)}
+                placeholder="Ex: Bloc Riviera Nord"
+                required
+              />
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="font-semibold block">
+              Délimiter la zone d'intervention sur la carte (Cliquez pour tracer les sommets)
+            </label>
+            <GeoMapCanvas
+              title="Zone d'intervention du Chef de Bloc"
+              heightClassName="h-[240px]"
+              allowPolygonDraw={true}
+              activeBoundary={leaderBoundary}
+              onBoundaryChange={setLeaderBoundary}
+              overlays={blocks
+                .filter((b) => b.boundary)
+                .map((b) => ({
+                  id: b.id,
+                  level: 'BLOCK' as const,
+                  label: b.name,
+                  boundary: b.boundary!,
+                  color: b.color || '#06b6d4',
+                  fillOpacity: 0.12,
+                  strokeWeight: 2,
+                  locked: true,
+                }))}
+            />
+          </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setNewLeaderModalOpen(false)}>
               Annuler
             </Button>
             <Button type="submit" className="bg-purple-600 hover:bg-purple-500 text-white font-bold">
-              Nommer le Chef de Bloc
+              Créer Chef de Bloc & Identifiants
             </Button>
           </div>
         </form>
@@ -1506,98 +1455,6 @@ export function NeighborhoodLeaderDashboard() {
             </Button>
             <Button type="submit" className="bg-purple-600 hover:bg-purple-500 text-white font-bold">
               Délivrer et Générer QR Code
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* MODAL : MOTIF DE REJET */}
-      <Modal open={rejectModalOpen} onOpenChange={setRejectModalOpen} title="Refuser l'annonce (Motif visible par l'habitant)">
-        <form onSubmit={handleConfirmReject} className="space-y-3 text-xs">
-          <p className="text-muted-foreground">
-            Précisez le motif du refus. L'habitant verra ce motif pour corriger son annonce.
-          </p>
-          <div>
-            <label className="font-semibold block mb-1">Motif explicite du refus *</label>
-            <textarea
-              rows={4}
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Ex : Document de propriété incomplet ou litige en cours sur la parcelle..."
-              required
-              className="w-full rounded-xl border border-input bg-background p-3 text-xs"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setRejectModalOpen(false)}>
-              Annuler
-            </Button>
-            <Button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold">
-              Confirmer le refus
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* MODAL : MODIFIER UNE ANNONCE */}
-      <Modal
-        open={editListingModalOpen}
-        onOpenChange={setEditListingModalOpen}
-        title="Modifier l'annonce (Autorité Chefferie)"
-      >
-        <form onSubmit={handleSaveListingCorrection} className="space-y-3 text-xs">
-          <div>
-            <label className="font-semibold block mb-1">Titre de l'annonce</label>
-            <Input
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              required
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="font-semibold block mb-1">Prix mensuel (FCFA)</label>
-              <Input
-                type="number"
-                value={editPrice}
-                onChange={(e) => setEditPrice(Number(e.target.value))}
-                required
-              />
-            </div>
-            <div>
-              <label className="font-semibold block mb-1">Superficie (m²)</label>
-              <Input
-                type="number"
-                value={editSurface}
-                onChange={(e) => setEditSurface(Number(e.target.value))}
-                required
-              />
-            </div>
-            <div>
-              <label className="font-semibold block mb-1">Chambres</label>
-              <Input
-                type="number"
-                value={editBedrooms}
-                onChange={(e) => setEditBedrooms(Number(e.target.value))}
-                required
-              />
-            </div>
-          </div>
-          <div>
-            <label className="font-semibold block mb-1">Description</label>
-            <textarea
-              rows={3}
-              value={editDesc}
-              onChange={(e) => setEditDesc(e.target.value)}
-              className="w-full rounded-xl border border-input bg-background p-2.5 text-xs"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setEditListingModalOpen(false)}>
-              Annuler
-            </Button>
-            <Button type="submit" className="bg-purple-600 hover:bg-purple-500 text-white font-bold">
-              Enregistrer les modifications
             </Button>
           </div>
         </form>
