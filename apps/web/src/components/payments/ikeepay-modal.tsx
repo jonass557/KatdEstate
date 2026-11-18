@@ -17,7 +17,7 @@ export interface IkeepayModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (data: any) => void;
-  onPaymentSuccess?: (reference: string) => void;
+  onPaymentSuccess?: (reference: string, method?: string) => void;
   amount?: number;
   defaultAmount?: number;
   currency?: string;
@@ -87,9 +87,14 @@ export function IkeepayModal({
       });
 
       setSuccessData(resData);
+      const selectedOp = OPERATORS.find((op) => op.id === operator);
+      const operatorLabel = selectedOp ? selectedOp.name : operator;
       if (onSuccess) onSuccess(resData);
       if (onPaymentSuccess)
-        onPaymentSuccess(resData?.external_reference || resData?.reference || 'REF_OK');
+        onPaymentSuccess(
+          resData?.external_reference || resData?.reference || 'REF_OK',
+          operatorLabel,
+        );
     } catch (err: any) {
       setError(err?.message || 'Échec de la transaction. Veuillez vérifier vos coordonnées.');
     } finally {

@@ -548,6 +548,82 @@ export function transferFromTenantWalletToOwner(params: {
   }
 }
 
+/**
+ * Règlement direct Mobile Money d'une quittance eau/électricité :
+ * crédite immédiatement le portefeuille Quittances du propriétaire avec les infos du locataire
+ * et la désignation, tout en enregistrant la transaction dans l'historique du locataire.
+ */
+export function creditOwnerQuittanceFromDirectPayment(params: {
+  tenantKey: string;
+  tenantId: string;
+  tenantName: string;
+  tenantEmail?: string | undefined;
+  tenantPhone?: string | undefined;
+  propertyName: string;
+  unitName: string;
+  amount: number;
+  nature: string;
+  method: string;
+  period?: string | undefined;
+  quittanceId: string;
+}): { tenantWallet: WalletState; ownerWallet: WalletState } {
+  const now = new Date().toISOString();
+  const infoParts = [params.tenantPhone, params.tenantEmail].filter(Boolean).join(' · ');
+  const fullMethod = infoParts ? `${params.method} (${infoParts})` : params.method;
+
+  const ownerTx: WalletTransaction = {
+    _id: `tx-own-quit-mm-${Date.now()}`,
+    type: 'TRANSFER_QUITTANCE',
+    amount: params.amount,
+    nature: params.nature,
+    method: fullMethod,
+    tenantId: params.tenantId,
+    tenantName: params.tenantName,
+    tenantEmail: params.tenantEmail,
+    propertyName: params.propertyName,
+    unitName: params.unitName,
+    quittanceId: params.quittanceId,
+    period: params.period || 'Novembre 2026',
+    createdAt: now,
+  };
+
+  const ownerQuit = getOwnerQuittanceWallet();
+  const nextOwnerQuit: WalletState = {
+    balance: ownerQuit.balance + params.amount,
+    totalReceived: ownerQuit.totalReceived + params.amount,
+    totalWithdrawn: ownerQuit.totalWithdrawn,
+    transactions: [ownerTx, ...ownerQuit.transactions],
+  };
+  saveOwnerQuittanceWallet(nextOwnerQuit);
+
+  // Enregistrer également dans l'historique des paiements du locataire (sans débiter son solde portefeuille)
+  const tenantWallet = getTenantWallet(params.tenantKey);
+  const tenantTx: WalletTransaction = {
+    ...ownerTx,
+    _id: `tx-ten-quit-mm-${Date.now()}`,
+  };
+  const nextTenantWallet: WalletState = {
+    ...tenantWallet,
+    transactions: [tenantTx, ...tenantWallet.transactions],
+  };
+  saveTenantWallet(params.tenantKey, nextTenantWallet);
+
+  const quittances = getStoredQuittances();
+  const updatedQuittances = quittances.map((q) =>
+    q._id === params.quittanceId
+      ? {
+          ...q,
+          status: 'PAID' as const,
+          paidAt: now,
+          paymentMethod: `Payé dans les délais (${params.method})`,
+        }
+      : q,
+  );
+  saveStoredQuittances(updatedQuittances);
+
+  return { tenantWallet: nextTenantWallet, ownerWallet: nextOwnerQuit };
+}
+
 // ============================================================================
 // 4. OWNER <-> TENANT SHARED CHAT MESSAGES STORE
 // ============================================================================

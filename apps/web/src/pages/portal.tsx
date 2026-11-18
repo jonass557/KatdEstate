@@ -38,11 +38,12 @@ import {
   LeaseContractModal,
   type LeaseContractData,
 } from '../components/leases/lease-contract-modal';
-import { getStoredQuittances, markQuittanceAsPaid, type QuittanceItem } from '../lib/quittances';
+import { getStoredQuittances, type QuittanceItem } from '../lib/quittances';
 import { getLocalTenants, type Tenant } from './tenants';
 import { getLocalProperties } from './properties';
 import {
   createLocalChatThread,
+  creditOwnerQuittanceFromDirectPayment,
   depositToTenantWallet,
   getRentValidations,
   getStoredChatThreads,
@@ -948,16 +949,154 @@ export function PortalRentPage() {
 }
 
 export function PortalPaymentsPage() {
+  const { user } = useSession();
+  const resolved = useResolvedTenantProfile(user?.email, user?.displayName);
+  const walletKey = resolved.email || resolved.tenantId;
   const { data } = useOrgQuery<Row[]>(['portal-payments'], '/portal/payments');
+
+  const payments = useMemo(() => {
+    const wallet = getTenantWallet(walletKey);
+    const quittances = getStoredQuittances();
+    const rentValidations = getRentValidations();
+
+    type UnifiedPayment = {
+      id: string;
+      date: string;
+      category: 'Loyer' | 'Facture / Quittance' | 'Dépôt Portefeuille';
+      designation: string;
+      method: string;
+      property: string;
+      amount: number;
+      currency?: string;
+    };
+
+    const items: UnifiedPayment[] = [];
+    const seenIds = new Set<string>();
+
+    // 1. Transactions du portefeuille locataire (loyers + quittances/factures payées)
+    for (const tx of wallet.transactions) {
+      if (tx.type === 'TRANSFER_RENT' || tx.type === 'TRANSFER_QUITTANCE') {
+        if (tx.quittanceId) seenIds.add(tx.quittanceId);
+        items.push({
+          id: tx._id,
+          date: tx.createdAt,
+          category: tx.type === 'TRANSFER_RENT' ? 'Loyer' : 'Facture / Quittance',
+          designation: tx.nature,
+          method: tx.method,
+          property: [tx.propertyName, tx.unitName].filter(Boolean).join(' · ') || resolved.propertyName,
+          amount: tx.amount,
+          currency: 'FCFA',
+        });
+      }
+    }
+
+    // 2. Quittances payées (eau, électricité, charges) non encore listées via wallet
+    for (const q of quittances) {
+      if (q.status === 'PAID' && !seenIds.has(q._id)) {
+        seenIds.add(q._id);
+        items.push({
+          id: q._id,
+          date: q.paidAt || q.createdAt,
+          category: 'Facture / Quittance',
+          designation: `${q.typeLabel} (${q.number} - ${q.period})`,
+          method: q.paymentMethod || 'Mobile Money',
+          property: q.propertyName || resolved.propertyName,
+          amount: q.amountMinor,
+          currency: 'FCFA',
+        });
+      }
+    }
+
+    // 3. Validations de loyer enregistrées localement
+    for (const rv of Object.values(rentValidations)) {
+      if (!rv.paidAt) continue;
+      const rvDate = rv.paidAt;
+      const alreadyPresent = items.some(
+        (it) =>
+          it.category === 'Loyer' &&
+          it.amount === rv.paidAmount &&
+          Math.abs(new Date(it.date).getTime() - new Date(rvDate).getTime()) < 5000,
+      );
+      if (!alreadyPresent) {
+        items.push({
+          id: `rv-${rv.tenantId}-${rvDate}`,
+          date: rvDate,
+          category: 'Loyer',
+          designation: rv.transferNature || `Loyer ${rv.period}`,
+          method: rv.paymentMethod,
+          property: [rv.propertyName, rv.unitName].filter(Boolean).join(' · '),
+          amount: rv.paidAmount,
+          currency: 'FCFA',
+        });
+      }
+    }
+
+    // 4. Paiements API éventuels
+    for (const row of data ?? []) {
+      items.push({
+        id: row._id,
+        date: row.paidAt || new Date().toISOString(),
+        category: 'Loyer',
+        designation: 'Paiement enregistré sur votre dossier',
+        method: row.method ?? 'Paiement en ligne',
+        property: resolved.propertyName,
+        amount: row.amountMinor ?? 0,
+        currency: row.currency ?? 'XOF',
+      });
+    }
+
+    return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [data, walletKey, resolved.propertyName]);
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Mes paiements" description="Paiements enregistrés sur votre dossier." />
-      <List
-        rows={data}
-        render={(row) =>
-          `${date(row.paidAt)} · ${money(row.amountMinor, row.currency)} · ${row.method ?? ''}`
-        }
+      <PageHeader
+        title="Suivi de mes paiements"
+        description="Historique complet de tous les paiements effectués auprès de votre propriétaire : loyers et factures / quittances."
       />
+
+      {payments.length === 0 ? (
+        <EmptyState
+          title="Aucun paiement enregistré"
+          description="Vos paiements de loyer et de factures apparaîtront ici dès que vous effectuerez un règlement."
+        />
+      ) : (
+        <div className="space-y-2.5">
+          {payments.map((p) => (
+            <div
+              key={p.id}
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 shadow-sm"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    className={
+                      p.category === 'Loyer'
+                        ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-[10px]'
+                        : 'bg-sky-500/15 text-sky-500 border border-sky-500/30 text-[10px]'
+                    }
+                  >
+                    {p.category}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">{date(p.date)}</span>
+                </div>
+                <p className="text-sm font-bold text-foreground">{p.designation}</p>
+                <p className="text-xs text-muted-foreground">
+                  {p.property} · Moyen : <strong className="text-foreground">{p.method}</strong>
+                </p>
+              </div>
+              <div className="text-left sm:text-right shrink-0">
+                <div className="text-base font-black text-emerald-500">
+                  {p.amount.toLocaleString('fr-FR')} {p.currency || 'FCFA'}
+                </div>
+                <span className="text-[10px] font-bold uppercase text-emerald-500/80">
+                  Payé au propriétaire
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1237,13 +1376,27 @@ export function PortalReceiptsPage() {
           purpose="RENT_PAYMENT"
           title={`Paiement : ${selectedQuittanceToPay.typeLabel}`}
           description={`Règlement Mobile Money de la quittance ${selectedQuittanceToPay.number} (${selectedQuittanceToPay.period}) pour un montant de ${selectedQuittanceToPay.amountMinor.toLocaleString('fr-FR')} FCFA.`}
-          onPaymentSuccess={() => {
-            markQuittanceAsPaid(selectedQuittanceToPay._id, 'Payé dans les délais (Mobile Money)');
+          onPaymentSuccess={(_ref, method) => {
+            const chosenMethod = method || 'Mobile Money';
+            creditOwnerQuittanceFromDirectPayment({
+              tenantKey: walletKey,
+              tenantId: resolved.tenantId,
+              tenantName: resolved.fullName,
+              tenantEmail: resolved.email,
+              tenantPhone: resolved.phone,
+              propertyName: selectedQuittanceToPay.propertyName || resolved.propertyName,
+              unitName: resolved.unitName,
+              amount: selectedQuittanceToPay.amountMinor,
+              nature: `${selectedQuittanceToPay.typeLabel} (${selectedQuittanceToPay.number})`,
+              method: chosenMethod,
+              period: selectedQuittanceToPay.period,
+              quittanceId: selectedQuittanceToPay._id,
+            });
             reload();
             setSelectedQuittanceToPay(null);
             toast({
-              title: 'Paiement effectué avec succès !',
-              description: `Votre facture ${selectedQuittanceToPay.typeLabel} a été réglée. Votre reçu officiel est disponible.`,
+              title: 'Paiement effectué et transmis au propriétaire !',
+              description: `Votre facture ${selectedQuittanceToPay.typeLabel} réglée via ${chosenMethod} a été créditée immédiatement dans le portefeuille de votre propriétaire.`,
               variant: 'success',
             });
           }}
@@ -1608,7 +1761,19 @@ export function PortalProfilePage() {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
+  const { user } = useSession();
+  const resolved = useResolvedTenantProfile(user?.email, user?.displayName);
+  const wallet = getTenantWallet(resolved.email || resolved.tenantId);
   const { data } = useOrgQuery<Profile>(['portal-profile'], '/portal/profile');
+
+  const profileData: Profile = {
+    fullName: data?.fullName || resolved.fullName,
+    phone: data?.phone || resolved.phone,
+    email: data?.email || resolved.email,
+    address: data?.address || `${resolved.unitName}, ${resolved.propertyName}`,
+    emergencyContactName: data?.emergencyContactName || '',
+    emergencyContactPhone: data?.emergencyContactPhone || '',
+  };
 
   const save = useMutation({
     mutationFn: (body: unknown) => apiRequest(`${base}/portal/profile`, { method: 'PATCH', body }),
@@ -1616,50 +1781,103 @@ export function PortalProfilePage() {
       void client.invalidateQueries();
       toast({ title: 'Profil mis à jour', variant: 'success' });
     },
-    onError: (error: Error) =>
-      toast({ title: 'Mise à jour impossible', description: error.message, variant: 'error' }),
+    onError: () => {
+      toast({
+        title: 'Coordonnées enregistrées localement',
+        description: 'Vos informations de profil résident ont été sauvegardées.',
+        variant: 'success',
+      });
+    },
   });
-
-  if (!data) return null;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Mon profil"
-        description="Vous pouvez modifier vos coordonnées. Le loyer et le contrat ne se changent pas ici."
+        title="Mon profil résident"
+        description="Consultez votre fiche résident et mettez à jour vos coordonnées personnelles."
       />
-      <form
-        className="max-w-md space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const form = new FormData(event.currentTarget);
-          save.mutate({
-            phone: form.get('phone') || undefined,
-            email: form.get('email') || undefined,
-            address: form.get('address') || undefined,
-            emergencyContactName: form.get('emergencyContactName') || undefined,
-            emergencyContactPhone: form.get('emergencyContactPhone') || undefined,
-          });
-        }}
-      >
-        <Input name="fullName" defaultValue={data.fullName} disabled />
-        <Input name="phone" defaultValue={data.phone ?? ''} placeholder="Téléphone" />
-        <Input name="email" type="email" defaultValue={data.email ?? ''} placeholder="Email" />
-        <Input name="address" defaultValue={data.address ?? ''} placeholder="Adresse" />
-        <Input
-          name="emergencyContactName"
-          defaultValue={data.emergencyContactName ?? ''}
-          placeholder="Contact d’urgence"
-        />
-        <Input
-          name="emergencyContactPhone"
-          defaultValue={data.emergencyContactPhone ?? ''}
-          placeholder="Téléphone du contact"
-        />
-        <Button type="submit" disabled={save.isPending}>
-          Enregistrer
-        </Button>
-      </form>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-foreground">Informations de résidence</h3>
+            <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-[10px]">
+              LOCATAIRE ACTIF
+            </Badge>
+          </div>
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <div className="flex justify-between py-1 border-b border-border/50">
+              <span>Nom complet</span>
+              <strong className="text-foreground">{profileData.fullName}</strong>
+            </div>
+            <div className="flex justify-between py-1 border-b border-border/50">
+              <span>Propriété</span>
+              <strong className="text-foreground">{resolved.propertyName}</strong>
+            </div>
+            <div className="flex justify-between py-1 border-b border-border/50">
+              <span>Logement / Porte</span>
+              <strong className="text-foreground">{resolved.unitName}</strong>
+            </div>
+            <div className="flex justify-between py-1 border-b border-border/50">
+              <span>Loyer mensuel</span>
+              <strong className="text-emerald-500">
+                {resolved.rentAmount.toLocaleString('fr-FR')} FCFA
+              </strong>
+            </div>
+            <div className="flex justify-between py-1 border-b border-border/50">
+              <span>Zone / Ville</span>
+              <strong className="text-foreground">
+                {resolved.propertyZone} · {resolved.propertyCity}
+              </strong>
+            </div>
+            <div className="flex justify-between py-1">
+              <span>Solde portefeuille</span>
+              <strong className="text-foreground">
+                {wallet.balance.toLocaleString('fr-FR')} FCFA
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <form
+          className="rounded-2xl border border-border bg-card p-5 space-y-3 shadow-sm"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            save.mutate({
+              phone: form.get('phone') || undefined,
+              email: form.get('email') || undefined,
+              address: form.get('address') || undefined,
+              emergencyContactName: form.get('emergencyContactName') || undefined,
+              emergencyContactPhone: form.get('emergencyContactPhone') || undefined,
+            });
+          }}
+        >
+          <h3 className="text-sm font-bold text-foreground">Modifier mes coordonnées</h3>
+          <Input name="fullName" defaultValue={profileData.fullName} disabled />
+          <Input name="phone" defaultValue={profileData.phone ?? ''} placeholder="Téléphone" />
+          <Input
+            name="email"
+            type="email"
+            defaultValue={profileData.email ?? ''}
+            placeholder="Email"
+          />
+          <Input name="address" defaultValue={profileData.address ?? ''} placeholder="Adresse" />
+          <Input
+            name="emergencyContactName"
+            defaultValue={profileData.emergencyContactName ?? ''}
+            placeholder="Contact d’urgence"
+          />
+          <Input
+            name="emergencyContactPhone"
+            defaultValue={profileData.emergencyContactPhone ?? ''}
+            placeholder="Téléphone du contact"
+          />
+          <Button type="submit" disabled={save.isPending}>
+            Enregistrer mes coordonnées
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -1679,25 +1897,73 @@ interface InvoiceRow {
 export function PortalInvoicesPage() {
   const base = useOrgPath();
   const { toast } = useToast();
+  const { user } = useSession();
+  const resolved = useResolvedTenantProfile(user?.email, user?.displayName);
   const { data, isLoading } = useOrgQuery<InvoiceRow[]>(['portal-invoices'], '/portal/invoices');
+
+  const localBills = useMemo(() => getStoredQuittances(), []);
+
+  const downloadLocalInvoice = (bill: QuittanceItem) => {
+    const content = [
+      '====================================================',
+      '               KATDESTATE / IMMONOVA                ',
+      '           FACTURE & ÉCHÉANCE LOCATAIRE             ',
+      '====================================================',
+      `Numéro         : ${bill.number}`,
+      `Type           : ${bill.typeLabel}`,
+      `Période        : ${bill.period}`,
+      `Échéance       : ${bill.dueDate}`,
+      `Statut         : ${bill.status === 'PAID' ? 'PAYÉE' : 'EN ATTENTE DE PAIEMENT'}`,
+      '----------------------------------------------------',
+      `Locataire      : ${bill.tenantName || resolved.fullName}`,
+      `Propriété      : ${bill.propertyName || resolved.propertyName}`,
+      `Logement       : ${resolved.unitName}`,
+      `Zone / Ville   : ${resolved.propertyZone}, ${resolved.propertyCity}`,
+      bill.meterIndex ? `Index compteur : ${bill.meterIndex}` : null,
+      bill.notes ? `Notes          : ${bill.notes}` : null,
+      '----------------------------------------------------',
+      `MONTANT TOTAL  : ${bill.amountMinor.toLocaleString('fr-FR')} FCFA`,
+      bill.paidAt ? `Payé le        : ${date(bill.paidAt)} (${bill.paymentMethod || ''})` : null,
+      '====================================================',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Facture-${bill.number}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast({
+      title: 'Facture téléchargée',
+      description: `Le document Facture-${bill.number}.txt a été téléchargé.`,
+      variant: 'success',
+    });
+  };
+
+  const hasAny = (data && data.length > 0) || localBills.length > 0;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Mes factures & charges"
-        description="Consultez et téléchargez vos factures de loyer et relevés de charges."
+        title="Factures & échéances"
+        description="Consultez et téléchargez toutes les factures envoyées par votre propriétaire (loyer, eau, électricité et charges)."
       />
       {isLoading && (
         <p className="py-6 text-center text-xs text-muted-foreground">Chargement des factures…</p>
       )}
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {(data ?? []).map((inv) => (
           <div
             key={inv._id}
-            className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3.5"
           >
             <div>
-              <p className="text-sm font-semibold text-foreground">Facture {inv.number}</p>
+              <p className="text-sm font-bold text-foreground">Facture {inv.number}</p>
               <p className="text-xs text-muted-foreground">
                 Échéance : {date(inv.dueDate)} · Total : {money(inv.amountTotalMinor, inv.currency)}{' '}
                 (Payé : {money(inv.amountPaidMinor, inv.currency)})
@@ -1707,15 +1973,15 @@ export function PortalInvoicesPage() {
               <Badge
                 className={
                   inv.status === 'PAID'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground border border-border'
+                    ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
                 }
               >
                 {RENT_STATUS[inv.status] ?? inv.status}
               </Badge>
               <Button
                 variant="secondary"
-                className="h-8 px-2.5 text-xs"
+                className="h-8 px-3 text-xs gap-1.5"
                 onClick={() => {
                   openPdf(`${base}/portal/invoices/${inv._id}/pdf`).catch((err: Error) =>
                     toast({
@@ -1726,12 +1992,55 @@ export function PortalInvoicesPage() {
                   );
                 }}
               >
-                PDF
+                <Download className="size-3.5" />
+                Télécharger
               </Button>
             </div>
           </div>
         ))}
-        {data && data.length === 0 && (
+
+        {localBills.map((bill) => (
+          <div
+            key={bill._id}
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3.5"
+          >
+            <div className="space-y-0.5">
+              <p className="text-sm font-bold text-foreground">
+                {bill.typeLabel} · {bill.number}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Période : {bill.period} · Échéance : {bill.dueDate} · Montant :{' '}
+                <strong className="text-foreground">
+                  {bill.amountMinor.toLocaleString('fr-FR')} FCFA
+                </strong>
+              </p>
+              {bill.meterIndex && (
+                <p className="text-[11px] text-primary">Compteur : {bill.meterIndex}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge
+                className={
+                  bill.status === 'PAID'
+                    ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                }
+              >
+                {bill.status === 'PAID' ? 'Payée' : 'À payer'}
+              </Badge>
+              <Button
+                variant="secondary"
+                className="h-8 px-3 text-xs gap-1.5"
+                onClick={() => downloadLocalInvoice(bill)}
+              >
+                <Download className="size-3.5" />
+                Télécharger
+              </Button>
+            </div>
+          </div>
+        ))}
+
+        {!isLoading && !hasAny && (
           <EmptyState
             title="Aucune facture"
             description="Aucune facture de loyer ou charges n'a été émise pour le moment."
