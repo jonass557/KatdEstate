@@ -34,7 +34,9 @@ import {
   LogOut,
   Gauge,
   BarChart3,
+  BedDouble,
 } from 'lucide-react';
+import { PublishListingModal } from '../components/marketplace/publish-listing-modal';
 import { useOrganization } from '../app/organization';
 import { useSession } from '../app/session';
 import { BackButton } from '../components/ui/back-button';
@@ -101,6 +103,7 @@ export function DashboardPage() {
   // Modals state
   const [ikeepayPayinOpen, setIkeepayPayinOpen] = useState(false);
   const [ikeepaySettingsOpen, setIkeepaySettingsOpen] = useState(false);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [ownerProblemModalOpen, setOwnerProblemModalOpen] = useState(false);
   const [ownerMsgModalOpen, setOwnerMsgModalOpen] = useState(false);
   const [ownerMsgSubject, setOwnerMsgSubject] = useState('');
@@ -120,6 +123,77 @@ export function DashboardPage() {
   const assignedLeaderBlock = matchedBlockOwner
     ? getStoredBlocks().find((b) => b.id === matchedBlockOwner.blockId)
     : undefined;
+
+  const publisherMarketplaceButtons: AppButton[] = [
+    {
+      title: 'Publier une\nAnnonce',
+      icon: Plus,
+      colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-700 text-white',
+      glowClass: 'shadow-emerald-500/25',
+      onClick: () => setPublishModalOpen(true),
+      badge: 'CARTE GPS',
+      badgeBg: 'bg-emerald-400 text-black',
+    },
+    {
+      title: 'Gestion des\nMeublés',
+      icon: BedDouble,
+      colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
+      glowClass: 'shadow-amber-500/25',
+      to: '/publisher/meubles',
+      badge: 'JOUR',
+      badgeBg: 'bg-amber-300 text-black',
+    },
+    {
+      title: 'Gestion des\nImmobiliers',
+      icon: Building2,
+      colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+      glowClass: 'shadow-blue-500/25',
+      to: '/publisher/listings',
+      badge: 'MES BIENS',
+      badgeBg: 'bg-blue-300 text-black',
+    },
+    {
+      title: 'Gestion des\nUtilisateurs',
+      icon: Users,
+      colorClass: 'bg-gradient-to-tr from-indigo-600 to-cyan-700 text-white',
+      glowClass: 'shadow-indigo-500/25',
+      to: '/publisher/users',
+      badge: 'VISITES',
+      badgeBg: 'bg-cyan-300 text-black',
+    },
+    {
+      title: 'Performance &\nStatistiques',
+      icon: BarChart3,
+      colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+      glowClass: 'shadow-rose-500/25',
+      to: '/publisher/stats',
+    },
+    {
+      title: 'Messagerie\nClients',
+      icon: MessageSquare,
+      colorClass: 'bg-gradient-to-tr from-purple-600 to-indigo-700 text-white',
+      glowClass: 'shadow-purple-500/25',
+      to: '/messages',
+    },
+    {
+      title: 'Signaler un\nProblème',
+      icon: AlertTriangle,
+      colorClass: 'bg-gradient-to-tr from-red-600 to-rose-700 text-white',
+      glowClass: 'shadow-red-500/25',
+      to: '/publisher/support',
+      badge: 'ADMIN',
+      badgeBg: 'bg-rose-300 text-black',
+    },
+    {
+      title: 'Estimation du\nPrix IA',
+      icon: Sparkles,
+      colorClass: 'bg-gradient-to-tr from-fuchsia-600 to-pink-600 text-white',
+      glowClass: 'shadow-fuchsia-500/25',
+      to: '/ai?tab=estimate',
+      badge: 'IA',
+      badgeBg: 'bg-fuchsia-400 text-black',
+    },
+  ];
 
   // Build categorized button sections according to the active role
   const getSectionsForRole = (role: string): AppSection[] => {
@@ -173,6 +247,15 @@ export function DashboardPage() {
                 to: '/admin-marketplace',
                 badge: 'MODÉRATION',
                 badgeBg: 'bg-yellow-400 text-black',
+              },
+              {
+                title: 'Signalements\nPublieurs',
+                icon: AlertTriangle,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-red-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/publisher/support',
+                badge: 'SUPPORT',
+                badgeBg: 'bg-rose-300 text-black',
               },
               {
                 title: 'Audit &\nSécurité',
@@ -453,18 +536,10 @@ export function DashboardPage() {
             ],
           },
           {
-            title: 'PUBLICATION IMMOBILIÈRE & MARKETPLACE',
-            subtitle: 'Publiez vos biens immobiliers dans la marketplace publique',
+            title: 'PUBLICATION MARKETPLACE, MEUBLÉS & OUTILS IA',
+            subtitle: 'Publiez vos annonces et meublés avec carte GPS, suivez vos visites et utilisez l’IA',
             buttons: [
-              {
-                title: 'Publier un\nImmobilier',
-                icon: Plus,
-                colorClass: 'bg-gradient-to-tr from-emerald-500 to-teal-600 text-white',
-                glowClass: 'shadow-emerald-500/30',
-                to: '/properties/new',
-                badge: 'MARKETPLACE',
-                badgeBg: 'bg-emerald-300 text-black',
-              },
+              ...publisherMarketplaceButtons,
               {
                 title: 'Marketplace\nLocale',
                 icon: Store,
@@ -569,6 +644,11 @@ export function DashboardPage() {
               },
             ],
           },
+          {
+            title: 'PUBLICATION MARKETPLACE, MEUBLÉS & OUTILS IA',
+            subtitle: 'Publiez vos annonces et meublés avec carte GPS, suivez vos visites et utilisez l’IA',
+            buttons: publisherMarketplaceButtons,
+          },
         ];
 
       case 'TENANT':
@@ -670,162 +750,10 @@ export function DashboardPage() {
       case 'AGENT':
         return [
           {
-            title: 'MANDATS & MARKETPLACE IMMOBILIÈRE',
-            subtitle: 'Diffusion de biens vérifiés, suivi des acquéreurs et visites terrain',
-            buttons: [
-              {
-                title: 'Marketplace\nPublique',
-                icon: Store,
-                colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
-                glowClass: 'shadow-amber-500/25',
-                to: '/marketplace',
-                badge: 'VITRINE',
-                badgeBg: 'bg-amber-400 text-black',
-              },
-              {
-                title: 'Espace Agent\n& Mandats',
-                icon: Briefcase,
-                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
-                glowClass: 'shadow-blue-500/25',
-                to: '/agent',
-                badge: 'EXCLUSIFS',
-                badgeBg: 'bg-blue-300 text-black',
-              },
-              {
-                title: 'Publier une\nAnnonce',
-                icon: Plus,
-                colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-700 text-white',
-                glowClass: 'shadow-emerald-500/25',
-                to: '/marketplace',
-                badge: 'NOUVEAU',
-                badgeBg: 'bg-emerald-400 text-black',
-              },
-              {
-                title: 'Mes Annonces\n& Mandats',
-                icon: Building2,
-                colorClass: 'bg-gradient-to-tr from-indigo-600 to-violet-700 text-white',
-                glowClass: 'shadow-indigo-500/25',
-                to: '/owner-listings',
-              },
-              {
-                title: 'Visites &\nPlanning',
-                icon: Calendar,
-                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
-                glowClass: 'shadow-purple-500/25',
-                to: '/agent',
-              },
-              {
-                title: 'Prospects &\nOffres',
-                icon: Users,
-                colorClass: 'bg-gradient-to-tr from-indigo-600 to-cyan-700 text-white',
-                glowClass: 'shadow-indigo-500/25',
-                to: '/agent',
-              },
-            ],
-          },
-          {
-            title: 'COMMISSIONS, HONORAIRES & FINANCES',
-            subtitle: 'Calcul des honoraires d’agence et retraits Mobile Money via Ikeepay',
-            buttons: [
-              {
-                title: 'Mes\nCommissions',
-                icon: Wallet,
-                colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
-                glowClass: 'shadow-emerald-500/30',
-                to: '/agent',
-                badge: 'DISPONIBLE',
-                badgeBg: 'bg-emerald-400 text-black',
-              },
-              {
-                title: 'Retrait\nIkeepay H2H',
-                icon: CreditCard,
-                colorClass: 'bg-gradient-to-tr from-teal-600 to-cyan-700 text-white',
-                glowClass: 'shadow-teal-500/25',
-                onClick: () => setIkeepayPayinOpen(true),
-                badge: 'H2H',
-                badgeBg: 'bg-teal-300 text-black',
-              },
-              {
-                title: 'Factures\nd’Honoraires',
-                icon: Receipt,
-                colorClass: 'bg-gradient-to-tr from-cyan-600 to-sky-700 text-white',
-                glowClass: 'shadow-cyan-500/25',
-                to: '/payments',
-              },
-              {
-                title: 'Performance &\nStatistiques',
-                icon: BarChart3,
-                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
-                glowClass: 'shadow-rose-500/25',
-                to: '/analytics',
-              },
-              {
-                title: 'Estimation de\nPrix IA',
-                icon: Sparkles,
-                colorClass: 'bg-gradient-to-tr from-fuchsia-600 to-pink-600 text-white',
-                glowClass: 'shadow-fuchsia-500/25',
-                to: '/ai',
-                badge: 'IA',
-                badgeBg: 'bg-fuchsia-400 text-black',
-              },
-              {
-                title: 'Baux &\nContrats',
-                icon: KeyRound,
-                colorClass: 'bg-gradient-to-tr from-violet-600 to-purple-700 text-white',
-                glowClass: 'shadow-violet-500/25',
-                to: '/leases',
-              },
-            ],
-          },
-          {
-            title: 'PATRIMOINE, DOCUMENTS & CONTACTS',
-            subtitle: 'Propriétés mandatées, documents administratifs et messagerie',
-            buttons: [
-              {
-                title: 'Propriétés &\nMandats',
-                icon: Building2,
-                colorClass: 'bg-gradient-to-tr from-blue-600 to-cyan-600 text-white',
-                glowClass: 'shadow-blue-500/25',
-                to: '/properties',
-              },
-              {
-                title: 'Lots &\nLogements',
-                icon: Home,
-                colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-600 text-white',
-                glowClass: 'shadow-teal-500/25',
-                to: '/units',
-              },
-              {
-                title: 'Documents &\nMandats PDF',
-                icon: FolderOpen,
-                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
-                glowClass: 'shadow-slate-500/25',
-                to: '/documents',
-              },
-              {
-                title: 'Messagerie &\nAcquéreurs',
-                icon: MessageSquare,
-                colorClass: 'bg-gradient-to-tr from-purple-600 to-indigo-700 text-white',
-                glowClass: 'shadow-purple-500/25',
-                to: '/messages',
-              },
-              {
-                title: 'Notifications\nActivité',
-                icon: Bell,
-                colorClass: 'bg-gradient-to-tr from-amber-600 to-orange-700 text-white',
-                glowClass: 'shadow-amber-500/25',
-                to: '/notifications',
-              },
-              {
-                title: 'Signaler un Problème\nà mon Chef de Bloc',
-                icon: AlertTriangle,
-                colorClass: 'bg-gradient-to-tr from-rose-600 to-amber-700 text-white',
-                glowClass: 'shadow-rose-500/25',
-                onClick: () => setOwnerProblemModalOpen(true),
-                badge: 'SUPPORT',
-                badgeBg: 'bg-rose-400 text-black',
-              },
-            ],
+            title: 'ESPACE AGENT IMMOBILIER',
+            subtitle:
+              'Publication Marketplace avec carte GPS, gestion des meublés (location journalière), immobiliers, visites, statistiques et estimation IA',
+            buttons: publisherMarketplaceButtons,
           },
         ];
 
@@ -1258,6 +1186,11 @@ export function DashboardPage() {
                 to: '/settings',
               },
             ],
+          },
+          {
+            title: 'PUBLICATION MARKETPLACE, MEUBLÉS & OUTILS IA',
+            subtitle: 'Publiez vos annonces et meublés avec carte GPS, suivez vos visites et utilisez l’IA',
+            buttons: publisherMarketplaceButtons,
           },
         ];
     }
@@ -1694,6 +1627,11 @@ export function DashboardPage() {
       <IkeepaySettingsModal
         isOpen={ikeepaySettingsOpen}
         onClose={() => setIkeepaySettingsOpen(false)}
+      />
+
+      <PublishListingModal
+        isOpen={publishModalOpen}
+        onClose={() => setPublishModalOpen(false)}
       />
     </div>
   );

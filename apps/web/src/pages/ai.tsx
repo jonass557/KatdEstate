@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import {
   Bot,
+  Calculator,
   Check,
   Copy,
   FileCheck2,
@@ -11,6 +13,11 @@ import {
   Sparkles,
   TrendingUp,
 } from 'lucide-react';
+import { BackButton } from '../components/ui/back-button';
+import {
+  estimatePropertyPriceAI,
+  type AiPriceEstimateResult,
+} from '../lib/katdestate-store';
 import { PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -75,8 +82,41 @@ export function AiAssistantPage() {
   const base = useOrgPath();
   const { activeOrganization } = useOrganization();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState<'chat' | 'draft'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'draft' | 'estimate'>(() =>
+    searchParams.get('tab') === 'estimate' ? 'estimate' : 'chat',
+  );
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'estimate') {
+      setActiveTab('estimate');
+    }
+  }, [searchParams]);
+
+  // Estimation de prix IA
+  const [estCity, setEstCity] = useState('Abidjan');
+  const [estDistrict, setEstDistrict] = useState('Cocody Riviera');
+  const [estCategory, setEstCategory] = useState('STUDIO_MODERNE');
+  const [estTransaction, setEstTransaction] = useState<'RENT' | 'DAILY_MEUBLE' | 'SALE'>('RENT');
+  const [estSurface, setEstSurface] = useState(45);
+  const [estBedrooms, setEstBedrooms] = useState(1);
+  const [estBathrooms, setEstBathrooms] = useState(1);
+  const [estStanding, setEstStanding] = useState<'ECONOMIQUE' | 'STANDARD' | 'HAUT_STANDING' | 'LUXE'>('STANDARD');
+  const [estAmenities, setEstAmenities] = useState<string[]>(['Climatisation', 'Wifi Fibre']);
+  const [estResult, setEstResult] = useState<AiPriceEstimateResult | null>(() =>
+    estimatePropertyPriceAI({
+      city: 'Abidjan',
+      district: 'Cocody Riviera',
+      category: 'STUDIO_MODERNE',
+      transactionType: 'RENT',
+      surfaceM2: 45,
+      bedrooms: 1,
+      bathrooms: 1,
+      standing: 'STANDARD',
+      amenities: ['Climatisation', 'Wifi Fibre'],
+    }),
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -205,11 +245,20 @@ export function AiAssistantPage() {
 
   return (
     <div className="space-y-6">
+      <BackButton to="/dashboard" label="Retour au Dashboard" />
       <PageHeader
-        title="DOMORA AI"
-        description="Analyste immobilier intelligent & assistant de rédaction juridique automatisé."
+        title="KatdEstate AI & Estimation de Prix"
+        description="Estimation intelligente des loyers, nuitées meublées et prix de vente, plus assistant juridique."
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={activeTab === 'estimate' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('estimate')}
+              className="inline-flex items-center gap-1.5"
+            >
+              <Calculator className="size-4" />
+              Estimation de Prix IA
+            </Button>
             <Button
               variant={activeTab === 'chat' ? 'primary' : 'secondary'}
               onClick={() => setActiveTab('chat')}
@@ -230,7 +279,237 @@ export function AiAssistantPage() {
         }
       />
 
-      {activeTab === 'chat' ? (
+      {activeTab === 'estimate' ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="size-4 text-fuchsia-500" />
+                Paramètres du bien à estimer
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Ville</label>
+                  <Input
+                    value={estCity}
+                    onChange={(e) => setEstCity(e.target.value)}
+                    placeholder="Ex: Abidjan, Douala, Mbanga..."
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Quartier / Secteur</label>
+                  <Input
+                    value={estDistrict}
+                    onChange={(e) => setEstDistrict(e.target.value)}
+                    placeholder="Ex: Cocody Riviera, Bonapriso..."
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Type de transaction</label>
+                  <select
+                    value={estTransaction}
+                    onChange={(e) => {
+                      const val = e.target.value as 'RENT' | 'DAILY_MEUBLE' | 'SALE';
+                      setEstTransaction(val);
+                      if (val === 'DAILY_MEUBLE') setEstCategory('STUDIO_MEUBLE_JOURNALIER');
+                    }}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="RENT">Location Mensuelle</option>
+                    <option value="DAILY_MEUBLE">Meublé (Location Journalière)</option>
+                    <option value="SALE">Vente Définitive</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Catégorie du bien</label>
+                  <select
+                    value={estCategory}
+                    onChange={(e) => setEstCategory(e.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="CHAMBRE_SIMPLE">Chambre simple</option>
+                    <option value="CHAMBRE_MODERNE">Chambre moderne</option>
+                    <option value="STUDIO_MODERNE">Studio moderne</option>
+                    <option value="CHAMBRE_MEUBLEE">Chambre meublée (Jour)</option>
+                    <option value="STUDIO_MEUBLE_JOURNALIER">Studio meublé (Jour)</option>
+                    <option value="APPARTEMENT_MEUBLE">Appartement meublé</option>
+                    <option value="APPARTEMENT">Appartement standard</option>
+                    <option value="VILLA">Villa / Maison</option>
+                    <option value="LAND">Terrain / Parcelle</option>
+                    <option value="COMMERCIAL">Local commercial / Bureau</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Surface (m²)</label>
+                  <Input
+                    type="number"
+                    min={10}
+                    value={estSurface}
+                    onChange={(e) => setEstSurface(Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Chambres</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={estBedrooms}
+                    onChange={(e) => setEstBedrooms(Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Douches</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={estBathrooms}
+                    onChange={(e) => setEstBathrooms(Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Standing</label>
+                  <select
+                    value={estStanding}
+                    onChange={(e) => setEstStanding(e.target.value as any)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-2 text-xs"
+                  >
+                    <option value="ECONOMIQUE">Économique</option>
+                    <option value="STANDARD">Standard</option>
+                    <option value="HAUT_STANDING">Haut Standing</option>
+                    <option value="LUXE">Luxe</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold">Équipements & atouts</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    'Climatisation',
+                    'Wifi Fibre',
+                    'Parking sécurisé',
+                    'Gardiennage 24/7',
+                    'Groupe électrogène',
+                    'Piscine',
+                  ].map((am) => {
+                    const active = estAmenities.includes(am);
+                    return (
+                      <button
+                        key={am}
+                        type="button"
+                        onClick={() =>
+                          setEstAmenities((prev) =>
+                            prev.includes(am) ? prev.filter((x) => x !== am) : [...prev, am],
+                          )
+                        }
+                        className={`rounded-full px-3 py-1 text-xs font-semibold border transition ${
+                          active
+                            ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/40'
+                            : 'bg-muted/40 text-muted-foreground border-border'
+                        }`}
+                      >
+                        {active ? '✓ ' : '+ '}
+                        {am}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                className="w-full bg-gradient-to-r from-fuchsia-600 to-emerald-600 text-white font-bold gap-2"
+                onClick={() => {
+                  const res = estimatePropertyPriceAI({
+                    city: estCity,
+                    district: estDistrict,
+                    category: estCategory,
+                    transactionType: estTransaction,
+                    surfaceM2: estSurface,
+                    bedrooms: estBedrooms,
+                    bathrooms: estBathrooms,
+                    standing: estStanding,
+                    amenities: estAmenities,
+                  });
+                  setEstResult(res);
+                  toast({ title: 'Estimation IA calculée !', variant: 'success' });
+                }}
+              >
+                <Sparkles className="size-4" />
+                Calculer l’estimation de prix IA
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <TrendingUp className="size-4 text-emerald-500" />
+                  Résultat de l’analyse IA
+                </span>
+                {estResult && (
+                  <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                    Confiance {estResult.confidenceScore}%
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {estResult ? (
+                <>
+                  <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-5 text-center space-y-1">
+                    <span className="text-xs uppercase font-bold text-emerald-500">
+                      Prix recommandé par l’IA
+                    </span>
+                    <div className="text-3xl font-black text-foreground">
+                      {estResult.estimatedPrice.toLocaleString('fr-FR')}{' '}
+                      <span className="text-base font-bold text-emerald-500">
+                        {estResult.unitLabel}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Fourchette marché : {estResult.minPrice.toLocaleString('fr-FR')} –{' '}
+                      {estResult.maxPrice.toLocaleString('fr-FR')} FCFA
+                    </p>
+                  </div>
+
+                  {estResult.pricePerM2 > 0 && (
+                    <div className="flex items-center justify-between rounded-xl border border-border px-4 py-2.5 text-xs">
+                      <span className="text-muted-foreground">Ratio estimé au m²</span>
+                      <strong className="text-foreground">
+                        {estResult.pricePerM2.toLocaleString('fr-FR')} FCFA / m²
+                      </strong>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground">
+                      Facteurs pris en compte par l’IA
+                    </h4>
+                    <ul className="space-y-1.5 text-xs text-foreground">
+                      {estResult.rationale.map((line, i) => (
+                        <li key={i} className="rounded-xl bg-muted/30 p-2.5 border border-border/50">
+                          • {line}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              ) : null}
+            </CardContent>
+          </Card>
+        </div>
+      ) : activeTab === 'chat' ? (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Fil de discussion principal */}
           <div className="flex h-[620px] flex-col rounded-2xl border border-border bg-card lg:col-span-2">

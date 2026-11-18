@@ -1890,3 +1890,410 @@ export function sendHierarchyMessage(
   }
   return full;
 }
+
+// ============================================================================
+// 11. MARKETPLACE PUBLISHER HUB: LISTINGS, VISITS, METRICS, SUPPORT & AI PRICE
+// ============================================================================
+
+export const STORAGE_CUSTOM_LISTINGS_KEY = 'katdestate_custom_listings';
+export const STORAGE_LISTING_METRICS_KEY = 'katdestate_listing_metrics';
+export const STORAGE_SCHEDULED_VISITS_KEY = 'katdestate_scheduled_visits';
+export const STORAGE_ADMIN_SUPPORT_KEY = 'katdestate_admin_support_tickets';
+
+export interface CustomMarketplaceListing {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  propertyType: string;
+  transactionType: 'SALE' | 'RENT';
+  priceMinor: number;
+  currency: string;
+  billingFrequency: 'DAILY' | 'MONTHLY' | 'TOTAL';
+  location: {
+    city: string;
+    district: string;
+    address: string;
+    latitude?: number | undefined;
+    longitude?: number | undefined;
+  };
+  surfaceM2?: number | undefined;
+  bedrooms?: number | undefined;
+  bathrooms?: number | undefined;
+  photos: Array<{ url: string; isPrimary?: boolean | undefined; caption?: string | undefined }>;
+  contact?: {
+    name?: string | undefined;
+    phone?: string | undefined;
+    whatsapp?: string | undefined;
+    email?: string | undefined;
+  } | undefined;
+  ownerEmail?: string | undefined;
+  publisherRole?: string | undefined;
+  workflowStatus?: 'PUBLIE' | 'EN_ATTENTE_VALIDATION' | 'REJETE' | undefined;
+  availabilityStatus?: 'AVAILABLE' | 'OCCUPIED' | undefined;
+  isMeuble?: boolean | undefined;
+  createdAt?: string | undefined;
+  cautionMonths?: number | undefined;
+  advanceMonths?: number | undefined;
+}
+
+export function getCustomMarketplaceListings(): CustomMarketplaceListing[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_CUSTOM_LISTINGS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomMarketplaceListings(list: CustomMarketplaceListing[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_CUSTOM_LISTINGS_KEY, JSON.stringify(list));
+  } catch {}
+}
+
+export function updateCustomMarketplaceListing(
+  id: string,
+  updates: Partial<CustomMarketplaceListing>,
+): CustomMarketplaceListing[] {
+  const list = getCustomMarketplaceListings();
+  const next = list.map((item) => (item._id === id ? { ...item, ...updates } : item));
+  saveCustomMarketplaceListings(next);
+  return next;
+}
+
+export function deleteCustomMarketplaceListing(id: string): CustomMarketplaceListing[] {
+  const list = getCustomMarketplaceListings();
+  const next = list.filter((item) => item._id !== id);
+  saveCustomMarketplaceListings(next);
+  return next;
+}
+
+export interface ListingMetricEntry {
+  views: number;
+  visits: number;
+  inquiries: number;
+  lastUpdatedAt: string;
+}
+
+export function getListingMetrics(): Record<string, ListingMetricEntry> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_LISTING_METRICS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function incrementListingMetric(
+  listingId: string,
+  field: 'views' | 'visits' | 'inquiries',
+): Record<string, ListingMetricEntry> {
+  const all = getListingMetrics();
+  const current = all[listingId] ?? {
+    views: 0,
+    visits: 0,
+    inquiries: 0,
+    lastUpdatedAt: new Date().toISOString(),
+  };
+  const updated: Record<string, ListingMetricEntry> = {
+    ...all,
+    [listingId]: {
+      ...current,
+      [field]: (current[field] || 0) + 1,
+      lastUpdatedAt: new Date().toISOString(),
+    },
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_LISTING_METRICS_KEY, JSON.stringify(updated));
+    } catch {}
+  }
+  return updated;
+}
+
+export interface ScheduledVisit {
+  _id: string;
+  listingId: string;
+  listingTitle: string;
+  listingCategory: string;
+  ownerEmail?: string | undefined;
+  ownerName: string;
+  visitorName: string;
+  visitorEmail: string;
+  visitorPhone: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  notes?: string | undefined;
+  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+  createdAt: string;
+}
+
+export function getScheduledVisits(): ScheduledVisit[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_SCHEDULED_VISITS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function createScheduledVisit(
+  visit: Omit<ScheduledVisit, '_id' | 'status' | 'createdAt'>,
+): ScheduledVisit {
+  const full: ScheduledVisit = {
+    ...visit,
+    _id: `visit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    status: 'PENDING',
+    createdAt: new Date().toISOString(),
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      const list = getScheduledVisits();
+      list.unshift(full);
+      localStorage.setItem(STORAGE_SCHEDULED_VISITS_KEY, JSON.stringify(list));
+    } catch {}
+  }
+  incrementListingMetric(visit.listingId, 'visits');
+  return full;
+}
+
+export function updateScheduledVisitStatus(
+  id: string,
+  status: ScheduledVisit['status'],
+): ScheduledVisit[] {
+  const list = getScheduledVisits();
+  const next = list.map((v) => (v._id === id ? { ...v, status } : v));
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_SCHEDULED_VISITS_KEY, JSON.stringify(next));
+    } catch {}
+  }
+  return next;
+}
+
+export interface AdminSupportReply {
+  _id: string;
+  senderRole: 'PUBLISHER' | 'ADMIN';
+  senderName: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface AdminSupportTicket {
+  _id: string;
+  senderEmail: string;
+  senderName: string;
+  senderRole: string;
+  subject: string;
+  category: string;
+  message: string;
+  status: 'OPEN' | 'REPLIED' | 'RESOLVED';
+  replies: AdminSupportReply[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getAdminSupportTickets(): AdminSupportTicket[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_ADMIN_SUPPORT_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function createAdminSupportTicket(
+  ticket: Omit<AdminSupportTicket, '_id' | 'status' | 'replies' | 'createdAt' | 'updatedAt'>,
+): AdminSupportTicket {
+  const now = new Date().toISOString();
+  const full: AdminSupportTicket = {
+    ...ticket,
+    _id: `sup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    status: 'OPEN',
+    replies: [
+      {
+        _id: `rep-${Date.now()}`,
+        senderRole: 'PUBLISHER',
+        senderName: ticket.senderName,
+        message: ticket.message,
+        createdAt: now,
+      },
+    ],
+    createdAt: now,
+    updatedAt: now,
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      const list = getAdminSupportTickets();
+      list.unshift(full);
+      localStorage.setItem(STORAGE_ADMIN_SUPPORT_KEY, JSON.stringify(list));
+    } catch {}
+  }
+  return full;
+}
+
+export function replyToAdminSupportTicket(
+  ticketId: string,
+  reply: { senderRole: 'PUBLISHER' | 'ADMIN'; senderName: string; message: string },
+  nextStatus?: AdminSupportTicket['status'],
+): AdminSupportTicket[] {
+  const now = new Date().toISOString();
+  const list = getAdminSupportTickets();
+  const next = list.map((t) => {
+    if (t._id !== ticketId) return t;
+    return {
+      ...t,
+      status: nextStatus ?? (reply.senderRole === 'ADMIN' ? 'REPLIED' : 'OPEN'),
+      updatedAt: now,
+      replies: [
+        ...t.replies,
+        {
+          _id: `rep-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+          senderRole: reply.senderRole,
+          senderName: reply.senderName,
+          message: reply.message,
+          createdAt: now,
+        },
+      ],
+    };
+  });
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_ADMIN_SUPPORT_KEY, JSON.stringify(next));
+    } catch {}
+  }
+  return next;
+}
+
+export interface AiPriceEstimateInput {
+  city: string;
+  district?: string | undefined;
+  category: string;
+  transactionType: 'RENT' | 'DAILY_MEUBLE' | 'SALE';
+  surfaceM2: number;
+  bedrooms: number;
+  bathrooms: number;
+  standing: 'ECONOMIQUE' | 'STANDARD' | 'HAUT_STANDING' | 'LUXE';
+  amenities: string[];
+}
+
+export interface AiPriceEstimateResult {
+  estimatedPrice: number;
+  minPrice: number;
+  maxPrice: number;
+  unitLabel: string;
+  pricePerM2: number;
+  confidenceScore: number;
+  rationale: string[];
+}
+
+export function estimatePropertyPriceAI(input: AiPriceEstimateInput): AiPriceEstimateResult {
+  const cityNorm = input.city.trim().toLowerCase();
+  let cityCoeff = 1.0;
+  if (cityNorm.includes('abidjan') || cityNorm.includes('cocody') || cityNorm.includes('marcory')) {
+    cityCoeff = 1.35;
+  } else if (cityNorm.includes('douala') || cityNorm.includes('yaound')) {
+    cityCoeff = 1.25;
+  } else if (cityNorm.includes('dakar')) {
+    cityCoeff = 1.4;
+  } else if (cityNorm.includes('mbanga') || cityNorm.includes('bouak')) {
+    cityCoeff = 0.72;
+  }
+
+  const districtNorm = (input.district || '').trim().toLowerCase();
+  let districtBonus = 1.0;
+  if (
+    districtNorm.includes('riviera') ||
+    districtNorm.includes('bonapriso') ||
+    districtNorm.includes('bastos') ||
+    districtNorm.includes('plateau') ||
+    districtNorm.includes('almadies')
+  ) {
+    districtBonus = 1.35;
+  } else if (districtNorm.includes('centre') || districtNorm.includes('palmeraie')) {
+    districtBonus = 1.15;
+  }
+
+  const standingMult: Record<AiPriceEstimateInput['standing'], number> = {
+    ECONOMIQUE: 0.78,
+    STANDARD: 1.0,
+    HAUT_STANDING: 1.45,
+    LUXE: 2.1,
+  };
+
+  let baseValue = 85000;
+  let unitLabel = 'FCFA / mois';
+
+  if (input.transactionType === 'DAILY_MEUBLE') {
+    unitLabel = 'FCFA / jour (nuitée)';
+    if (input.category === 'CHAMBRE_MEUBLEE') baseValue = 15000;
+    else if (input.category === 'STUDIO_MEUBLE_JOURNALIER') baseValue = 25000;
+    else baseValue = 45000;
+  } else if (input.transactionType === 'SALE') {
+    unitLabel = 'FCFA (vente)';
+    if (input.category === 'LAND') baseValue = 18000000;
+    else if (input.category === 'VILLA') baseValue = 75000000;
+    else if (input.category === 'COMMERCIAL') baseValue = 55000000;
+    else baseValue = 35000000;
+  } else {
+    unitLabel = 'FCFA / mois';
+    if (input.category === 'CARABOT') baseValue = 25000;
+    else if (input.category === 'CHAMBRE_SIMPLE') baseValue = 35000;
+    else if (input.category === 'CHAMBRE_MODERNE') baseValue = 65000;
+    else if (input.category === 'STUDIO_MODERNE') baseValue = 110000;
+    else if (input.category === 'APPARTEMENT') baseValue = 220000;
+    else if (input.category === 'APPARTEMENT_MEUBLE') baseValue = 420000;
+    else if (input.category === 'VILLA') baseValue = 550000;
+    else if (input.category === 'COMMERCIAL') baseValue = 300000;
+  }
+
+  const surfaceFactor =
+    input.surfaceM2 > 0
+      ? Math.max(0.75, Math.min(2.4, input.surfaceM2 / (input.category === 'LAND' ? 400 : 65)))
+      : 1;
+  const roomFactor =
+    1 + Math.max(0, input.bedrooms - 1) * 0.14 + Math.max(0, input.bathrooms - 1) * 0.08;
+  const amenityFactor = 1 + Math.min(0.45, input.amenities.length * 0.06);
+
+  const rawPrice =
+    baseValue *
+    cityCoeff *
+    districtBonus *
+    standingMult[input.standing] *
+    surfaceFactor *
+    roomFactor *
+    amenityFactor;
+
+  const roundStep = input.transactionType === 'SALE' ? 500000 : input.transactionType === 'DAILY_MEUBLE' ? 1000 : 5000;
+  const estimatedPrice = Math.max(roundStep, Math.round(rawPrice / roundStep) * roundStep);
+  const minPrice = Math.max(roundStep, Math.round((estimatedPrice * 0.88) / roundStep) * roundStep);
+  const maxPrice = Math.round((estimatedPrice * 1.14) / roundStep) * roundStep;
+  const pricePerM2 = input.surfaceM2 > 0 ? Math.round(estimatedPrice / input.surfaceM2) : 0;
+
+  const rationale: string[] = [
+    `Indice de marché local (${input.city || 'Zone standard'}${input.district ? ` · ${input.district}` : ''}) : coefficient ×${(cityCoeff * districtBonus).toFixed(2)}.`,
+    `Standing ${input.standing.replace('_', ' ')} avec ${input.bedrooms} chambre(s) et ${input.surfaceM2} m².`,
+  ];
+  if (input.amenities.length > 0) {
+    rationale.push(`Plus-value équipements (+${Math.round((amenityFactor - 1) * 100)}%) : ${input.amenities.join(', ')}.`);
+  }
+  if (input.transactionType === 'DAILY_MEUBLE') {
+    rationale.push(`Recommandation Meublé : tarif journalier compétitif avec projection mensuelle à ${(estimatedPrice * 22).toLocaleString('fr-FR')} FCFA (taux d'occupation moyen 73%).`);
+  }
+
+  return {
+    estimatedPrice,
+    minPrice,
+    maxPrice,
+    unitLabel,
+    pricePerM2,
+    confidenceScore: input.district ? 91 : 84,
+    rationale,
+  };
+}

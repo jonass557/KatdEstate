@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   ArrowRight,
   Navigation,
+  Calendar,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -24,6 +25,12 @@ import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
 import { useSession } from '../app/session';
 import { PublishListingModal } from '../components/marketplace/publish-listing-modal';
+import { GeoMapCanvas } from '../components/geo/GeoMapCanvas';
+import {
+  createLocalChatThread,
+  createScheduledVisit,
+  incrementListingMetric,
+} from '../lib/katdestate-store';
 
 export interface MarketplaceListing {
   _id: string;
@@ -66,11 +73,13 @@ export interface MarketplaceListing {
 
 export const CATEGORY_LABELS: Record<string, string> = {
   ALL: 'Toutes les offres',
+  MEUBLE: 'Meublés (Location Journalière)',
   CARABOT: 'Maison en carabot',
   CHAMBRE_SIMPLE: 'Chambre simple',
   CHAMBRE_MODERNE: 'Chambre moderne',
   STUDIO_MODERNE: 'Studio moderne',
   APPARTEMENT: 'Appartement standard',
+  CHAMBRE_MEUBLEE: 'Chambre meublée (Jour)',
   APPARTEMENT_MEUBLE: 'Appartement meublé',
   STUDIO_MEUBLE_JOURNALIER: 'Studio meublé (Nuitée / Jour)',
   VILLA: 'Villa & Maison',
@@ -315,7 +324,7 @@ const SEED_LISTINGS: MarketplaceListing[] = [
 
 export function MarketplacePage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated, user } = useSession();
   const { toast } = useToast();
 
   const [search, setSearch] = useState('');
@@ -326,6 +335,11 @@ export function MarketplacePage() {
   const [activeTab, setActiveTab] = useState<'info' | 'map' | 'contact'>('info');
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const [visitDate, setVisitDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [visitTime, setVisitTime] = useState('10:00');
+  const [visitPhone, setVisitPhone] = useState('');
+  const [visitNotes, setVisitNotes] = useState('');
+  const [quickMessage, setQuickMessage] = useState('');
 
   // Load custom listings published by owners/agents
   const customListings = useMemo<MarketplaceListing[]>(() => {
@@ -346,7 +360,17 @@ export function MarketplacePage() {
   // Filtering
   const filteredListings = useMemo(() => {
     return allListings.filter((item) => {
-      if (selectedCategory !== 'ALL' && item.category !== selectedCategory) return false;
+      if (selectedCategory === 'MEUBLE') {
+        const isMeuble =
+          item.category === 'CHAMBRE_MEUBLEE' ||
+          item.category === 'STUDIO_MEUBLE_JOURNALIER' ||
+          item.category === 'APPARTEMENT_MEUBLE' ||
+          item.billingFrequency === 'DAILY' ||
+          (item as any).isMeuble === true;
+        if (!isMeuble) return false;
+      } else if (selectedCategory !== 'ALL' && item.category !== selectedCategory) {
+        return false;
+      }
       if (transactionType && item.transactionType !== transactionType) return false;
       if (city && !item.location.city.toLowerCase().includes(city.toLowerCase())) return false;
       if (search) {
@@ -507,6 +531,7 @@ export function MarketplacePage() {
                   key={item._id}
                   className="overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer border-border group flex flex-col justify-between rounded-3xl bg-card"
                   onClick={() => {
+                    incrementListingMetric(item._id, 'views');
                     setSelectedListing(item);
                     setActiveTab('info');
                   }}
@@ -533,7 +558,12 @@ export function MarketplacePage() {
                         </span>
                         {isDaily && (
                           <span className="rounded-full bg-amber-400 text-slate-950 px-2 py-0.5 text-[10px] font-black uppercase shadow-sm">
-                            Nuitée
+                            Nuitée / Jour
+                          </span>
+                        )}
+                        {(item as any).availabilityStatus === 'OCCUPIED' && (
+                          <span className="rounded-full bg-rose-600 text-white px-2 py-0.5 text-[10px] font-black uppercase shadow-sm">
+                            Occupé
                           </span>
                         )}
                       </div>
@@ -771,17 +801,25 @@ export function MarketplacePage() {
                   </div>
                 </div>
 
-                <div className="h-64 sm:h-80 rounded-2xl overflow-hidden border border-border relative shadow-inner">
-                  <iframe
-                    title="Localisation réelle"
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    scrolling="no"
-                    marginHeight={0}
-                    marginWidth={0}
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${(selectedListing.location.longitude || -4.0082) - 0.01}%2C${(selectedListing.location.latitude || 5.3599) - 0.01}%2C${(selectedListing.location.longitude || -4.0082) + 0.01}%2C${(selectedListing.location.latitude || 5.3599) + 0.01}&layer=mapnik&marker=${selectedListing.location.latitude || 5.3599}%2C${selectedListing.location.longitude || -4.0082}`}
-                    className="w-full h-full"
+                <div className="rounded-2xl overflow-hidden border border-border relative shadow-inner">
+                  <GeoMapCanvas
+                    title="Carte & Itinéraire GPS vers ce bien"
+                    subtitle="Activez votre GPS ou cliquez sur Démarrer la navigation pour vous rendre facilement sur place"
+                    heightClassName="h-80"
+                    initialCenter={{
+                      lat: selectedListing.location.latitude || 5.3599,
+                      lng: selectedListing.location.longitude || -4.0082,
+                    }}
+                    initialZoom={15}
+                    activeMarker={{
+                      lat: selectedListing.location.latitude || 5.3599,
+                      lng: selectedListing.location.longitude || -4.0082,
+                    }}
+                    targetDestination={{
+                      lat: selectedListing.location.latitude || 5.3599,
+                      lng: selectedListing.location.longitude || -4.0082,
+                    }}
+                    targetDestinationName={selectedListing.title}
                   />
                 </div>
               </div>
@@ -833,13 +871,111 @@ export function MarketplacePage() {
                       </a>
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-2 space-y-3">
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          createScheduledVisit({
+                            listingId: selectedListing._id,
+                            listingTitle: selectedListing.title,
+                            listingCategory: selectedListing.category,
+                            ownerEmail: (selectedListing as any).ownerEmail || selectedListing.contact?.email,
+                            ownerName: selectedListing.contact?.name || 'Agent / Bailleur',
+                            visitorName: user?.displayName || 'Visiteur KatdEstate',
+                            visitorEmail: user?.email || 'visiteur@katdestate.immo',
+                            visitorPhone: visitPhone || '+225 07 00 00 00 00',
+                            scheduledDate: visitDate,
+                            scheduledTime: visitTime,
+                            notes: visitNotes,
+                          });
+                          setVisitNotes('');
+                          toast({
+                            title: 'Visite programmée avec succès !',
+                            description: `Votre rendez-vous du ${visitDate} à ${visitTime} a été transmis au publieur.`,
+                            variant: 'success',
+                          });
+                        }}
+                        className="p-4 rounded-xl bg-background border border-border space-y-2.5"
+                      >
+                        <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+                          <Calendar className="size-4 text-emerald-500" />
+                          <span>Programmer une visite sur place</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <Input
+                            type="date"
+                            value={visitDate}
+                            onChange={(e) => setVisitDate(e.target.value)}
+                            required
+                            className="h-8 text-xs"
+                          />
+                          <Input
+                            type="time"
+                            value={visitTime}
+                            onChange={(e) => setVisitTime(e.target.value)}
+                            required
+                            className="h-8 text-xs"
+                          />
+                          <Input
+                            placeholder="Votre téléphone"
+                            value={visitPhone}
+                            onChange={(e) => setVisitPhone(e.target.value)}
+                            required
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Message ou précision pour la visite (optionnel)"
+                            value={visitNotes}
+                            onChange={(e) => setVisitNotes(e.target.value)}
+                            className="h-8 text-xs flex-1"
+                          />
+                          <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-8 px-3 font-bold">
+                            Réserver la visite
+                          </Button>
+                        </div>
+                      </form>
+
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (!quickMessage.trim()) return;
+                          incrementListingMetric(selectedListing._id, 'inquiries');
+                          createLocalChatThread({
+                            senderName: user?.displayName || 'Visiteur Intéressé',
+                            senderRole: 'TENANT',
+                            recipientName: selectedListing.contact?.name || 'Agent / Propriétaire',
+                            propertyName: selectedListing.title,
+                            subject: `Intérêt pour : ${selectedListing.title}`,
+                            body: quickMessage.trim(),
+                          });
+                          setQuickMessage('');
+                          toast({
+                            title: 'Message envoyé au publieur !',
+                            description: 'Vous pouvez suivre la conversation dans la Messagerie.',
+                            variant: 'success',
+                          });
+                        }}
+                        className="flex gap-2"
+                      >
+                        <Input
+                          placeholder="Écrire un message rapide au publieur..."
+                          value={quickMessage}
+                          onChange={(e) => setQuickMessage(e.target.value)}
+                          className="h-9 text-xs flex-1"
+                        />
+                        <Button type="submit" size="sm" variant="outline" className="text-xs h-9 font-bold">
+                          Envoyer
+                        </Button>
+                      </form>
+
                       <Button
                         onClick={() => handleStartMessaging(selectedListing)}
                         className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2"
                       >
                         <MessageSquare className="size-4" />
-                        <span>Discuter via la Messagerie KatdEstate</span>
+                        <span>Ouvrir la Messagerie complète KatdEstate</span>
                       </Button>
                     </div>
                   </div>

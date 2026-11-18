@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Building2,
   MapPin,
@@ -15,6 +15,12 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useToast } from '../ui/toast';
 import { useSession } from '../../app/session';
+import { GeoMapCanvas } from '../geo/GeoMapCanvas';
+import { getPreciseUserLocation } from '../../lib/geo/geolocation-helper';
+import {
+  updateCustomMarketplaceListing,
+  type CustomMarketplaceListing,
+} from '../../lib/katdestate-store';
 
 export interface NewListingPayload {
   title: string;
@@ -68,16 +74,25 @@ const PROPERTY_CATEGORIES = [
     defaultType: 'RENT',
   },
   {
-    id: 'APPARTEMENT_MEUBLE',
-    label: 'Appartement meublé haut standing',
+    id: 'CHAMBRE_MEUBLEE',
+    label: 'Chambre meublée (Location journalière / Nuitée)',
     icon: Sparkles,
     defaultType: 'RENT',
+    isMeuble: true,
   },
   {
     id: 'STUDIO_MEUBLE_JOURNALIER',
     label: 'Studio meublé (Location journalière / Nuitée)',
     icon: Sparkles,
     defaultType: 'RENT',
+    isMeuble: true,
+  },
+  {
+    id: 'APPARTEMENT_MEUBLE',
+    label: 'Appartement meublé (Location journalière / Séjour)',
+    icon: Sparkles,
+    defaultType: 'RENT',
+    isMeuble: true,
   },
   { id: 'VILLA', label: 'Villa & Maison individuelle', icon: Building2, defaultType: 'SALE' },
   { id: 'LAND', label: 'Terrain foncier / Parcelle avec ACD', icon: MapPin, defaultType: 'SALE' },
@@ -93,21 +108,28 @@ export function PublishListingModal({
   isOpen,
   onClose,
   onPublished,
+  meubleOnly = false,
+  editingListing = null,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onPublished?: (listing: NewListingPayload) => void;
+  meubleOnly?: boolean;
+  editingListing?: CustomMarketplaceListing | null;
 }) {
-  const { user } = useSession();
+  const { user, memberships } = useSession();
   const { toast } = useToast();
+  const userRole = memberships?.[0]?.role || (user as any)?.platformRole || 'AGENT';
 
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('STUDIO_MODERNE');
+  const [category, setCategory] = useState(
+    meubleOnly ? 'STUDIO_MEUBLE_JOURNALIER' : 'STUDIO_MODERNE',
+  );
   const [transactionType, setTransactionType] = useState<'RENT' | 'SALE'>('RENT');
   const [billingFrequency, setBillingFrequency] = useState<'DAILY' | 'MONTHLY' | 'TOTAL'>(
-    'MONTHLY',
+    meubleOnly ? 'DAILY' : 'MONTHLY',
   );
-  const [priceMinor, setPriceMinor] = useState<number>(150000);
+  const [priceMinor, setPriceMinor] = useState<number>(meubleOnly ? 25000 : 150000);
   const [currency, setCurrency] = useState('FCFA');
 
   // Location & Map
@@ -149,31 +171,61 @@ export function PublishListingModal({
     'Très beau logement spacieux et lumineux dans un cadre paisible et sécurisé. Eau et électricité disponibles 24/7, gardiennage et parking disponible.',
   );
 
+  useEffect(() => {
+    if (!isOpen) return;
+    if (editingListing) {
+      setTitle(editingListing.title || '');
+      setCategory(editingListing.category || 'STUDIO_MODERNE');
+      setTransactionType(editingListing.transactionType || 'RENT');
+      setBillingFrequency(editingListing.billingFrequency || 'MONTHLY');
+      setPriceMinor(editingListing.priceMinor || 150000);
+      setCity(editingListing.location?.city || 'Abidjan');
+      setDistrict(editingListing.location?.district || '');
+      setAddress(editingListing.location?.address || '');
+      setLatitude(editingListing.location?.latitude ?? 5.359952);
+      setLongitude(editingListing.location?.longitude ?? -4.008256);
+      setSurfaceM2(editingListing.surfaceM2 ?? 35);
+      setBedrooms(editingListing.bedrooms ?? 1);
+      setBathrooms(editingListing.bathrooms ?? 1);
+      setCautionMonths(editingListing.cautionMonths ?? 2);
+      setAdvanceMonths(editingListing.advanceMonths ?? 2);
+      setDescription(editingListing.description || '');
+      if (editingListing.photos?.length) {
+        setPhotoUrls(editingListing.photos.map((p) => p.url));
+      }
+      if (editingListing.contact) {
+        setContactName(editingListing.contact.name || contactName);
+        setContactPhone(editingListing.contact.phone || contactPhone);
+        setContactWhatsapp(editingListing.contact.whatsapp || contactWhatsapp);
+        setContactEmail(editingListing.contact.email || contactEmail);
+      }
+    } else if (meubleOnly) {
+      setCategory('STUDIO_MEUBLE_JOURNALIER');
+      setTransactionType('RENT');
+      setBillingFrequency('DAILY');
+      setPriceMinor(25000);
+    }
+  }, [isOpen, editingListing, meubleOnly]);
+
   if (!isOpen) return null;
 
   // Handle auto GPS Location
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      toast({ title: 'Géolocalisation non supportée', variant: 'error' });
-      return;
-    }
+  const handleGetLocation = async () => {
     setGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLatitude(Number(pos.coords.latitude.toFixed(6)));
-        setLongitude(Number(pos.coords.longitude.toFixed(6)));
-        setGettingLocation(false);
-        toast({
-          title: 'Coordonnées GPS capturées !',
-          description: `Lat: ${pos.coords.latitude.toFixed(4)}, Long: ${pos.coords.longitude.toFixed(4)}`,
-          variant: 'success',
-        });
-      },
-      () => {
-        setGettingLocation(false);
-        toast({ title: 'Impossible d’obtenir la position GPS', variant: 'error' });
-      },
-    );
+    try {
+      const pos = await getPreciseUserLocation();
+      setLatitude(Number(pos.lat.toFixed(6)));
+      setLongitude(Number(pos.lng.toFixed(6)));
+      toast({
+        title: 'Position GPS exacte capturée !',
+        description: `Lat: ${pos.lat.toFixed(5)}, Long: ${pos.lng.toFixed(5)}`,
+        variant: 'success',
+      });
+    } catch {
+      toast({ title: 'Impossible d’obtenir la position GPS', variant: 'error' });
+    } finally {
+      setGettingLocation(false);
+    }
   };
 
   const handleAddPhoto = () => {
@@ -250,28 +302,47 @@ export function PublishListingModal({
       advanceMonths,
     };
 
-    // Store in custom listings with workflow status EN_ATTENTE
+    const isMeubleCategory =
+      category === 'CHAMBRE_MEUBLEE' ||
+      category === 'STUDIO_MEUBLE_JOURNALIER' ||
+      category === 'APPARTEMENT_MEUBLE' ||
+      billingFrequency === 'DAILY';
+
     try {
-      const existing = JSON.parse(localStorage.getItem('katdestate_custom_listings') || '[]');
-      existing.unshift({
-        ...payload,
-        _id: `listing-${Date.now()}`,
-        workflowStatus: 'EN_ATTENTE',
-        status: 'PENDING',
-        authorId: user?.id || 'habitant-local',
-        authorName: user?.displayName || contactName,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      localStorage.setItem('katdestate_custom_listings', JSON.stringify(existing));
+      if (editingListing) {
+        updateCustomMarketplaceListing(editingListing._id, {
+          ...payload,
+          isMeuble: isMeubleCategory,
+          workflowStatus: 'PUBLIE',
+        });
+      } else {
+        const existing = JSON.parse(localStorage.getItem('katdestate_custom_listings') || '[]');
+        existing.unshift({
+          ...payload,
+          _id: `listing-${Date.now()}`,
+          workflowStatus: 'PUBLIE',
+          status: 'PUBLISHED',
+          availabilityStatus: 'AVAILABLE',
+          isMeuble: isMeubleCategory,
+          ownerEmail: user?.email || contactEmail,
+          publisherRole: userRole,
+          authorId: user?.id || 'habitant-local',
+          authorName: user?.displayName || contactName,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        localStorage.setItem('katdestate_custom_listings', JSON.stringify(existing));
+      }
     } catch {
       // fallback
     }
 
     toast({
-      title: 'Annonce enregistrée — Statut : EN ATTENTE',
+      title: editingListing
+        ? 'Annonce mise à jour sur la Marketplace !'
+        : 'Bien publié sur la Marketplace avec succès !',
       description:
-        'Votre annonce a été soumise avec succès. Le Chef de Bloc va procéder à la vérification terrain avant validation.',
+        'Votre annonce et sa position GPS exacte sont immédiatement visibles et navigables par les utilisateurs.',
       variant: 'success',
     });
 
@@ -291,9 +362,17 @@ export function PublishListingModal({
               </div>
             </div>
             <div>
-              <h3 className="text-lg sm:text-xl font-black">Publier un Bien sur la Marketplace</h3>
+              <h3 className="text-lg sm:text-xl font-black">
+                {editingListing
+                  ? 'Modifier le Bien Immobilier'
+                  : meubleOnly
+                    ? 'Publier un Meublé (Location Journalière)'
+                    : 'Publier un Bien sur la Marketplace'}
+              </h3>
               <p className="text-xs text-purple-300">
-                Chambre simple, studio meublé, appartement ou villa avec géolocalisation et photos.
+                {meubleOnly
+                  ? 'Chambre meublée, studio meublé ou appartement meublé à la journée / nuitée avec position GPS exacte.'
+                  : 'Chambre, studio, meublé journalier, appartement ou villa avec positionnement exact sur la carte.'}
               </p>
             </div>
           </div>
@@ -312,13 +391,20 @@ export function PublishListingModal({
               1. Type & Catégorie de Bien *
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {PROPERTY_CATEGORIES.map((cat) => (
+              {(meubleOnly
+                ? PROPERTY_CATEGORIES.filter((c) => (c as any).isMeuble)
+                : PROPERTY_CATEGORIES
+              ).map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
                   onClick={() => {
                     setCategory(cat.id);
-                    if (cat.id === 'STUDIO_MEUBLE_JOURNALIER') {
+                    if (
+                      cat.id === 'CHAMBRE_MEUBLEE' ||
+                      cat.id === 'STUDIO_MEUBLE_JOURNALIER' ||
+                      cat.id === 'APPARTEMENT_MEUBLE'
+                    ) {
                       setBillingFrequency('DAILY');
                       setTransactionType('RENT');
                     } else if (cat.id === 'VILLA' || cat.id === 'LAND') {
@@ -675,22 +761,27 @@ export function PublishListingModal({
               </div>
             </div>
 
-            {/* Interactive OpenStreetMap iframe preview */}
-            <div className="h-32 rounded-xl overflow-hidden border border-purple-700/60 relative mt-2 shadow-inner">
-              <iframe
-                title="Aperçu de la position"
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                scrolling="no"
-                marginHeight={0}
-                marginWidth={0}
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.01}%2C${latitude - 0.01}%2C${longitude + 0.01}%2C${latitude + 0.01}&layer=mapnik&marker=${latitude}%2C${longitude}`}
-                className="w-full h-full grayscale-[20%] contrast-125"
+            {/* Carte interactive identique aux autres dashboards pour pointer la position exacte */}
+            <div className="mt-2 rounded-2xl overflow-hidden border border-purple-700/60 bg-slate-950/60">
+              <GeoMapCanvas
+                title="Positionnement exact du bien sur la carte"
+                subtitle="Cliquez sur la carte ou recherchez une adresse pour placer le marqueur GPS du bien"
+                heightClassName="h-72"
+                initialCenter={{ lat: latitude, lng: longitude }}
+                initialZoom={14}
+                allowMarkerPlacement={true}
+                activeMarker={{ lat: latitude, lng: longitude }}
+                focusTarget={{ lat: latitude, lng: longitude, zoom: 15, key: `${latitude}-${longitude}` }}
+                onMarkerChange={(pt, geocode) => {
+                  setLatitude(Number(pt.lat.toFixed(6)));
+                  setLongitude(Number(pt.lng.toFixed(6)));
+                  if (geocode?.city) setCity(geocode.city);
+                  if (geocode?.neighborhood) setDistrict(geocode.neighborhood);
+                  if (geocode?.address) {
+                    setAddress(geocode.address.split(',')[0] || address);
+                  }
+                }}
               />
-              <div className="absolute top-1 left-2 bg-slate-950/80 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] text-emerald-400 font-bold">
-                📍 Point d’ancrage GPS vérifié
-              </div>
             </div>
           </div>
 

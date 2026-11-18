@@ -53,6 +53,13 @@ import { QuartierHomePage } from '../pages/quartier/quartier-home';
 import { InteractiveQuartierMap } from '../pages/quartier/interactive-map';
 import { PropertyQrPublicPage } from '../pages/property-qr-public';
 import { ScanQrPage } from '../pages/scan-qr';
+import {
+  PublisherListingsPage,
+  PublisherMeublesPage,
+  PublisherStatsPage,
+  PublisherSupportPage,
+  PublisherUsersPage,
+} from '../pages/publisher-hub';
 import type { ReactNode } from 'react';
 
 /**
@@ -183,6 +190,11 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'publisher/listings', element: <PublisherListingsPage /> },
+      { path: 'publisher/meubles', element: <PublisherMeublesPage /> },
+      { path: 'publisher/users', element: <PublisherUsersPage /> },
+      { path: 'publisher/stats', element: <PublisherStatsPage /> },
+      { path: 'publisher/support', element: <PublisherSupportPage /> },
       { path: 'carte', element: <InteractiveQuartierMap /> },
       { path: 'admin/owners', element: <AdminOwnersPage /> },
       { path: 'platform/owners', element: <AdminOwnersPage /> },
