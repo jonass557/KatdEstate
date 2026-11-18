@@ -451,25 +451,32 @@ export function GeoMapCanvas({
     const map = mapInstanceRef.current;
     if (!map || !focusTarget) return;
 
-    if (focusTarget.boundary) {
-      const pts = fromGeoJsonBoundary(focusTarget.boundary);
-      if (pts.length >= 3) {
-        const bounds = L.latLngBounds(pts.map((p) => [p.lat, p.lng]));
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17, animate: true });
+    const applyFocus = () => {
+      map.invalidateSize();
+      if (focusTarget.boundary) {
+        const pts = fromGeoJsonBoundary(focusTarget.boundary);
+        if (pts.length >= 3) {
+          const bounds = L.latLngBounds(pts.map((p) => [p.lat, p.lng]));
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17, animate: true });
+          return;
+        }
+      }
+
+      if (focusTarget.point) {
+        map.setView([focusTarget.point.lat, focusTarget.point.lng], focusTarget.zoom || 16, {
+          animate: true,
+        });
         return;
       }
-    }
 
-    if (focusTarget.point) {
-      map.setView([focusTarget.point.lat, focusTarget.point.lng], focusTarget.zoom || 16, {
-        animate: true,
-      });
-      return;
-    }
+      if (typeof focusTarget.lat === 'number' && typeof focusTarget.lng === 'number') {
+        map.setView([focusTarget.lat, focusTarget.lng], focusTarget.zoom || 15, { animate: true });
+      }
+    };
 
-    if (typeof focusTarget.lat === 'number' && typeof focusTarget.lng === 'number') {
-      map.setView([focusTarget.lat, focusTarget.lng], focusTarget.zoom || 15, { animate: true });
-    }
+    applyFocus();
+    const t = setTimeout(applyFocus, 260);
+    return () => clearTimeout(t);
   }, [focusTarget]);
 
   // 9. Déclenchement externe de la navigation (targetDestination)

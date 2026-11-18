@@ -16,6 +16,7 @@ import {
 import {
   computePolygonAreaM2,
   doPolygonsOverlap,
+  fromGeoJsonBoundary,
   isPolygonInsidePolygon,
   toGeoJsonPolygon,
   validatePolygonGeometry,
@@ -163,7 +164,14 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
   const handleAutoDelimitFromGps = async (targetMode: 'EDIT_NEIGHBORHOOD' | 'CREATE_BLOCK') => {
     setIsAutoDelimitingGps(true);
     try {
-      const loc = await getPreciseUserLocation({ requireRealGps: true });
+      let loc;
+      try {
+        loc = await getPreciseUserLocation({ requireRealGps: true });
+      } catch {
+        // Si le navigateur bloque le GPS matériel (ex: contexte HTTP ou signal faible en intérieur),
+        // on utilise le repli réseau/IP ou la localité déjà saisie plutôt que de bloquer l'utilisateur
+        loc = await getPreciseUserLocation({ requireRealGps: false });
+      }
       let geocode: any = null;
       try {
         geocode = await reverseGeocodeWithNominatim(loc.lat, loc.lng);
@@ -511,8 +519,8 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
       setGpsFocusTarget({ boundary: draftBoundary, key: `saved-neigh-${Date.now()}` });
       refreshLocal();
       toast({
-        title: 'Limites du quartier enregistrées',
-        description: 'Le polygone GeoJSON du quartier a été sauvegardé avec succès.',
+        title: `Quartier « ${finalZoneName} » enregistré !`,
+        description: 'Votre zone délimitée est maintenant sauvegardée et affichée sur la carte.',
         variant: 'success',
       });
     } finally {
@@ -1052,6 +1060,14 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
         title="Carte du Quartier et des Zones de Chefs de Bloc"
         subtitle="Cliquez sur « Dessiner une zone » ou « Modifier les frontières » pour tracer les polygones directement sur l’imagerie satellite ou routière."
         heightClassName="h-[500px]"
+        initialCenter={(() => {
+          if (!activeNeighborhood.boundary) return undefined;
+          const pts = fromGeoJsonBoundary(activeNeighborhood.boundary);
+          if (pts.length === 0) return undefined;
+          const lat = pts.reduce((s, p) => s + p.lat, 0) / pts.length;
+          const lng = pts.reduce((s, p) => s + p.lng, 0) / pts.length;
+          return { lat, lng };
+        })()}
         overlays={overlays}
         activeBoundary={mapMode === 'VIEW' ? null : draftBoundary}
         onBoundaryChange={mapMode === 'VIEW' ? undefined : setDraftBoundary}

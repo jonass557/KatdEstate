@@ -56,8 +56,8 @@ function acquireHighAccuracyFix(maxWaitMs = 12000): Promise<GeolocationPosition>
         if (!bestPos || pos.coords.accuracy < bestPos.coords.accuracy) {
           bestPos = pos;
         }
-        // Si la précision est excellente (<= 80 mètres), on valide immédiatement
-        if (pos.coords.accuracy <= 80) {
+        // Si la précision est bonne (<= 150 mètres), on valide immédiatement
+        if (pos.coords.accuracy <= 150) {
           finish(pos);
         }
       },
@@ -77,7 +77,7 @@ function acquireHighAccuracyFix(maxWaitMs = 12000): Promise<GeolocationPosition>
       {
         enableHighAccuracy: true,
         timeout: maxWaitMs,
-        maximumAge: 0,
+        maximumAge: 15000,
       },
     );
   });
@@ -120,13 +120,13 @@ export async function getPreciseUserLocation(
         : new Error('Permission GPS refusée. Veuillez autoriser la géolocalisation.');
     }
 
-    // Étape 2 : Essai Réseau / WiFi du navigateur (sans cache périmé: maximumAge: 0)
+    // Étape 2 : Essai Réseau / WiFi du navigateur (accepte un fix récent jusqu'à 60s)
     try {
       const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: false,
-          timeout: 10000,
-          maximumAge: 0,
+          timeout: 12000,
+          maximumAge: 60000,
         });
       });
       return {
