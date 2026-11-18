@@ -508,6 +508,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
       });
 
       setMapMode('VIEW');
+      setGpsFocusTarget({ boundary: draftBoundary, key: `saved-neigh-${Date.now()}` });
       refreshLocal();
       toast({
         title: 'Limites du quartier enregistrées',

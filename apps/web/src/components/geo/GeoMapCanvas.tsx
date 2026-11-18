@@ -68,7 +68,17 @@ export interface GeoMapCanvasProps {
   validationError?: string | null | undefined;
   validationSuccess?: string | null | undefined;
   /** Permet le zoom automatique vers un polygone ou marqueur cible */
-  focusTarget?: { boundary?: GeoJsonBoundary | null; point?: LatLngPoint | null; key?: string } | null | undefined;
+  focusTarget?:
+    | {
+        boundary?: GeoJsonBoundary | null | undefined;
+        point?: LatLngPoint | null | undefined;
+        lat?: number | undefined;
+        lng?: number | undefined;
+        zoom?: number | undefined;
+        key?: string | undefined;
+      }
+    | null
+    | undefined;
   legendItems?: Array<{ label: string; color: string }> | undefined;
   /** Déclenchement externe de la navigation vers une destination */
   targetDestination?: LatLngPoint | null | undefined;
@@ -451,7 +461,14 @@ export function GeoMapCanvas({
     }
 
     if (focusTarget.point) {
-      map.setView([focusTarget.point.lat, focusTarget.point.lng], 16, { animate: true });
+      map.setView([focusTarget.point.lat, focusTarget.point.lng], focusTarget.zoom || 16, {
+        animate: true,
+      });
+      return;
+    }
+
+    if (typeof focusTarget.lat === 'number' && typeof focusTarget.lng === 'number') {
+      map.setView([focusTarget.lat, focusTarget.lng], focusTarget.zoom || 15, { animate: true });
     }
   }, [focusTarget]);
 

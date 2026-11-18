@@ -112,13 +112,12 @@ export function InteractiveQuartierMap() {
     };
   }, [base]);
 
-  // Fusion propre API + Store Local
+  // Fusion propre API + Store Local (les délimitations enregistrées localement restent prioritaires et persistantes même hors connexion)
   const rawNeighborhoods: NeighborhoodGeoRecord[] = useMemo(() => {
     const local = getStoredNeighborhoods();
     const apiList = apiData?.layers?.neighborhoods ?? apiData?.neighborhoods ?? [];
     if (apiList.length === 0) return local;
     const map = new Map<string, NeighborhoodGeoRecord>();
-    local.forEach((n) => map.set(n.id, n));
     apiList.forEach((n) =>
       map.set(n._id, {
         id: n._id,
@@ -130,9 +129,17 @@ export function InteractiveQuartierMap() {
         leaderName: n.leaderName,
         leaderPhone: n.leaderPhone,
         boundary: n.boundary,
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date(0).toISOString(),
       }),
     );
+    local.forEach((n) => {
+      const apiExisting = map.get(n.id);
+      map.set(n.id, {
+        ...apiExisting,
+        ...n,
+        boundary: n.boundary ?? apiExisting?.boundary,
+      });
+    });
     return Array.from(map.values());
   }, [apiData]);
 
@@ -141,24 +148,30 @@ export function InteractiveQuartierMap() {
     const apiList = apiData?.layers?.blocks ?? apiData?.blocks ?? [];
     if (apiList.length === 0) return local;
     const map = new Map<string, BlockRecord>();
-    local.forEach((b) => map.set(b.id, b));
     apiList.forEach((b) => {
-      const existing = map.get(b._id);
       map.set(b._id, {
         id: b._id,
         code: b.code,
         name: b.name,
         neighborhoodId: b.neighborhoodId,
-        neighborhoodName: existing?.neighborhoodName || 'Quartier',
-        leaderName: b.leaderName ?? existing?.leaderName,
-        leaderEmail: b.leaderEmail ?? existing?.leaderEmail,
-        leaderPhone: b.leaderPhone ?? existing?.leaderPhone,
-        color: b.color ?? existing?.color ?? '#06b6d4',
+        neighborhoodName: 'Quartier',
+        leaderName: b.leaderName,
+        leaderEmail: b.leaderEmail,
+        leaderPhone: b.leaderPhone,
+        color: b.color ?? '#06b6d4',
         isActive: b.isActive ?? true,
-        boundary: b.boundary ?? existing?.boundary,
-        totalResidences: b.totalResidences ?? existing?.totalResidences ?? 0,
-        totalHabitants: b.totalHabitants ?? existing?.totalHabitants ?? 0,
-        createdAt: existing?.createdAt || new Date().toISOString(),
+        boundary: b.boundary,
+        totalResidences: b.totalResidences ?? 0,
+        totalHabitants: b.totalHabitants ?? 0,
+        createdAt: new Date().toISOString(),
+      });
+    });
+    local.forEach((b) => {
+      const apiExisting = map.get(b.id);
+      map.set(b.id, {
+        ...apiExisting,
+        ...b,
+        boundary: b.boundary ?? apiExisting?.boundary,
       });
     });
     return Array.from(map.values());
@@ -257,12 +270,18 @@ export function InteractiveQuartierMap() {
   const [selectedNeighborhoodFilter, setSelectedNeighborhoodFilter] = useState('');
   const [selectedBlockFilter, setSelectedBlockFilter] = useState('');
 
-  // Focus auto-zoom & sélection de fiche détail
+  // Focus auto-zoom & sélection de fiche détail (se cale par défaut sur la zone délimitée)
   const [focusTarget, setFocusTarget] = useState<{
     boundary?: GeoJsonBoundary | null;
     point?: LatLngPoint | null;
     key?: string;
-  } | null>(null);
+  } | null>(() => {
+    const firstNeigh = getStoredNeighborhoods()[0];
+    if (firstNeigh?.boundary && !searchParams.get('navToLat')) {
+      return { boundary: firstNeigh.boundary, key: `init-${firstNeigh.id}` };
+    }
+    return null;
+  });
   const [selectedDetail, setSelectedDetail] = useState<{
     title: string;
     subtitle?: string | undefined;

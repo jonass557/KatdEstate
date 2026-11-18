@@ -38,6 +38,7 @@ import {
   saveRegisteredUser,
   deleteBlockLeader,
   getStoredBlocks,
+  getStoredNeighborhoods,
   createBlock,
   updateStoredBlock,
   getStoredHabitants,
@@ -1284,22 +1285,40 @@ export function NeighborhoodLeaderDashboard() {
             </label>
             <GeoMapCanvas
               title="Zone d'intervention du Chef de Bloc"
-              heightClassName="h-[240px]"
+              heightClassName="h-[260px]"
               allowPolygonDraw={true}
               activeBoundary={leaderBoundary}
               onBoundaryChange={setLeaderBoundary}
-              overlays={blocks
-                .filter((b) => b.boundary)
-                .map((b) => ({
-                  id: b.id,
-                  level: 'BLOCK' as const,
-                  label: b.name,
-                  boundary: b.boundary!,
-                  color: b.color || '#06b6d4',
-                  fillOpacity: 0.12,
-                  strokeWeight: 2,
-                  locked: true,
-                }))}
+              overlays={[
+                ...getStoredNeighborhoods()
+                  .filter((n) => n.boundary)
+                  .map((n) => ({
+                    id: n.id,
+                    level: 'NEIGHBORHOOD' as const,
+                    label: `Mon Quartier : ${n.name}`,
+                    boundary: n.boundary!,
+                    color: '#7c3aed',
+                    fillOpacity: 0.08,
+                    strokeWeight: 3,
+                    locked: true,
+                  })),
+                ...getStoredBlocks()
+                  .filter((b) => b.boundary)
+                  .map((b) => ({
+                    id: b.id,
+                    level: 'BLOCK' as const,
+                    label: b.name,
+                    boundary: b.boundary!,
+                    color: b.color || '#06b6d4',
+                    fillOpacity: 0.14,
+                    strokeWeight: 2,
+                    locked: true,
+                  })),
+              ]}
+              focusTarget={{
+                boundary: getStoredNeighborhoods()[0]?.boundary ?? null,
+                key: `leader-modal-${newLeaderModalOpen}`,
+              }}
             />
           </div>
 
