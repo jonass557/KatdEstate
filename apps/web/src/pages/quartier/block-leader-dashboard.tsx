@@ -1537,6 +1537,7 @@ export function BlockLeaderDashboard() {
         open={newOwnerOpen}
         onOpenChange={setNewOwnerOpen}
         title="Créer un Propriétaire & ses Identifiants de connexion"
+        className="max-w-2xl"
       >
         <form onSubmit={handleCreateOwner} className="space-y-3 text-xs">
           <div>

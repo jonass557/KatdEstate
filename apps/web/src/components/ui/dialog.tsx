@@ -54,9 +54,9 @@ export function Modal({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-4">
       <div
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+        className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
         aria-hidden
       />
@@ -68,11 +68,11 @@ export function Modal({
         {...(description ? { 'aria-describedby': descriptionId } : {})}
         tabIndex={-1}
         className={cn(
-          'animate-in relative z-10 w-full max-w-lg rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-2xl',
+          'animate-in relative z-10 my-auto flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-2xl',
           className,
         )}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex shrink-0 items-start justify-between gap-4">
           <div className="space-y-1">
             <h2 id={titleId} className="text-base font-semibold tracking-tight">
               {title}
@@ -94,7 +94,7 @@ export function Modal({
             </button>
           )}
         </div>
-        <div className="mt-4">{children}</div>
+        <div className="mt-4 flex-1 overflow-y-auto pr-1">{children}</div>
       </div>
     </div>,
     document.body,

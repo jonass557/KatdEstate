@@ -1191,7 +1191,12 @@ export function NeighborhoodLeaderDashboard() {
       )}
 
       {/* MODAL : NOMMER UN CHEF DE BLOC */}
-      <Modal open={newLeaderModalOpen} onOpenChange={setNewLeaderModalOpen} title="Nommer un Chef de Bloc">
+      <Modal
+        open={newLeaderModalOpen}
+        onOpenChange={setNewLeaderModalOpen}
+        title="Nommer un Chef de Bloc"
+        className="max-w-2xl"
+      >
         <form onSubmit={handleCreateLeader} className="space-y-3 text-xs">
           <div>
             <label className="font-semibold block mb-1">Nom complet du Chef de Bloc *</label>

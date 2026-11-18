@@ -569,8 +569,8 @@ export function GeoMapCanvas({
   }, []);
 
   // Recherche d'adresse mondiale avec Nominatim (OpenStreetMap)
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
     if (!searchQuery.trim()) return;
 
     setIsSearching(true);
@@ -752,9 +752,9 @@ export function GeoMapCanvas({
             </button>
           </div>
 
-          {/* Formulaire de recherche mondiale d'adresses (Nominatim OSM) */}
+          {/* Barre de recherche mondiale d'adresses (Nominatim OSM — sans balise form imbriquée) */}
           <div className="relative min-w-[240px] max-w-sm flex-1">
-            <form onSubmit={handleSearch} className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5">
               <div className="relative w-full">
                 <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
                 <Input
@@ -762,19 +762,26 @@ export function GeoMapCanvas({
                   placeholder="Rechercher ville, quartier, pays..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleSearch();
+                    }
+                  }}
                   className="h-8 rounded-xl pl-8 pr-3 text-xs bg-background border-input text-foreground"
                 />
               </div>
               <Button
-                type="submit"
+                type="button"
                 size="sm"
                 variant="secondary"
                 className="h-8 px-2.5 text-xs font-semibold shrink-0"
                 disabled={isSearching}
+                onClick={() => void handleSearch()}
               >
                 {isSearching ? '...' : 'Chercher'}
               </Button>
-            </form>
+            </div>
 
             {/* Suggestions de recherche */}
             {searchResults.length > 0 && (
