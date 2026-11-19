@@ -32,6 +32,7 @@ export const registerSchema = z
     role: z
       .enum([
         'OWNER',
+        'INDEPENDENT_OWNER',
         'TENANT',
         'AGENT',
         'NEIGHBORHOOD_LEADER',

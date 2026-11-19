@@ -44,6 +44,7 @@ import { Button } from '../components/ui/button';
 import { useOrgQuery } from '../lib/query';
 import { IkeepayModal } from '../components/payments/ikeepay-modal';
 import { IkeepaySettingsModal } from '../components/admin/ikeepay-settings-modal';
+import { AdminNotificationApiSettingsModal } from '../components/admin/notification-api-settings-modal';
 import { OwnerReportProblemModal } from '../components/quartier/OwnerReportProblemModal';
 import { Modal } from '../components/ui/dialog';
 import {
@@ -103,6 +104,7 @@ export function DashboardPage() {
   // Modals state
   const [ikeepayPayinOpen, setIkeepayPayinOpen] = useState(false);
   const [ikeepaySettingsOpen, setIkeepaySettingsOpen] = useState(false);
+  const [notifApiSettingsOpen, setNotifApiSettingsOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [ownerProblemModalOpen, setOwnerProblemModalOpen] = useState(false);
   const [ownerMsgModalOpen, setOwnerMsgModalOpen] = useState(false);
@@ -256,6 +258,15 @@ export function DashboardPage() {
                 to: '/publisher/support',
                 badge: 'SUPPORT',
                 badgeBg: 'bg-rose-300 text-black',
+              },
+              {
+                title: 'Paramètres API\nSMS / Appel / Email',
+                icon: Settings,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                onClick: () => setNotifApiSettingsOpen(true),
+                badge: 'API NOTIF',
+                badgeBg: 'bg-teal-300 text-black',
               },
               {
                 title: 'Audit &\nSécurité',
@@ -988,6 +999,16 @@ export function DashboardPage() {
           },
         ];
 
+      case 'INDEPENDENT_OWNER':
+        return [
+          {
+            title: 'ESPACE PROPRIÉTAIRE INDÉPENDANT',
+            subtitle:
+              'Publication Marketplace avec carte GPS, gestion des meublés & comptes à rebours clients, immobiliers, visites, statistiques et estimation IA',
+            buttons: publisherMarketplaceButtons,
+          },
+        ];
+
       case 'OWNER':
       case 'LANDLORD':
       default: // OWNER / Propriétaire
@@ -1218,6 +1239,11 @@ export function DashboardPage() {
       label: 'Propriétaire & Bailleur Foncier',
       icon: Building2,
       color: 'text-blue-400 bg-blue-400/10 border-blue-400/30',
+    },
+    INDEPENDENT_OWNER: {
+      label: 'Propriétaire Indépendant',
+      icon: Home,
+      color: 'text-teal-400 bg-teal-400/10 border-teal-400/30',
     },
     TENANT: {
       label: 'Locataire Résident',
@@ -1627,6 +1653,11 @@ export function DashboardPage() {
       <IkeepaySettingsModal
         isOpen={ikeepaySettingsOpen}
         onClose={() => setIkeepaySettingsOpen(false)}
+      />
+
+      <AdminNotificationApiSettingsModal
+        isOpen={notifApiSettingsOpen}
+        onClose={() => setNotifApiSettingsOpen(false)}
       />
 
       <PublishListingModal

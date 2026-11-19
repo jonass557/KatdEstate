@@ -1,23 +1,29 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
   BarChart3,
   BedDouble,
+  Bell,
   Building2,
   Calendar,
   CheckCircle2,
+  Clock,
   Edit3,
   Eye,
   Flame,
+  Mail,
   MapPin,
   MessageSquare,
+  Phone,
+  PhoneCall,
   Plus,
   Send,
   ShieldCheck,
   Trash2,
   UserCheck,
   Users,
+  Wallet,
   XCircle,
 } from 'lucide-react';
 import { BackButton } from '../components/ui/back-button';
@@ -33,16 +39,28 @@ import { useSession } from '../app/session';
 import { PublishListingModal } from '../components/marketplace/publish-listing-modal';
 import {
   createAdminSupportTicket,
+  createMeubleClientStay,
   deleteCustomMarketplaceListing,
+  deleteRegisteredMeuble,
+  dispatchExpirationNotifications,
   getAdminSupportTickets,
   getCustomMarketplaceListings,
   getListingMetrics,
+  getMeubleClientStays,
+  getNotificationDispatchLogs,
+  getRegisteredMeubles,
   getScheduledVisits,
+  markMeubleStayCompleted,
   replyToAdminSupportTicket,
+  saveRegisteredMeuble,
   updateCustomMarketplaceListing,
   updateScheduledVisitStatus,
   type AdminSupportTicket,
   type CustomMarketplaceListing,
+  type MeubleClientStay,
+  type MeubleTypeOption,
+  type NotifyChannel,
+  type RegisteredMeubleProperty,
   type ScheduledVisit,
 } from '../lib/katdestate-store';
 
@@ -292,16 +310,87 @@ export function PublisherListingsPage() {
 // ============================================================================
 // 2. GESTION DES MEUBLÉS (Chambres, Studios & Appartements en Location Journalière)
 // ============================================================================
+function formatCountdownRemaining(targetIso: string, nowMs: number): {
+  expired: boolean;
+  label: string;
+} {
+  const diff = new Date(targetIso).getTime() - nowMs;
+  if (Number.isNaN(diff) || diff <= 0) {
+    return { expired: true, label: 'TEMPS EXPIRÉ' };
+  }
+  const totalSec = Math.floor(diff / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}j`);
+  parts.push(`${String(hours).padStart(2, '0')}h`);
+  parts.push(`${String(mins).padStart(2, '0')}m`);
+  parts.push(`${String(secs).padStart(2, '0')}s`);
+  return { expired: false, label: parts.join(' ') };
+}
+
+const MEUBLE_TYPE_LABELS: Record<MeubleTypeOption, string> = {
+  CHAMBRE_MEUBLEE: 'Chambre meublée',
+  STUDIO_MEUBLE: 'Studio meublé',
+  APPARTEMENT_MEUBLE: 'Appartement meublé',
+};
+
 export function PublisherMeublesPage() {
   const { user, memberships } = useSession();
   const { toast } = useToast();
   const role = memberships?.[0]?.role || (user as any)?.platformRole || 'AGENT';
+  const ownerEmail = user?.email || 'proprietaire@katdestate.immo';
   const { listings, refresh } = usePublisherListings(user?.email, role);
 
+  const [subTab, setSubTab] = useState<'meubles' | 'clients' | 'stats'>('meubles');
   const [publishOpen, setPublishOpen] = useState(false);
   const [editingListing, setEditingListing] = useState<CustomMarketplaceListing | null>(null);
+  const [tick, setTick] = useState(0);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const meubles = useMemo(
+  // Enregistrer un meublé dans son parc
+  const [regTitle, setRegTitle] = useState('');
+  const [regType, setRegType] = useState<MeubleTypeOption>('STUDIO_MEUBLE');
+  const [regRate, setRegRate] = useState(25000);
+  const [regCity] = useState('Abidjan');
+  const [regDistrict, setRegDistrict] = useState('Cocody');
+  const [regAddress, setRegAddress] = useState('');
+
+  // Enregistrer un client occupant
+  const [stayMeubleId, setStayMeubleId] = useState('');
+  const [stayType, setStayType] = useState<MeubleTypeOption>('STUDIO_MEUBLE');
+  const [clientName, setClientName] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [durationValue, setDurationValue] = useState(1);
+  const [durationUnit, setDurationUnit] = useState<'DAYS' | 'HOURS'>('DAYS');
+  const [checkInDate, setCheckInDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [checkInTime, setCheckInTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [checkOutDate, setCheckOutDate] = useState(() =>
+    new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+  );
+  const [checkOutTime, setCheckOutTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [amountPaid, setAmountPaid] = useState(25000);
+  const [ownerNotifyPhone, setOwnerNotifyPhone] = useState('');
+  const [notifyChannels, setNotifyChannels] = useState<NotifyChannel[]>(['EMAIL', 'SMS']);
+
+  // Filtres historique / stats par meublé et par période
+  const [filterMeubleId, setFilterMeubleId] = useState('ALL');
+  const [filterFromDate, setFilterFromDate] = useState('');
+  const [filterToDate, setFilterToDate] = useState('');
+
+  const registeredMeubles = useMemo<RegisteredMeubleProperty[]>(() => {
+    void tick;
+    const all = getRegisteredMeubles();
+    if (role === 'SUPER_ADMIN' || role === 'ADMIN') return all;
+    const norm = ownerEmail.trim().toLowerCase();
+    const mine = all.filter((m) => m.ownerEmail.trim().toLowerCase() === norm);
+    return mine.length > 0 ? mine : all;
+  }, [tick, ownerEmail, role]);
+
+  const marketplaceMeubles = useMemo(
     () =>
       listings.filter(
         (l) =>
@@ -314,18 +403,237 @@ export function PublisherMeublesPage() {
     [listings],
   );
 
+  // Parc unifié (meublés publiés + meublés enregistrés)
+  const allMeublesUnified = useMemo(() => {
+    const items: Array<{
+      id: string;
+      title: string;
+      type: MeubleTypeOption;
+      dailyRate: number;
+      city: string;
+      district: string;
+      source: 'MARKETPLACE' | 'REGISTERED';
+      rawListing?: CustomMarketplaceListing;
+    }> = [];
+    for (const m of marketplaceMeubles) {
+      const t: MeubleTypeOption =
+        m.category === 'CHAMBRE_MEUBLEE'
+          ? 'CHAMBRE_MEUBLEE'
+          : m.category === 'APPARTEMENT_MEUBLE'
+            ? 'APPARTEMENT_MEUBLE'
+            : 'STUDIO_MEUBLE';
+      items.push({
+        id: m._id,
+        title: m.title,
+        type: t,
+        dailyRate: m.priceMinor || 25000,
+        city: m.location?.city || '',
+        district: m.location?.district || '',
+        source: 'MARKETPLACE',
+        rawListing: m,
+      });
+    }
+    for (const r of registeredMeubles) {
+      items.push({
+        id: r._id,
+        title: r.title,
+        type: r.meubleType,
+        dailyRate: r.dailyRate,
+        city: r.city,
+        district: r.district,
+        source: 'REGISTERED',
+      });
+    }
+    return items;
+  }, [marketplaceMeubles, registeredMeubles]);
+
+  const stays = useMemo<MeubleClientStay[]>(() => {
+    void tick;
+    const all = getMeubleClientStays();
+    if (role === 'SUPER_ADMIN' || role === 'ADMIN') return all;
+    const norm = ownerEmail.trim().toLowerCase();
+    const mine = all.filter((s) => s.ownerEmail.trim().toLowerCase() === norm);
+    return mine.length > 0 ? mine : all;
+  }, [tick, ownerEmail, role]);
+
+  const notifLogs = useMemo(() => {
+    void tick;
+    return getNotificationDispatchLogs();
+  }, [tick]);
+
+  // Compte à rebours temps réel (chaque seconde) + notification automatique à expiration
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      setNowMs(now);
+
+      const currentStays = getMeubleClientStays();
+      for (const s of currentStays) {
+        if (
+          s.status === 'ACTIVE' &&
+          !s.notificationSentAt &&
+          new Date(s.checkOutIso).getTime() <= now
+        ) {
+          void dispatchExpirationNotifications(s).then(() => {
+            setTick((t) => t + 1);
+            toast({
+              title: `Temps expiré : ${s.clientName}`,
+              description: `Le séjour dans « ${s.meubleTitle} » est arrivé à expiration. Alerte envoyée (${s.notifyChannels.join(', ')}).`,
+              variant: 'info',
+            });
+          });
+        }
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [toast]);
+
+  // Recalculer automatiquement date/heure de sortie quand entrée ou durée change
+  const syncCheckoutFromDuration = (
+    inDate: string,
+    inTime: string,
+    val: number,
+    unit: 'DAYS' | 'HOURS',
+  ) => {
+    const start = new Date(`${inDate}T${inTime || '00:00'}:00`);
+    if (Number.isNaN(start.getTime())) return;
+    const addMs = (unit === 'DAYS' ? val * 24 : val) * 3600 * 1000;
+    const end = new Date(start.getTime() + addMs);
+    setCheckOutDate(end.toISOString().slice(0, 10));
+    setCheckOutTime(end.toTimeString().slice(0, 5));
+  };
+
+  const toggleNotifyChannel = (ch: NotifyChannel) => {
+    setNotifyChannels((prev) =>
+      prev.includes(ch) ? (prev.length > 1 ? prev.filter((c) => c !== ch) : prev) : [...prev, ch],
+    );
+  };
+
+  const handleRegisterMeuble = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regTitle.trim()) return;
+    saveRegisteredMeuble({
+      ownerEmail,
+      title: regTitle.trim(),
+      meubleType: regType,
+      dailyRate: Number(regRate) || 25000,
+      city: regCity.trim(),
+      district: regDistrict.trim(),
+      address: regAddress.trim(),
+    });
+    setRegTitle('');
+    setRegAddress('');
+    setTick((t) => t + 1);
+    toast({
+      title: 'Meublé enregistré !',
+      description: 'Vous pouvez maintenant y enregistrer des clients occupants.',
+      variant: 'success',
+    });
+  };
+
+  const handleRegisterClientStay = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientName.trim() || !clientPhone.trim()) return;
+    const chosenMeuble = allMeublesUnified.find((m) => m.id === stayMeubleId) || allMeublesUnified[0];
+    const finalMeubleId = chosenMeuble?.id || `manual-${stayType}`;
+    const finalMeubleTitle = chosenMeuble?.title || MEUBLE_TYPE_LABELS[stayType];
+    const finalType = chosenMeuble?.type || stayType;
+
+    const checkInIso = new Date(`${checkInDate}T${checkInTime || '00:00'}:00`).toISOString();
+    const checkOutIso = new Date(`${checkOutDate}T${checkOutTime || '00:00'}:00`).toISOString();
+
+    createMeubleClientStay({
+      ownerEmail,
+      ownerPhone: ownerNotifyPhone.trim() || undefined,
+      meubleId: finalMeubleId,
+      meubleTitle: finalMeubleTitle,
+      meubleType: finalType,
+      clientName: clientName.trim(),
+      clientPhone: clientPhone.trim(),
+      clientEmail: clientEmail.trim() || undefined,
+      durationValue,
+      durationUnit,
+      durationLabel: `${durationValue} ${durationUnit === 'DAYS' ? 'jour(s)' : 'heure(s)'}`,
+      checkInDate,
+      checkInTime,
+      checkOutDate,
+      checkOutTime,
+      checkInIso,
+      checkOutIso,
+      amountPaid: Number(amountPaid) || 0,
+      notifyChannels,
+    });
+
+    setClientName('');
+    setClientPhone('');
+    setClientEmail('');
+    setTick((t) => t + 1);
+    setSubTab('clients');
+    toast({
+      title: 'Client enregistré dans le meublé !',
+      description: `Compte à rebours démarré jusqu’au ${checkOutDate} à ${checkOutTime}. Notification programmée (${notifyChannels.join(', ')}).`,
+      variant: 'success',
+    });
+  };
+
+  // Statistiques par meublé
+  const statsByMeuble = useMemo(() => {
+    const map = new Map<
+      string,
+      { title: string; type: MeubleTypeOption; totalClients: number; totalRevenue: number; activeCount: number }
+    >();
+    for (const m of allMeublesUnified) {
+      map.set(m.id, {
+        title: m.title,
+        type: m.type,
+        totalClients: 0,
+        totalRevenue: 0,
+        activeCount: 0,
+      });
+    }
+    for (const s of stays) {
+      const entry = map.get(s.meubleId) ?? {
+        title: s.meubleTitle,
+        type: s.meubleType,
+        totalClients: 0,
+        totalRevenue: 0,
+        activeCount: 0,
+      };
+      entry.totalClients += 1;
+      entry.totalRevenue += s.amountPaid || 0;
+      if (s.status === 'ACTIVE' && new Date(s.checkOutIso).getTime() > nowMs) {
+        entry.activeCount += 1;
+      }
+      map.set(s.meubleId, entry);
+    }
+    return Array.from(map.entries()).map(([id, data]) => ({ id, ...data }));
+  }, [allMeublesUnified, stays, nowMs]);
+
+  // Historique filtré par meublé et par période
+  const filteredHistory = useMemo(() => {
+    return stays.filter((s) => {
+      if (filterMeubleId !== 'ALL' && s.meubleId !== filterMeubleId) return false;
+      if (filterFromDate && s.checkInDate < filterFromDate) return false;
+      if (filterToDate && s.checkInDate > filterToDate) return false;
+      return true;
+    });
+  }, [stays, filterMeubleId, filterFromDate, filterToDate]);
+
+  const activeStays = stays.filter((s) => s.status !== 'COMPLETED');
+  const totalRevenueAll = stays.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
+
   return (
     <div className="space-y-6">
       <BackButton to="/dashboard" label="Retour au Dashboard" />
       <PageHeader
-        title="Gestion des meublés (Location journalière)"
-        description="Publiez et gérez vos chambres meublées, studios meublés et appartements meublés à la journée / nuitée dans la catégorie Meublé de la Marketplace."
+        title="Gestion des meublés (Location journalière & Clients)"
+        description="Publiez et enregistrez vos chambres, studios et appartements meublés, enregistrez vos clients avec compte à rebours en direct et alertes automatiques (Email, SMS, Appel)."
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link to="/marketplace">
               <Button variant="outline" size="sm" className="text-xs gap-1.5">
                 <Eye className="size-3.5" />
-                Voir dans la Marketplace
+                Catégorie Meublé Marketplace
               </Button>
             </Link>
             <Button
@@ -336,121 +644,696 @@ export function PublisherMeublesPage() {
               className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs gap-1.5"
             >
               <Plus className="size-4" />
-              Publier un Meublé (Jour)
+              Publier un Meublé (Marketplace)
             </Button>
           </div>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-4">
         <StatCard
-          label="Meublés publiés"
-          value={String(meubles.length)}
-          hint="Catégorie Meublé"
+          label="Meublés enregistrés"
+          value={String(allMeublesUnified.length)}
+          hint="Marketplace + Parc"
           icon={BedDouble}
         />
         <StatCard
-          label="Disponibles aujourd'hui"
-          value={String(meubles.filter((m) => m.availabilityStatus !== 'OCCUPIED').length)}
-          hint="Ouverts à la nuitée"
-          icon={CheckCircle2}
+          label="Clients actifs / en cours"
+          value={String(activeStays.length)}
+          hint="Avec compte à rebours"
+          icon={Clock}
         />
         <StatCard
-          label="Tarif moyen / jour"
-          value={
-            meubles.length > 0
-              ? `${Math.round(
-                  meubles.reduce((s, m) => s + (m.priceMinor || 0), 0) / meubles.length,
-                ).toLocaleString('fr-FR')} FCFA`
-              : '—'
-          }
-          hint="Location journalière"
-          icon={BarChart3}
+          label="Total clients accueillis"
+          value={String(stays.length)}
+          hint="Tous meublés confondus"
+          icon={Users}
+        />
+        <StatCard
+          label="Recettes meublés"
+          value={`${totalRevenueAll.toLocaleString('fr-FR')} FCFA`}
+          hint="Paiements enregistrés"
+          icon={Wallet}
         />
       </div>
 
-      {meubles.length === 0 ? (
-        <EmptyState
-          title="Aucun meublé publié"
-          description="Cliquez sur « Publier un Meublé (Jour) » pour ajouter une chambre meublée, un studio ou un appartement meublé en location journalière."
-        />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {meubles.map((item) => {
-            const isOccupied = item.availabilityStatus === 'OCCUPIED';
-            return (
-              <Card key={item._id} className="overflow-hidden border-border">
-                <div className="relative h-36 bg-slate-900">
-                  {item.photos?.[0]?.url ? (
-                    <img
-                      src={item.photos[0].url}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
+      {/* Onglets de gestion des meublés */}
+      <div className="flex flex-wrap gap-2 border-b border-border pb-3">
+        <Button
+          size="sm"
+          variant={subTab === 'meubles' ? 'primary' : 'outline'}
+          onClick={() => setSubTab('meubles')}
+          className="text-xs gap-1.5"
+        >
+          <BedDouble className="size-3.5" />
+          Mes Meublés ({allMeublesUnified.length})
+        </Button>
+        <Button
+          size="sm"
+          variant={subTab === 'clients' ? 'primary' : 'outline'}
+          onClick={() => setSubTab('clients')}
+          className="text-xs gap-1.5"
+        >
+          <Clock className="size-3.5" />
+          Clients & Compte à rebours ({activeStays.length})
+        </Button>
+        <Button
+          size="sm"
+          variant={subTab === 'stats' ? 'primary' : 'outline'}
+          onClick={() => setSubTab('stats')}
+          className="text-xs gap-1.5"
+        >
+          <BarChart3 className="size-3.5" />
+          Statistiques par meublé & Historique ({stays.length})
+        </Button>
+      </div>
+
+      {/* ONGLET 1 : MES MEUBLÉS */}
+      {subTab === 'meubles' && (
+        <div className="space-y-6">
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Plus className="size-4 text-emerald-500" />
+                Enregistrer un Meublé dans mon parc
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleRegisterMeuble} className="grid gap-3 sm:grid-cols-6">
+                <Input
+                  placeholder="Nom / Libellé (ex: Studio Meublé A1)"
+                  value={regTitle}
+                  onChange={(e) => setRegTitle(e.target.value)}
+                  required
+                  className="sm:col-span-2"
+                />
+                <select
+                  value={regType}
+                  onChange={(e) => setRegType(e.target.value as MeubleTypeOption)}
+                  className="h-10 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  <option value="CHAMBRE_MEUBLEE">Chambre meublée</option>
+                  <option value="STUDIO_MEUBLE">Studio meublé</option>
+                  <option value="APPARTEMENT_MEUBLE">Appartement meublé</option>
+                </select>
+                <Input
+                  type="number"
+                  placeholder="Prix / jour (FCFA)"
+                  value={regRate}
+                  onChange={(e) => setRegRate(Number(e.target.value))}
+                  required
+                />
+                <Input
+                  placeholder="Ville / Quartier"
+                  value={regDistrict}
+                  onChange={(e) => setRegDistrict(e.target.value)}
+                />
+                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">
+                  Enregistrer
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {allMeublesUnified.length === 0 ? (
+            <EmptyState
+              title="Aucun meublé enregistré"
+              description="Enregistrez vos meublés ci-dessus ou publiez un meublé sur la Marketplace pour commencer."
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {allMeublesUnified.map((item) => {
+                const stat = statsByMeuble.find((s) => s.id === item.id);
+                const isOccupied = item.rawListing?.availabilityStatus === 'OCCUPIED';
+                return (
+                  <Card key={item.id} className="overflow-hidden border-border">
+                    {item.rawListing?.photos?.[0]?.url && (
+                      <div className="relative h-32 bg-slate-900">
+                        <img
+                          src={item.rawListing.photos[0].url}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 left-2 flex gap-1">
+                          <Badge className="bg-amber-400 text-slate-950 font-black text-[10px]">
+                            LOCATION / JOUR
+                          </Badge>
+                          <Badge className={isOccupied ? 'bg-rose-600 text-white text-[10px]' : 'bg-emerald-600 text-white text-[10px]'}>
+                            {isOccupied ? 'OCCUPÉ' : 'LIBRE'}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge className="bg-muted text-foreground text-[10px]">
+                          {MEUBLE_TYPE_LABELS[item.type]}
+                        </Badge>
+                        <span className="text-[11px] font-bold text-emerald-500">
+                          {stat?.totalClients || 0} client(s) accueilli(s)
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-sm text-foreground line-clamp-1">{item.title}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {item.district} {item.city ? `· ${item.city}` : ''}
+                      </p>
+                      <p className="text-base font-black text-amber-500">
+                        {item.dailyRate.toLocaleString('fr-FR')} FCFA / jour
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs flex-1"
+                          onClick={() => {
+                            setStayMeubleId(item.id);
+                            setStayType(item.type);
+                            setAmountPaid(item.dailyRate);
+                            setSubTab('clients');
+                          }}
+                        >
+                          + Enregistrer client
+                        </Button>
+                        {item.rawListing ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                              onClick={() => {
+                                setEditingListing(item.rawListing!);
+                                setPublishOpen(true);
+                              }}
+                            >
+                              <Edit3 className="size-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs text-rose-500"
+                              onClick={() => {
+                                deleteCustomMarketplaceListing(item.id);
+                                refresh();
+                              }}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs text-rose-500"
+                            onClick={() => {
+                              deleteRegisteredMeuble(item.id);
+                              setTick((t) => t + 1);
+                            }}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ONGLET 2 : CLIENTS OCCUPANTS & COMPTE À REBOURS */}
+      {subTab === 'clients' && (
+        <div className="space-y-6">
+          <Card className="border-emerald-500/30 bg-emerald-500/5">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <UserCheck className="size-4 text-emerald-500" />
+                Enregistrer un client occupant un meublé
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleRegisterClientStay} className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Meublé concerné</label>
+                    <select
+                      value={stayMeubleId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setStayMeubleId(val);
+                        const found = allMeublesUnified.find((m) => m.id === val);
+                        if (found) {
+                          setStayType(found.type);
+                          setAmountPaid(found.dailyRate * Math.max(1, durationUnit === 'DAYS' ? durationValue : 1));
+                        }
+                      }}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs"
+                    >
+                      <option value="">— Sélectionner un meublé ou type ci-contre —</option>
+                      {allMeublesUnified.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.title} ({m.dailyRate.toLocaleString('fr-FR')} FCFA/j)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Type de meublé</label>
+                    <select
+                      value={stayType}
+                      onChange={(e) => setStayType(e.target.value as MeubleTypeOption)}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-xs"
+                    >
+                      <option value="CHAMBRE_MEUBLEE">Chambre meublée</option>
+                      <option value="STUDIO_MEUBLE">Studio meublé</option>
+                      <option value="APPARTEMENT_MEUBLE">Appartement meublé</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Prix payé par le client (FCFA) *</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={amountPaid}
+                      onChange={(e) => setAmountPaid(Number(e.target.value))}
+                      required
                     />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <BedDouble className="size-8 opacity-40" />
-                    </div>
-                  )}
-                  <div className="absolute top-2.5 left-2.5 flex gap-1.5">
-                    <Badge className="bg-amber-400 text-slate-950 font-black">LOCATION / JOUR</Badge>
-                    <Badge className={isOccupied ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'}>
-                      {isOccupied ? 'OCCUPÉ' : 'LIBRE'}
-                    </Badge>
                   </div>
                 </div>
-                <CardContent className="p-4 space-y-2">
-                  <h3 className="font-bold text-sm text-foreground line-clamp-1">{item.title}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {item.location?.district}, {item.location?.city}
-                  </p>
-                  <p className="text-base font-black text-amber-500">{formatPrice(item)}</p>
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs flex-1"
-                      onClick={() => {
-                        setEditingListing(item);
-                        setPublishOpen(true);
-                      }}
-                    >
-                      Modifier
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs flex-1"
-                      onClick={() => {
-                        updateCustomMarketplaceListing(item._id, {
-                          availabilityStatus: isOccupied ? 'AVAILABLE' : 'OCCUPIED',
-                        });
-                        refresh();
-                        toast({
-                          title: isOccupied ? 'Meublé disponible' : 'Meublé marqué occupé',
-                          variant: 'success',
-                        });
-                      }}
-                    >
-                      {isOccupied ? 'Libérer' : 'Occuper'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs text-rose-500"
-                      onClick={() => {
-                        deleteCustomMarketplaceListing(item._id);
-                        refresh();
-                        toast({ title: 'Meublé supprimé', variant: 'success' });
-                      }}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Nom complet du client *</label>
+                    <Input
+                      placeholder="Ex: M. Konan Kouassi"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      required
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Téléphone du client *</label>
+                    <Input
+                      placeholder="Ex: +225 07 00 00 00"
+                      value={clientPhone}
+                      onChange={(e) => setClientPhone(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Email du client (optionnel)</label>
+                    <Input
+                      type="email"
+                      placeholder="client@email.com"
+                      value={clientEmail}
+                      onChange={(e) => setClientEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-6">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Durée</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={durationValue}
+                      onChange={(e) => {
+                        const v = Math.max(1, Number(e.target.value));
+                        setDurationValue(v);
+                        syncCheckoutFromDuration(checkInDate, checkInTime, v, durationUnit);
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Unité</label>
+                    <select
+                      value={durationUnit}
+                      onChange={(e) => {
+                        const u = e.target.value as 'DAYS' | 'HOURS';
+                        setDurationUnit(u);
+                        syncCheckoutFromDuration(checkInDate, checkInTime, durationValue, u);
+                      }}
+                      className="h-10 w-full rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="DAYS">Jour(s)</option>
+                      <option value="HOURS">Heure(s)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Jour d’entrée</label>
+                    <Input
+                      type="date"
+                      value={checkInDate}
+                      onChange={(e) => {
+                        setCheckInDate(e.target.value);
+                        syncCheckoutFromDuration(e.target.value, checkInTime, durationValue, durationUnit);
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Heure d’entrée</label>
+                    <Input
+                      type="time"
+                      value={checkInTime}
+                      onChange={(e) => {
+                        setCheckInTime(e.target.value);
+                        syncCheckoutFromDuration(checkInDate, e.target.value, durationValue, durationUnit);
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Jour de sortie</label>
+                    <Input
+                      type="date"
+                      value={checkOutDate}
+                      onChange={(e) => setCheckOutDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold">Heure de sortie</label>
+                    <Input
+                      type="time"
+                      value={checkOutTime}
+                      onChange={(e) => setCheckOutTime(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-card p-3 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      <Bell className="size-4 text-amber-500" />
+                      Comment souhaitez-vous être notifié à l’expiration du séjour ?
+                    </span>
+                    <Input
+                      placeholder="Votre N° pour SMS/Appel (optionnel)"
+                      value={ownerNotifyPhone}
+                      onChange={(e) => setOwnerNotifyPhone(e.target.value)}
+                      className="sm:w-64 h-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        { id: 'EMAIL', label: 'Par Email', icon: Mail },
+                        { id: 'SMS', label: 'Par SMS', icon: MessageSquare },
+                        { id: 'CALL', label: 'Par Appel Vocal', icon: PhoneCall },
+                      ] as const
+                    ).map((ch) => {
+                      const active = notifyChannels.includes(ch.id);
+                      const ChIcon = ch.icon;
+                      return (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          onClick={() => toggleNotifyChannel(ch.id)}
+                          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold border transition ${
+                            active
+                              ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                              : 'bg-background text-muted-foreground border-border'
+                          }`}
+                        >
+                          <ChIcon className="size-3.5" />
+                          {ch.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-2">
+                  <Plus className="size-4" />
+                  Enregistrer le client & Démarrer le compte à rebours
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Liste des clients en cours avec compte à rebours temps réel */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              Clients occupants actifs & Compte à rebours en direct
+            </h3>
+            {activeStays.length === 0 ? (
+              <EmptyState
+                title="Aucun client actuellement enregistré"
+                description="Enregistrez un client dans le formulaire ci-dessus pour suivre le temps restant en direct."
+              />
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {activeStays.map((s) => {
+                  const cd = formatCountdownRemaining(s.checkOutIso, nowMs);
+                  return (
+                    <Card
+                      key={s._id}
+                      className={`border ${
+                        cd.expired ? 'border-rose-500/60 bg-rose-500/5' : 'border-emerald-500/30'
+                      }`}
+                    >
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Badge className={cd.expired ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'}>
+                                {cd.expired ? 'EXPIRÉ' : 'EN COURS'}
+                              </Badge>
+                              <span className="text-xs font-semibold text-muted-foreground">
+                                {MEUBLE_TYPE_LABELS[s.meubleType]}
+                              </span>
+                            </div>
+                            <h4 className="font-bold text-sm text-foreground mt-1">{s.meubleTitle}</h4>
+                          </div>
+                          <div
+                            className={`px-3 py-1.5 rounded-xl font-mono text-xs font-black ${
+                              cd.expired
+                                ? 'bg-rose-600 text-white animate-pulse'
+                                : 'bg-slate-900 text-emerald-400 border border-emerald-500/40'
+                            }`}
+                          >
+                            ⏱ {cd.label}
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl bg-muted/40 p-3 text-xs space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Client :</span>
+                            <strong className="text-foreground">{s.clientName}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Téléphone :</span>
+                            <strong className="text-foreground flex items-center gap-1">
+                              <Phone className="size-3 text-emerald-500" />
+                              {s.clientPhone}
+                            </strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Entrée :</span>
+                            <strong>
+                              {s.checkInDate} à {s.checkInTime}
+                            </strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Sortie prévue :</span>
+                            <strong>
+                              {s.checkOutDate} à {s.checkOutTime} ({s.durationLabel})
+                            </strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Prix payé :</span>
+                            <strong className="text-emerald-500">
+                              {s.amountPaid.toLocaleString('fr-FR')} FCFA
+                            </strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Alertes expiration :</span>
+                            <strong>{s.notifyChannels.join(' + ')}</strong>
+                          </div>
+                          {s.notificationSentAt && (
+                            <div className="text-[11px] text-amber-500 font-semibold pt-1">
+                              ✓ Notification d’expiration déclenchée à{' '}
+                              {s.notificationSentAt.slice(11, 19)}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs flex-1"
+                            onClick={() => {
+                              void dispatchExpirationNotifications(s).then(() => {
+                                setTick((t) => t + 1);
+                                toast({
+                                  title: 'Notification envoyée !',
+                                  description: `Canaux déclenchés : ${s.notifyChannels.join(', ')}`,
+                                  variant: 'success',
+                                });
+                              });
+                            }}
+                          >
+                            <Bell className="size-3.5 mr-1" />
+                            Notifier maintenant
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs flex-1"
+                            onClick={() => {
+                              markMeubleStayCompleted(s._id);
+                              setTick((t) => t + 1);
+                              toast({ title: 'Séjour clôturé et archivé', variant: 'success' });
+                            }}
+                          >
+                            <CheckCircle2 className="size-3.5 mr-1" />
+                            Clôturer / Libérer
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ONGLET 3 : STATISTIQUES PAR MEUBLÉ & HISTORIQUE PAR PÉRIODE */}
+      {subTab === 'stats' && (
+        <div className="space-y-6">
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 className="size-4 text-emerald-500" />
+                Statistiques d’occupation par meublé enregistré
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {statsByMeuble.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Aucune donnée disponible.</p>
+              ) : (
+                statsByMeuble.map((row) => (
+                  <div
+                    key={row.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-border p-3 bg-muted/20"
+                  >
+                    <div>
+                      <p className="font-bold text-sm text-foreground">{row.title}</p>
+                      <p className="text-xs text-muted-foreground">{MEUBLE_TYPE_LABELS[row.type]}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <Badge className="bg-sky-500/15 text-sky-500 border border-sky-500/30">
+                        {row.totalClients} client(s) total
+                      </Badge>
+                      <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                        {row.activeCount} en cours
+                      </Badge>
+                      <strong className="text-amber-500">
+                        {row.totalRevenue.toLocaleString('fr-FR')} FCFA
+                      </strong>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="size-4 text-sky-500" />
+                Historique des clients par meublé et par période
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <select
+                  value={filterMeubleId}
+                  onChange={(e) => setFilterMeubleId(e.target.value)}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-xs"
+                >
+                  <option value="ALL">Tous les meublés</option>
+                  {allMeublesUnified.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.title}
+                    </option>
+                  ))}
+                </select>
+                <Input
+                  type="date"
+                  value={filterFromDate}
+                  onChange={(e) => setFilterFromDate(e.target.value)}
+                  placeholder="Date début"
+                />
+                <Input
+                  type="date"
+                  value={filterToDate}
+                  onChange={(e) => setFilterToDate(e.target.value)}
+                  placeholder="Date fin"
+                />
+              </div>
+
+              {filteredHistory.length === 0 ? (
+                <EmptyState
+                  title="Aucun séjour sur cette période"
+                  description="Modifiez les filtres ou enregistrez un premier client occupant."
+                />
+              ) : (
+                <div className="space-y-2">
+                  {filteredHistory.map((h) => (
+                    <div
+                      key={h._id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-border p-3 text-xs"
+                    >
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-foreground">
+                          {h.clientName} ({h.clientPhone}) —{' '}
+                          <span className="text-emerald-500">{h.meubleTitle}</span>
+                        </p>
+                        <p className="text-muted-foreground">
+                          Du {h.checkInDate} {h.checkInTime} au {h.checkOutDate} {h.checkOutTime} (
+                          {h.durationLabel}) · Alertes : {h.notifyChannels.join(', ')}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <strong className="text-amber-500">
+                          {h.amountPaid.toLocaleString('fr-FR')} FCFA
+                        </strong>
+                        <Badge className="bg-muted text-foreground">{h.status}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {notifLogs.length > 0 && (
+                <div className="pt-4 border-t border-border space-y-2">
+                  <h4 className="text-xs font-bold uppercase text-muted-foreground">
+                    Journal des notifications d’expiration (Email / SMS / Appel)
+                  </h4>
+                  {notifLogs.slice(0, 10).map((nl) => (
+                    <div
+                      key={nl._id}
+                      className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-[11px] flex flex-wrap justify-between gap-2"
+                    >
+                      <span>
+                        <strong>[{nl.channel}]</strong> {nl.clientName} ({nl.meubleTitle}) →{' '}
+                        {nl.recipient}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {nl.status} · {nl.createdAt.slice(0, 16).replace('T', ' ')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 

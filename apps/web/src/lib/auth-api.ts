@@ -66,6 +66,11 @@ export const DEMO_PROFILES: Record<
     name: 'M. Amadou Diallo',
     orgName: 'Patrimoine & SCI Diallo',
   },
+  'proprietaire.independant@katdestate.immo': {
+    role: 'INDEPENDENT_OWNER',
+    name: 'M. Jean-Baptiste Ekotto',
+    orgName: 'Résidences & Meublés Ekotto',
+  },
   'locataire@katdestate.immo': {
     role: 'TENANT',
     name: 'Mme Aïssatou Traoré',

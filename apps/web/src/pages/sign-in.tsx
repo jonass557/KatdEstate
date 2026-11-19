@@ -40,6 +40,13 @@ const TEST_ACCOUNTS = [
     color: 'text-blue-400 bg-blue-400/10',
   },
   {
+    role: 'INDEPENDENT_OWNER',
+    label: 'Propriétaire Indép.',
+    email: 'proprietaire.independant@katdestate.immo',
+    icon: Home,
+    color: 'text-teal-400 bg-teal-400/10',
+  },
+  {
     role: 'TENANT',
     label: 'Locataire',
     email: 'locataire@katdestate.immo',

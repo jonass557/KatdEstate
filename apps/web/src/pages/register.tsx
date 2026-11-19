@@ -29,7 +29,15 @@ import { ApiError } from '../lib/api-client';
 type RegisterFormValues = z.input<typeof registerSchema>;
 
 interface RoleCard {
-  id: 'OWNER' | 'TENANT' | 'AGENT' | 'NEIGHBORHOOD_LEADER' | 'BLOCK_LEADER' | 'RESIDENT' | 'USER';
+  id:
+    | 'OWNER'
+    | 'INDEPENDENT_OWNER'
+    | 'TENANT'
+    | 'AGENT'
+    | 'NEIGHBORHOOD_LEADER'
+    | 'BLOCK_LEADER'
+    | 'RESIDENT'
+    | 'USER';
   title: string;
   badge: string;
   icon: typeof Building2;
@@ -65,6 +73,20 @@ const ROLES_LIST: RoleCard[] = [
       'Gestion des biens & logements',
       'Paiements Mobile Money',
       'Quittances automatiques',
+    ],
+  },
+  {
+    id: 'INDEPENDENT_OWNER',
+    title: 'Propriétaire Indépendant',
+    badge: 'Marketplace & Meublés',
+    icon: Sparkles,
+    gradient: 'from-teal-500 to-emerald-700',
+    description:
+      'Publiez vos biens sur la Marketplace avec carte GPS, gérez vos meublés journaliers et vos clients en direct.',
+    features: [
+      'Publication Marketplace + Carte GPS',
+      'Gestion des Meublés & Compte à rebours',
+      'Alertes expiration (SMS, Appel, Email)',
     ],
   },
   {

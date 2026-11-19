@@ -2297,3 +2297,365 @@ export function estimatePropertyPriceAI(input: AiPriceEstimateInput): AiPriceEst
     rationale,
   };
 }
+
+// ============================================================================
+// 12. GESTION DES MEUBLÉS, SÉJOURS CLIENTS, COMPTE À REBOURS & APIS ADMIN
+// ============================================================================
+
+export const STORAGE_REGISTERED_MEUBLES_KEY = 'katdestate_registered_meubles';
+export const STORAGE_MEUBLE_STAYS_KEY = 'katdestate_meuble_client_stays';
+export const STORAGE_ADMIN_NOTIF_APIS_KEY = 'katdestate_admin_notification_apis';
+export const STORAGE_NOTIF_DISPATCH_LOGS_KEY = 'katdestate_notif_dispatch_logs';
+
+export type MeubleTypeOption = 'CHAMBRE_MEUBLEE' | 'STUDIO_MEUBLE' | 'APPARTEMENT_MEUBLE';
+export type NotifyChannel = 'EMAIL' | 'SMS' | 'CALL';
+
+export interface RegisteredMeubleProperty {
+  _id: string;
+  ownerEmail: string;
+  title: string;
+  meubleType: MeubleTypeOption;
+  dailyRate: number;
+  city: string;
+  district: string;
+  address: string;
+  createdAt: string;
+}
+
+export interface MeubleClientStay {
+  _id: string;
+  ownerEmail: string;
+  ownerPhone?: string | undefined;
+  meubleId: string;
+  meubleTitle: string;
+  meubleType: MeubleTypeOption;
+  clientName: string;
+  clientPhone: string;
+  clientEmail?: string | undefined;
+  durationValue: number;
+  durationUnit: 'HOURS' | 'DAYS';
+  durationLabel: string;
+  checkInDate: string;
+  checkInTime: string;
+  checkOutDate: string;
+  checkOutTime: string;
+  checkInIso: string;
+  checkOutIso: string;
+  amountPaid: number;
+  notifyChannels: NotifyChannel[];
+  notificationSentAt?: string | undefined;
+  notifiedChannels?: NotifyChannel[] | undefined;
+  status: 'ACTIVE' | 'EXPIRED' | 'COMPLETED';
+  createdAt: string;
+}
+
+export interface AdminNotificationApiConfig {
+  sms: {
+    enabled: boolean;
+    provider: string;
+    apiUrl: string;
+    apiKey: string;
+    apiSecret: string;
+    senderId: string;
+  };
+  call: {
+    enabled: boolean;
+    provider: string;
+    apiUrl: string;
+    apiKey: string;
+    apiSecret: string;
+    callerNumber: string;
+    voiceMessageTemplate: string;
+  };
+  email: {
+    enabled: boolean;
+    provider: string;
+    apiUrl: string;
+    apiKey: string;
+    fromEmail: string;
+    fromName: string;
+  };
+  updatedAt: string;
+}
+
+export interface NotificationDispatchLog {
+  _id: string;
+  stayId: string;
+  meubleTitle: string;
+  clientName: string;
+  channel: NotifyChannel;
+  recipient: string;
+  provider: string;
+  status: 'SENT' | 'SIMULATED_LOCAL' | 'FAILED';
+  message: string;
+  createdAt: string;
+}
+
+export function getRegisteredMeubles(): RegisteredMeubleProperty[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_REGISTERED_MEUBLES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveRegisteredMeuble(
+  item: Omit<RegisteredMeubleProperty, '_id' | 'createdAt'>,
+): RegisteredMeubleProperty {
+  const full: RegisteredMeubleProperty = {
+    ...item,
+    _id: `mbl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    createdAt: new Date().toISOString(),
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      const list = getRegisteredMeubles();
+      list.unshift(full);
+      localStorage.setItem(STORAGE_REGISTERED_MEUBLES_KEY, JSON.stringify(list));
+    } catch {}
+  }
+  return full;
+}
+
+export function deleteRegisteredMeuble(id: string): RegisteredMeubleProperty[] {
+  const list = getRegisteredMeubles().filter((m) => m._id !== id);
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_REGISTERED_MEUBLES_KEY, JSON.stringify(list));
+    } catch {}
+  }
+  return list;
+}
+
+export function getMeubleClientStays(): MeubleClientStay[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_MEUBLE_STAYS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveMeubleClientStays(list: MeubleClientStay[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_MEUBLE_STAYS_KEY, JSON.stringify(list));
+  } catch {}
+}
+
+export function createMeubleClientStay(
+  stay: Omit<MeubleClientStay, '_id' | 'status' | 'createdAt'>,
+): MeubleClientStay {
+  const full: MeubleClientStay = {
+    ...stay,
+    _id: `stay-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    status: new Date(stay.checkOutIso).getTime() <= Date.now() ? 'EXPIRED' : 'ACTIVE',
+    createdAt: new Date().toISOString(),
+  };
+  const list = getMeubleClientStays();
+  list.unshift(full);
+  saveMeubleClientStays(list);
+  return full;
+}
+
+export function markMeubleStayCompleted(stayId: string): MeubleClientStay[] {
+  const list = getMeubleClientStays().map((s) =>
+    s._id === stayId ? { ...s, status: 'COMPLETED' as const } : s,
+  );
+  saveMeubleClientStays(list);
+  return list;
+}
+
+export function markMeubleStayNotified(
+  stayId: string,
+  channels: NotifyChannel[],
+): MeubleClientStay[] {
+  const now = new Date().toISOString();
+  const list = getMeubleClientStays().map((s) =>
+    s._id === stayId
+      ? {
+          ...s,
+          status: s.status === 'ACTIVE' ? ('EXPIRED' as const) : s.status,
+          notificationSentAt: now,
+          notifiedChannels: channels,
+        }
+      : s,
+  );
+  saveMeubleClientStays(list);
+  return list;
+}
+
+export function getAdminNotificationApiConfig(): AdminNotificationApiConfig {
+  const fallback: AdminNotificationApiConfig = {
+    sms: {
+      enabled: true,
+      provider: 'Twilio / Africa’s Talking / Orange SMS',
+      apiUrl: '',
+      apiKey: '',
+      apiSecret: '',
+      senderId: 'KatdEstate',
+    },
+    call: {
+      enabled: true,
+      provider: 'Twilio Voice / Africa’s Talking Voice',
+      apiUrl: '',
+      apiKey: '',
+      apiSecret: '',
+      callerNumber: '+225 00 00 00 00',
+      voiceMessageTemplate:
+        'Bonjour, le séjour de votre client {clientName} dans le meublé {meubleTitle} est arrivé à expiration.',
+    },
+    email: {
+      enabled: true,
+      provider: 'Resend / SendGrid / SMTP',
+      apiUrl: '',
+      apiKey: '',
+      fromEmail: 'notifications@katdestate.immo',
+      fromName: 'KatdEstate Alertes Meublés',
+    },
+    updatedAt: new Date().toISOString(),
+  };
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(STORAGE_ADMIN_NOTIF_APIS_KEY);
+    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveAdminNotificationApiConfig(cfg: AdminNotificationApiConfig): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(
+      STORAGE_ADMIN_NOTIF_APIS_KEY,
+      JSON.stringify({ ...cfg, updatedAt: new Date().toISOString() }),
+    );
+  } catch {}
+}
+
+export function getNotificationDispatchLogs(): NotificationDispatchLog[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_NOTIF_DISPATCH_LOGS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function dispatchExpirationNotifications(
+  stay: MeubleClientStay,
+): Promise<NotificationDispatchLog[]> {
+  const cfg = getAdminNotificationApiConfig();
+  const createdLogs: NotificationDispatchLog[] = [];
+
+  for (const channel of stay.notifyChannels) {
+    const msg = `Alerte expiration meublé : le temps de ${stay.clientName} (${stay.clientPhone}) pour « ${stay.meubleTitle} » (sortie prévue ${stay.checkOutDate} à ${stay.checkOutTime}) est expiré.`;
+
+    let status: NotificationDispatchLog['status'] = 'SIMULATED_LOCAL';
+    let provider = '';
+    let recipient = stay.ownerEmail;
+
+    if (channel === 'SMS') {
+      provider = cfg.sms.provider;
+      recipient = stay.ownerPhone || stay.ownerEmail;
+      if (cfg.sms.enabled && cfg.sms.apiUrl.trim()) {
+        try {
+          const res = await fetch(cfg.sms.apiUrl.trim(), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(cfg.sms.apiKey ? { Authorization: `Bearer ${cfg.sms.apiKey}` } : {}),
+            },
+            body: JSON.stringify({
+              to: recipient,
+              senderId: cfg.sms.senderId,
+              message: msg,
+            }),
+          });
+          status = res.ok ? 'SENT' : 'FAILED';
+        } catch {
+          status = 'FAILED';
+        }
+      }
+    } else if (channel === 'CALL') {
+      provider = cfg.call.provider;
+      recipient = stay.ownerPhone || stay.ownerEmail;
+      if (cfg.call.enabled && cfg.call.apiUrl.trim()) {
+        try {
+          const text = cfg.call.voiceMessageTemplate
+            .replace('{clientName}', stay.clientName)
+            .replace('{meubleTitle}', stay.meubleTitle);
+          const res = await fetch(cfg.call.apiUrl.trim(), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(cfg.call.apiKey ? { Authorization: `Bearer ${cfg.call.apiKey}` } : {}),
+            },
+            body: JSON.stringify({
+              from: cfg.call.callerNumber,
+              to: recipient,
+              message: text,
+            }),
+          });
+          status = res.ok ? 'SENT' : 'FAILED';
+        } catch {
+          status = 'FAILED';
+        }
+      }
+    } else if (channel === 'EMAIL') {
+      provider = cfg.email.provider;
+      recipient = stay.ownerEmail;
+      if (cfg.email.enabled && cfg.email.apiUrl.trim()) {
+        try {
+          const res = await fetch(cfg.email.apiUrl.trim(), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(cfg.email.apiKey ? { Authorization: `Bearer ${cfg.email.apiKey}` } : {}),
+            },
+            body: JSON.stringify({
+              from: `${cfg.email.fromName} <${cfg.email.fromEmail}>`,
+              to: recipient,
+              subject: `Expiration séjour meublé : ${stay.meubleTitle}`,
+              text: msg,
+            }),
+          });
+          status = res.ok ? 'SENT' : 'FAILED';
+        } catch {
+          status = 'FAILED';
+        }
+      }
+    }
+
+    createdLogs.push({
+      _id: `nlog-${Date.now()}-${channel}-${Math.random().toString(36).slice(2, 5)}`,
+      stayId: stay._id,
+      meubleTitle: stay.meubleTitle,
+      clientName: stay.clientName,
+      channel,
+      recipient,
+      provider,
+      status,
+      message: msg,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  if (typeof window !== 'undefined' && createdLogs.length > 0) {
+    try {
+      const prev = getNotificationDispatchLogs();
+      localStorage.setItem(
+        STORAGE_NOTIF_DISPATCH_LOGS_KEY,
+        JSON.stringify([...createdLogs, ...prev].slice(0, 200)),
+      );
+    } catch {}
+  }
+
+  markMeubleStayNotified(stay._id, stay.notifyChannels);
+  return createdLogs;
+}
