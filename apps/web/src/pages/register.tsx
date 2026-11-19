@@ -10,7 +10,6 @@ import {
   Briefcase,
   Crown,
   ShieldCheck,
-  Users,
   ArrowLeft,
   CheckCircle2,
   AlertCircle,

@@ -114,8 +114,7 @@ export function AdminChefferiesPage() {
         <CardContent className="space-y-3">
           {neighborhoods.map((n) => {
             const nBlocks = blocks.filter((b) => b.neighborhoodId === n.id);
-            const nRent =
-              nBlocks.reduce((s, b) => s + (b.monthlyRevenueMinor || 0), 0) || totalRentRevenue;
+            const nRent = totalRentRevenue;
             return (
               <div
                 key={n.id}
@@ -245,12 +244,19 @@ export function AdminBlocksPage() {
   }, [tick]);
   const leaders = useMemo(() => getBlockLeaders(), [tick]);
   const owners = useMemo(() => getBlockOwners(), [tick]);
+  const rentValidations = useMemo(() => Object.values(getRentValidations()), [tick]);
   const subscriptions = useMemo(() => {
     void tick;
     return getUserSubscriptions().filter((s) => s.role === 'BLOCK_LEADER');
   }, [tick]);
 
-  const totalBlockRevenue = blocks.reduce((s, b) => s + (b.monthlyRevenueMinor || 0), 0);
+  const getBlockRentRevenue = (blockId: string) => {
+    const blkOwnerIds = new Set(owners.filter((o) => o.blockId === blockId).map((o) => o.id));
+    const matched = rentValidations.filter((rv) => blkOwnerIds.has(rv.tenantId));
+    return matched.reduce((s, r) => s + (r.paidAmount || 0), 0);
+  };
+
+  const totalBlockRevenue = rentValidations.reduce((s, r) => s + (r.paidAmount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -306,7 +312,7 @@ export function AdminBlocksPage() {
                     {blkOwners.length} propriétaire(s) créé(s)
                   </Badge>
                   <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 font-bold">
-                    Revenus : {(blk.monthlyRevenueMinor || 0).toLocaleString('fr-FR')} FCFA
+                    Revenus : {getBlockRentRevenue(blk.id).toLocaleString('fr-FR')} FCFA
                   </Badge>
                 </div>
               </div>
