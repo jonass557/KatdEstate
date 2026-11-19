@@ -25,6 +25,8 @@ import { useSession } from '../app/session';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ApiError } from '../lib/api-client';
+import { IkeepayModal } from '../components/payments/ikeepay-modal';
+import { getSubscriptionPlans, upsertUserSubscription } from '../lib/katdestate-store';
 
 type RegisterFormValues = z.input<typeof registerSchema>;
 
@@ -36,7 +38,6 @@ interface RoleCard {
     | 'AGENT'
     | 'NEIGHBORHOOD_LEADER'
     | 'BLOCK_LEADER'
-    | 'RESIDENT'
     | 'USER';
   title: string;
   badge: string;
@@ -143,27 +144,25 @@ const ROLES_LIST: RoleCard[] = [
       'Gestion des alertes de sécurité',
     ],
   },
-  {
-    id: 'RESIDENT',
-    title: 'Résident / Citoyen',
-    badge: 'Communauté',
-    icon: Users,
-    gradient: 'from-rose-600 to-pink-600',
-    description: 'Rattachez votre foyer à votre quartier, recevez les alertes et restez informé.',
-    features: [
-      'Attestation de résidence',
-      'Alertes de quartier en direct',
-      'Participation citoyenne',
-    ],
-  },
 ];
+
+const PAID_PLAN_ROLES = new Set(['AGENT', 'INDEPENDENT_OWNER', 'NEIGHBORHOOD_LEADER']);
 
 export function RegisterPage() {
   const [searchParams] = useSearchParams();
-  const initialRole = (searchParams.get('role') as any) || 'OWNER';
+  const initialRole = (searchParams.get('role') as any) || 'USER';
+  const initialPlanId = searchParams.get('planId') || '';
   const [selectedRole, setSelectedRole] = useState<RoleCard['id']>(
-    ROLES_LIST.some((r) => r.id === initialRole) ? initialRole : 'OWNER',
+    ROLES_LIST.some((r) => r.id === initialRole) ? initialRole : 'USER',
   );
+  const allPlans = getSubscriptionPlans().filter((p) => p.isActive);
+  const rolePlans = allPlans.filter((p) => p.roleKey === selectedRole);
+  const [selectedPlanId, setSelectedPlanId] = useState(initialPlanId);
+  const activePlan =
+    rolePlans.find((p) => p._id === selectedPlanId) || rolePlans[0] || null;
+
+  const [pendingValues, setPendingValues] = useState<RegisterFormValues | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const { registerUser, signOut } = useSession();
   const navigate = useNavigate();
@@ -179,9 +178,23 @@ export function RegisterPage() {
     },
   });
 
-  const onSubmit = handleSubmit(async (values) => {
+  const completeRegistration = async (values: RegisterFormValues, paymentRef?: string) => {
     setFormError(null);
     try {
+      if (PAID_PLAN_ROLES.has(selectedRole) && activePlan) {
+        upsertUserSubscription({
+          email: values.email.trim().toLowerCase(),
+          fullName: values.displayName.trim(),
+          phone: values.phone,
+          role: selectedRole,
+          planId: activePlan._id,
+          planName: activePlan.name,
+          amountPaid: activePlan.priceMinor,
+          paymentRef: paymentRef || `SUB_${Date.now()}`,
+          status: 'ACTIVE',
+        });
+      }
+
       await registerUser({
         displayName: values.displayName,
         email: values.email,
@@ -214,6 +227,15 @@ export function RegisterPage() {
         'Une erreur est survenue lors de la création de votre compte. Veuillez réessayer.',
       );
     }
+  };
+
+  const onSubmit = handleSubmit(async (values) => {
+    if (PAID_PLAN_ROLES.has(selectedRole) && activePlan) {
+      setPendingValues(values);
+      setPaymentModalOpen(true);
+      return;
+    }
+    await completeRegistration(values);
   });
 
   const currentRoleCard: RoleCard = ROLES_LIST.find((r) => r.id === selectedRole) || ROLES_LIST[0]!;
@@ -436,6 +458,45 @@ export function RegisterPage() {
                 )}
               </div>
 
+              {/* Plan d'abonnement si profil payant (Agent, Propriétaire Indépendant, Chef de Quartier) */}
+              {PAID_PLAN_ROLES.has(selectedRole) && rolePlans.length > 0 && (
+                <div className="space-y-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                    Plan d’abonnement requis avant accès au dashboard
+                  </p>
+                  <div className="grid gap-2">
+                    {rolePlans.map((pl) => {
+                      const isPicked = activePlan?._id === pl._id;
+                      return (
+                        <button
+                          key={pl._id}
+                          type="button"
+                          onClick={() => setSelectedPlanId(pl._id)}
+                          className={`text-left rounded-xl p-3 border transition ${
+                            isPicked
+                              ? 'border-emerald-400 bg-slate-900 text-white'
+                              : 'border-slate-700 bg-slate-950/60 text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span>{pl.name}</span>
+                            <span className="text-emerald-400">
+                              {pl.priceMinor.toLocaleString('fr-FR')} {pl.currency} {pl.periodLabel}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {selectedRole === 'USER' && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300 font-semibold">
+                  ✓ Inscription 100% gratuite — aucune souscription requise pour les utilisateurs / visiteurs.
+                </div>
+              )}
+
               {/* Bouton de soumission */}
               <Button
                 type="submit"
@@ -444,7 +505,9 @@ export function RegisterPage() {
               >
                 {formState.isSubmitting
                   ? 'Création de votre espace en cours...'
-                  : `Créer mon compte ${currentRoleCard.title}`}
+                  : PAID_PLAN_ROLES.has(selectedRole) && activePlan
+                    ? `S'inscrire & Payer (${activePlan.priceMinor.toLocaleString('fr-FR')} FCFA)`
+                    : `Créer mon compte ${currentRoleCard.title}`}
               </Button>
 
               <p className="text-center text-[11px] text-slate-500">
@@ -455,6 +518,23 @@ export function RegisterPage() {
           </div>
         </div>
       </div>
+
+      {activePlan && (
+        <IkeepayModal
+          isOpen={paymentModalOpen}
+          onClose={() => setPaymentModalOpen(false)}
+          amount={activePlan.priceMinor}
+          purpose="SUBSCRIPTION_PAYMENT"
+          title={`Souscription : ${activePlan.name}`}
+          description={`Réglez votre abonnement (${activePlan.priceMinor.toLocaleString('fr-FR')} FCFA) pour activer votre compte ${currentRoleCard.title}.`}
+          onPaymentSuccess={(ref) => {
+            setPaymentModalOpen(false);
+            if (pendingValues) {
+              void completeRegistration(pendingValues, ref);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

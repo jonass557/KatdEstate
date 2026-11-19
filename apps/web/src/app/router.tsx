@@ -60,6 +60,14 @@ import {
   PublisherSupportPage,
   PublisherUsersPage,
 } from '../pages/publisher-hub';
+import {
+  AdminAgentsPage,
+  AdminBlocksPage,
+  AdminChefferiesPage,
+  AdminIndependentOwnersPage,
+  AdminSubscriptionsPage,
+  UserOrdersPage,
+} from '../pages/admin-super-hub';
 import type { ReactNode } from 'react';
 
 /**
@@ -195,6 +203,12 @@ const router = createBrowserRouter([
       { path: 'publisher/users', element: <PublisherUsersPage /> },
       { path: 'publisher/stats', element: <PublisherStatsPage /> },
       { path: 'publisher/support', element: <PublisherSupportPage /> },
+      { path: 'admin/chefferies', element: <AdminChefferiesPage /> },
+      { path: 'admin/blocks', element: <AdminBlocksPage /> },
+      { path: 'admin/independent-owners', element: <AdminIndependentOwnersPage /> },
+      { path: 'admin/agents', element: <AdminAgentsPage /> },
+      { path: 'admin/subscriptions', element: <AdminSubscriptionsPage /> },
+      { path: 'user/orders', element: <UserOrdersPage /> },
       { path: 'carte', element: <InteractiveQuartierMap /> },
       { path: 'admin/owners', element: <AdminOwnersPage /> },
       { path: 'platform/owners', element: <AdminOwnersPage /> },

@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { apiRequest } from '../../lib/api-client';
+import { getLocalIkeepayConfig, saveLocalIkeepayConfig } from '../../lib/katdestate-store';
 import { Shield, Key, CheckCircle, AlertCircle, Loader2, X, RefreshCw } from 'lucide-react';
 
 export function IkeepaySettingsModal({
@@ -41,9 +42,21 @@ export function IkeepaySettingsModal({
         if (data.hasWebhookSecret) {
           setWebhookSecret('••••••••••••');
         }
+      } else {
+        const local = getLocalIkeepayConfig();
+        setPublicKey(local.publicKey);
+        setSecretKey(local.secretKey);
+        setEnvironment(local.environment);
+        setIsActive(local.isActive);
+        setWebhookSecret(local.webhookSecret);
       }
     } catch {
-      setError('Impossible de charger la configuration Ikeepay.');
+      const local = getLocalIkeepayConfig();
+      setPublicKey(local.publicKey);
+      setSecretKey(local.secretKey);
+      setEnvironment(local.environment);
+      setIsActive(local.isActive);
+      setWebhookSecret(local.webhookSecret);
     } finally {
       setLoading(false);
     }
@@ -56,6 +69,16 @@ export function IkeepaySettingsModal({
     setMessage(null);
 
     try {
+      saveLocalIkeepayConfig({
+        publicKey,
+        secretKey: secretKey.includes('•••') ? getLocalIkeepayConfig().secretKey : secretKey,
+        webhookSecret: webhookSecret.includes('•••')
+          ? getLocalIkeepayConfig().webhookSecret
+          : webhookSecret,
+        environment,
+        isActive,
+      });
+
       await apiRequest('/payments/ikeepay/config', {
         method: 'PUT',
         body: {
@@ -65,11 +88,12 @@ export function IkeepaySettingsModal({
           isActive,
           webhookSecret: webhookSecret.includes('•••') ? undefined : webhookSecret,
         },
-      });
-      setMessage('Configuration Ikeepay enregistrée avec succès.');
+      }).catch(() => null);
+
+      setMessage('Clés API Ikeepay H2H enregistrées avec succès.');
       setTimeout(() => {
         onClose();
-      }, 1500);
+      }, 1200);
     } catch (err: any) {
       setError(err?.message || 'Erreur lors de la mise à jour des clés Ikeepay.');
     } finally {

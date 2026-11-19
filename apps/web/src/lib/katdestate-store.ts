@@ -2659,3 +2659,285 @@ export async function dispatchExpirationNotifications(
   markMeubleStayNotified(stay._id, stay.notifyChannels);
   return createdLogs;
 }
+
+// ============================================================================
+// 13. ABONNEMENTS, SOUSCRIPTIONS, COMMANDES UTILISATEUR & CONFIG IKEEPAY
+// ============================================================================
+
+export const STORAGE_SUBSCRIPTION_PLANS_KEY = 'katdestate_subscription_plans';
+export const STORAGE_USER_SUBSCRIPTIONS_KEY = 'katdestate_user_subscriptions';
+export const STORAGE_USER_ORDERS_KEY = 'katdestate_user_property_orders';
+export const STORAGE_IKEEPAY_LOCAL_CONFIG_KEY = 'katdestate_ikeepay_local_config';
+
+export interface SubscriptionPlan {
+  _id: string;
+  roleKey: 'AGENT' | 'INDEPENDENT_OWNER' | 'NEIGHBORHOOD_LEADER' | 'BLOCK_LEADER' | 'OWNER';
+  roleLabel: string;
+  name: string;
+  priceMinor: number;
+  currency: string;
+  periodLabel: string;
+  features: string[];
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface UserSubscriptionRecord {
+  _id: string;
+  email: string;
+  fullName: string;
+  phone?: string | undefined;
+  role: string;
+  planId: string;
+  planName: string;
+  amountPaid: number;
+  paymentRef?: string | undefined;
+  status: 'ACTIVE' | 'DISABLED';
+  subscribedAt: string;
+  expiresAt: string;
+}
+
+export interface UserPropertyOrder {
+  _id: string;
+  userEmail: string;
+  userName: string;
+  listingId: string;
+  listingTitle: string;
+  listingCategory: string;
+  ownerName: string;
+  ownerEmail?: string | undefined;
+  ownerPhone?: string | undefined;
+  priceMinor: number;
+  currency: string;
+  orderType: 'RESERVATION' | 'VISITE' | 'CONTACT';
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+  latitude?: number | undefined;
+  longitude?: number | undefined;
+  address?: string | undefined;
+  createdAt: string;
+}
+
+export interface LocalIkeepayConfig {
+  publicKey: string;
+  secretKey: string;
+  webhookSecret: string;
+  environment: 'SANDBOX' | 'LIVE';
+  isActive: boolean;
+  updatedAt?: string | undefined;
+}
+
+const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    _id: 'plan-agent-pro',
+    roleKey: 'AGENT',
+    roleLabel: 'Agent Immobilier',
+    name: 'Plan Agent Immobilier Pro',
+    priceMinor: 25000,
+    currency: 'FCFA',
+    periodLabel: 'par mois',
+    features: [
+      'Publication illimitée sur la Marketplace avec Carte GPS',
+      'Gestion des Meublés (Location Journalière)',
+      'Gestion des visites & statistiques de performance',
+      'Estimation du Prix IA & Messagerie clients',
+    ],
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    _id: 'plan-indep-owner',
+    roleKey: 'INDEPENDENT_OWNER',
+    roleLabel: 'Propriétaire Indépendant',
+    name: 'Plan Propriétaire Indépendant',
+    priceMinor: 15000,
+    currency: 'FCFA',
+    periodLabel: 'par mois',
+    features: [
+      'Publication directe sur la Marketplace + GPS',
+      'Gestion des Meublés, clients & compte à rebours',
+      'Alertes automatiques expiration (Email, SMS, Appel)',
+      'Statistiques, Estimation IA & Support Admin',
+    ],
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    _id: 'plan-chef-quartier',
+    roleKey: 'NEIGHBORHOOD_LEADER',
+    roleLabel: 'Chef de Quartier',
+    name: 'Plan Chefferie & Quartier',
+    priceMinor: 35000,
+    currency: 'FCFA',
+    periodLabel: 'par mois',
+    features: [
+      'Délimitation GPS du Quartier & création des Blocs',
+      'Gestion des Chefs de Bloc & Attestations coutumières',
+      'Suivi des loyers mensuels des blocs & diffusion globale',
+      'Publication Marketplace, Meublés & Estimation IA',
+    ],
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+];
+
+export function getSubscriptionPlans(): SubscriptionPlan[] {
+  if (typeof window === 'undefined') return DEFAULT_SUBSCRIPTION_PLANS;
+  try {
+    const raw = localStorage.getItem(STORAGE_SUBSCRIPTION_PLANS_KEY);
+    if (!raw) {
+      localStorage.setItem(STORAGE_SUBSCRIPTION_PLANS_KEY, JSON.stringify(DEFAULT_SUBSCRIPTION_PLANS));
+      return DEFAULT_SUBSCRIPTION_PLANS;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_SUBSCRIPTION_PLANS;
+  } catch {
+    return DEFAULT_SUBSCRIPTION_PLANS;
+  }
+}
+
+export function saveSubscriptionPlans(plans: SubscriptionPlan[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_SUBSCRIPTION_PLANS_KEY, JSON.stringify(plans));
+  } catch {}
+}
+
+export function createSubscriptionPlan(
+  plan: Omit<SubscriptionPlan, '_id' | 'createdAt'>,
+): SubscriptionPlan {
+  const full: SubscriptionPlan = {
+    ...plan,
+    _id: `plan-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+    createdAt: new Date().toISOString(),
+  };
+  const list = getSubscriptionPlans();
+  saveSubscriptionPlans([full, ...list]);
+  return full;
+}
+
+export function updateSubscriptionPlan(
+  id: string,
+  updates: Partial<SubscriptionPlan>,
+): SubscriptionPlan[] {
+  const next = getSubscriptionPlans().map((p) => (p._id === id ? { ...p, ...updates } : p));
+  saveSubscriptionPlans(next);
+  return next;
+}
+
+export function deleteSubscriptionPlan(id: string): SubscriptionPlan[] {
+  const next = getSubscriptionPlans().filter((p) => p._id !== id);
+  saveSubscriptionPlans(next);
+  return next;
+}
+
+export function getUserSubscriptions(): UserSubscriptionRecord[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_USER_SUBSCRIPTIONS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveUserSubscriptions(list: UserSubscriptionRecord[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_USER_SUBSCRIPTIONS_KEY, JSON.stringify(list));
+  } catch {}
+}
+
+export function upsertUserSubscription(
+  record: Omit<UserSubscriptionRecord, '_id' | 'subscribedAt' | 'expiresAt'>,
+): UserSubscriptionRecord {
+  const now = new Date();
+  const expires = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
+  const full: UserSubscriptionRecord = {
+    ...record,
+    _id: `sub-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+    subscribedAt: now.toISOString(),
+    expiresAt: expires.toISOString(),
+  };
+  const list = getUserSubscriptions();
+  const norm = record.email.trim().toLowerCase();
+  const filtered = list.filter((s) => s.email.trim().toLowerCase() !== norm);
+  saveUserSubscriptions([full, ...filtered]);
+  return full;
+}
+
+export function toggleUserSubscriptionStatus(
+  idOrEmail: string,
+  status: 'ACTIVE' | 'DISABLED',
+): UserSubscriptionRecord[] {
+  const norm = idOrEmail.trim().toLowerCase();
+  const next = getUserSubscriptions().map((s) =>
+    s._id === idOrEmail || s.email.trim().toLowerCase() === norm ? { ...s, status } : s,
+  );
+  saveUserSubscriptions(next);
+  return next;
+}
+
+export function deleteUserSubscription(idOrEmail: string): UserSubscriptionRecord[] {
+  const norm = idOrEmail.trim().toLowerCase();
+  const next = getUserSubscriptions().filter(
+    (s) => s._id !== idOrEmail && s.email.trim().toLowerCase() !== norm,
+  );
+  saveUserSubscriptions(next);
+  return next;
+}
+
+export function getUserPropertyOrders(): UserPropertyOrder[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_USER_ORDERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function createUserPropertyOrder(
+  order: Omit<UserPropertyOrder, '_id' | 'status' | 'createdAt'>,
+): UserPropertyOrder {
+  const full: UserPropertyOrder = {
+    ...order,
+    _id: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+    status: 'PENDING',
+    createdAt: new Date().toISOString(),
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      const list = getUserPropertyOrders();
+      list.unshift(full);
+      localStorage.setItem(STORAGE_USER_ORDERS_KEY, JSON.stringify(list));
+    } catch {}
+  }
+  return full;
+}
+
+export function getLocalIkeepayConfig(): LocalIkeepayConfig {
+  const fallback: LocalIkeepayConfig = {
+    publicKey: '',
+    secretKey: '',
+    webhookSecret: '',
+    environment: 'LIVE',
+    isActive: true,
+  };
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(STORAGE_IKEEPAY_LOCAL_CONFIG_KEY);
+    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveLocalIkeepayConfig(cfg: LocalIkeepayConfig): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(
+      STORAGE_IKEEPAY_LOCAL_CONFIG_KEY,
+      JSON.stringify({ ...cfg, updatedAt: new Date().toISOString() }),
+    );
+  } catch {}
+}

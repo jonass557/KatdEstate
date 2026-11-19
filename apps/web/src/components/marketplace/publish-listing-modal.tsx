@@ -234,6 +234,45 @@ export function PublishListingModal({
     setNewPhotoInput('');
   };
 
+  const handleUploadImageFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const compressedUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/')) continue;
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const maxDim = 900;
+            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              resolve(canvas.toDataURL('image/jpeg', 0.78));
+            } else {
+              resolve(String(reader.result || ''));
+            }
+          };
+          img.onerror = () => resolve(String(reader.result || ''));
+          img.src = String(reader.result || '');
+        };
+        reader.readAsDataURL(file);
+      });
+      if (dataUrl) compressedUrls.push(dataUrl);
+    }
+    if (compressedUrls.length > 0) {
+      setPhotoUrls((prev) => [...prev, ...compressedUrls]);
+      toast({
+        title: `${compressedUrls.length} photo(s) ajoutée(s) !`,
+        variant: 'success',
+      });
+    }
+  };
+
   const handleRemovePhoto = (idx: number) => {
     setPhotoUrls(photoUrls.filter((_, i) => i !== idx));
   };
@@ -636,21 +675,38 @@ export function PublishListingModal({
               <label className="text-xs font-bold uppercase tracking-wider text-[#00e676]">
                 3. Galerie Photos du Bien ({photoUrls.length} photos) *
               </label>
-              <div className="flex gap-2">
-                <Input
-                  value={newPhotoInput}
-                  onChange={(e) => setNewPhotoInput(e.target.value)}
-                  placeholder="Entrez l'URL d'une photo (Unsplash, Cloudinary, etc.)..."
-                  className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9 flex-1"
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddPhoto}
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
-                >
-                  <Plus className="size-4 mr-1" /> Ajouter
-                </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold text-white shadow-sm">
+                  <Plus className="size-4" />
+                  <span>Importer plusieurs images (Appareil)</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      void handleUploadImageFiles(e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                <div className="flex flex-1 gap-2 min-w-[220px]">
+                  <Input
+                    value={newPhotoInput}
+                    onChange={(e) => setNewPhotoInput(e.target.value)}
+                    placeholder="Ou collez l'URL d'une photo..."
+                    className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9 flex-1"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddPhoto}
+                    size="sm"
+                    variant="outline"
+                    className="border-emerald-500/40 text-emerald-300 font-bold text-xs"
+                  >
+                    Ajouter URL
+                  </Button>
+                </div>
               </div>
 
               {/* Thumbnails */}

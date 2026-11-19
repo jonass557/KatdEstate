@@ -27,6 +27,10 @@ import { useSession } from '../app/session';
 import { apiRequest } from '../lib/api-client';
 import { Button } from '../components/ui/button';
 import { HeroCarousel } from '../components/landing/hero-carousel';
+import {
+  getCustomMarketplaceListings,
+  getSubscriptionPlans,
+} from '../lib/katdestate-store';
 
 interface PublicListing {
   id: string;
@@ -167,10 +171,57 @@ export function LandingPage() {
     }
   };
 
-  const filteredProperties = SEED_MARKETPLACE_ITEMS.filter((item) => {
+  const [marketPage, setMarketPage] = useState(1);
+  const PAGE_SIZE = 4;
+
+  const customPublished = getCustomMarketplaceListings()
+    .filter((l) => l.workflowStatus === 'PUBLIE' || !l.workflowStatus)
+    .map((l) => ({
+      id: l._id,
+      title: l.title,
+      type:
+        l.category === 'LAND'
+          ? 'LAND'
+          : l.transactionType === 'SALE'
+            ? 'SALE'
+            : 'RENTAL',
+      badge: l.billingFrequency === 'DAILY' ? 'MEUBLÉ / JOUR' : l.category,
+      price: l.priceMinor || 0,
+      currency: l.currency || 'FCFA',
+      location: l.location?.district || l.location?.address || '',
+      city: l.location?.city || '',
+      surface: l.surfaceM2 ? `${l.surfaceM2} m²` : 'Vérifiée',
+      certified: true,
+      image:
+        l.photos?.[0]?.url ||
+        'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
+      photosCount: l.photos?.length || 1,
+    }));
+
+  const combinedProperties = [
+    ...customPublished,
+    ...SEED_MARKETPLACE_ITEMS.map((item) => ({ ...item, photosCount: 1 })),
+  ];
+
+  const filteredProperties = combinedProperties.filter((item) => {
     if (selectedCategory === 'ALL') return true;
     return item.type === selectedCategory;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredProperties.length / PAGE_SIZE));
+  const safePage = Math.min(marketPage, totalPages);
+  const paginatedProperties = filteredProperties.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
+
+  const landingPlans = getSubscriptionPlans().filter(
+    (p) =>
+      p.isActive &&
+      (p.roleKey === 'AGENT' ||
+        p.roleKey === 'INDEPENDENT_OWNER' ||
+        p.roleKey === 'NEIGHBORHOOD_LEADER'),
+  );
 
   return (
     <div className="min-h-screen bg-[#110222] text-slate-100 selection:bg-[#00e676] selection:text-slate-950">
@@ -731,7 +782,10 @@ export function LandingPage() {
             {(['ALL', 'SALE', 'RENTAL', 'LAND'] as const).map((cat) => (
               <button
                 key={cat}
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setMarketPage(1);
+                }}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                   selectedCategory === cat
                     ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
@@ -749,7 +803,7 @@ export function LandingPage() {
 
         {/* Properties Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredProperties.map((prop) => (
+          {paginatedProperties.map((prop) => (
             <div
               key={prop.id}
               className="group rounded-3xl bg-slate-900/70 border border-slate-800 overflow-hidden hover:border-emerald-500/40 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all flex flex-col"
@@ -771,6 +825,11 @@ export function LandingPage() {
                     </span>
                   )}
                 </div>
+                {prop.photosCount > 1 && (
+                  <span className="absolute bottom-3 right-3 rounded-lg bg-black/75 px-2 py-0.5 text-[10px] font-bold text-white">
+                    📷 {prop.photosCount} photos
+                  </span>
+                )}
                 <div className="absolute bottom-3 left-3">
                   <p className="text-xl font-black text-white">
                     {prop.price.toLocaleString('fr-FR')} {prop.currency}
@@ -808,6 +867,47 @@ export function LandingPage() {
           ))}
         </div>
 
+        {/* Pagination Marketplace */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage <= 1}
+              onClick={() => setMarketPage((p) => Math.max(1, p - 1))}
+              className="text-xs border-slate-700 text-slate-200"
+            >
+              Précédent
+            </Button>
+            {Array.from({ length: totalPages }).map((_, idx) => {
+              const pNum = idx + 1;
+              return (
+                <button
+                  key={pNum}
+                  type="button"
+                  onClick={() => setMarketPage(pNum)}
+                  className={`size-8 rounded-lg text-xs font-bold transition ${
+                    safePage === pNum
+                      ? 'bg-emerald-500 text-slate-950'
+                      : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'
+                  }`}
+                >
+                  {pNum}
+                </button>
+              );
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages}
+              onClick={() => setMarketPage((p) => Math.min(totalPages, p + 1))}
+              className="text-xs border-slate-700 text-slate-200"
+            >
+              Suivant
+            </Button>
+          </div>
+        )}
+
         <div className="text-center pt-4">
           <Link
             to="/marketplace"
@@ -816,6 +916,58 @@ export function LandingPage() {
             <span>Consulter les 150+ offres sur la marketplace</span>
             <ExternalLink className="size-4" />
           </Link>
+        </div>
+      </section>
+
+      {/* 5b. Plans d'Abonnement Officiels (Agent Immobilier, Propriétaire Indépendant, Chef de Quartier) */}
+      <section id="plans" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 border-t border-slate-800/70">
+        <div className="text-center max-w-2xl mx-auto space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+            <CreditCard className="size-3.5" />
+            Plans & Abonnements Professionnels
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+            Choisissez votre Plan d’Accès
+          </h2>
+          <p className="text-slate-400 text-sm sm:text-base">
+            Plans dédiés aux Agents Immobiliers, Propriétaires Indépendants et Chefs de Quartier.
+            L’accès Utilisateur / Visiteur est 100% gratuit.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {landingPlans.map((plan) => (
+            <div
+              key={plan._id}
+              className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 flex flex-col justify-between space-y-6 hover:border-emerald-500/40 transition-all"
+            >
+              <div className="space-y-4">
+                <span className="inline-block rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-400">
+                  {plan.roleLabel}
+                </span>
+                <h3 className="text-xl font-black text-white">{plan.name}</h3>
+                <div className="text-3xl font-black text-emerald-400">
+                  {plan.priceMinor.toLocaleString('fr-FR')} {plan.currency}{' '}
+                  <span className="text-xs font-normal text-slate-400">{plan.periodLabel}</span>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-300">
+                  {plan.features.map((feat, fIdx) => (
+                    <li key={fIdx} className="flex items-start gap-2">
+                      <CheckCircle2 className="size-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <Link
+                to={`/register?role=${plan.roleKey}&planId=${plan._id}`}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs py-3 px-4 transition-all"
+              >
+                <span>Choisir ce plan & S’inscrire</span>
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
+          ))}
         </div>
       </section>
 

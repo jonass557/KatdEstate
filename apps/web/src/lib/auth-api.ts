@@ -81,10 +81,10 @@ export const DEMO_PROFILES: Record<
     name: "M. Koffi N'Dri",
     orgName: 'Agence Immobilière Ivoire',
   },
-  'resident@katdestate.immo': {
-    role: 'RESIDENT',
-    name: 'M. Yao Konan',
-    orgName: 'Foyer Citoyen Konan',
+  'utilisateur@katdestate.immo': {
+    role: 'USER',
+    name: 'M. Yao Konan (Visiteur)',
+    orgName: 'Espace Visiteur KatdEstate',
   },
   'admin@kadtestate.immo': {
     role: 'SUPER_ADMIN',

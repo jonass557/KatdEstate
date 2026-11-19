@@ -75,11 +75,11 @@ const TEST_ACCOUNTS = [
     color: 'text-cyan-400 bg-cyan-400/10',
   },
   {
-    role: 'RESIDENT',
-    label: 'Résident',
-    email: 'resident@katdestate.immo',
+    role: 'USER',
+    label: 'Utilisateur / Visiteur',
+    email: 'utilisateur@katdestate.immo',
     icon: Users,
-    color: 'text-rose-400 bg-rose-400/10',
+    color: 'text-emerald-400 bg-emerald-400/10',
   },
 ];
 

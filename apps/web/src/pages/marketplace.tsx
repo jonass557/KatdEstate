@@ -29,6 +29,7 @@ import { GeoMapCanvas } from '../components/geo/GeoMapCanvas';
 import {
   createLocalChatThread,
   createScheduledVisit,
+  createUserPropertyOrder,
   incrementListingMetric,
 } from '../lib/katdestate-store';
 
@@ -887,6 +888,22 @@ export function MarketplacePage() {
                             scheduledDate: visitDate,
                             scheduledTime: visitTime,
                             notes: visitNotes,
+                          });
+                          createUserPropertyOrder({
+                            userEmail: user?.email || 'visiteur@katdestate.immo',
+                            userName: user?.displayName || 'Visiteur KatdEstate',
+                            listingId: selectedListing._id,
+                            listingTitle: selectedListing.title,
+                            listingCategory: selectedListing.category,
+                            ownerName: selectedListing.contact?.name || 'Agent / Bailleur',
+                            ownerEmail: (selectedListing as any).ownerEmail || selectedListing.contact?.email,
+                            ownerPhone: selectedListing.contact?.phone,
+                            priceMinor: selectedListing.priceMinor,
+                            currency: selectedListing.currency || 'FCFA',
+                            orderType: 'VISITE',
+                            latitude: selectedListing.location?.latitude,
+                            longitude: selectedListing.location?.longitude,
+                            address: [selectedListing.location?.address, selectedListing.location?.district, selectedListing.location?.city].filter(Boolean).join(', '),
                           });
                           setVisitNotes('');
                           toast({
