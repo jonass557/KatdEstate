@@ -104,7 +104,7 @@ export function AgentPage() {
   const [propertyType, setPropertyType] = useState('APARTMENT');
   const [transactionType, setTransactionType] = useState('SALE');
   const [isTitled, setIsTitled] = useState(false);
-  const [photosInput, setPhotosInput] = useState('');
+  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
   const [videosInput, setVideosInput] = useState('');
 
   // Mutation: Create listing
@@ -521,11 +521,10 @@ export function AgentPage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const form = new FormData(e.currentTarget);
-                const photosArray = photosInput
-                  .split('\n')
-                  .map((u) => u.trim())
-                  .filter(Boolean)
-                  .map((url, idx) => ({ url, isPrimary: idx === 0 }));
+                const photosArray = uploadedPhotos.map((url, idx) => ({
+                  url,
+                  isPrimary: idx === 0,
+                }));
                 const videosArray = videosInput
                   .split('\n')
                   .map((u) => u.trim())
@@ -731,19 +730,45 @@ export function AgentPage() {
                 )}
               </div>
 
-              {/* Photos & Videos URLs */}
+              {/* Upload Photos depuis l'appareil */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold block">
-                  Photos du bien (URLs directes, une par ligne — max{' '}
-                  {plan?.maxPhotosPerListing || 5})
+                  Photos du bien ({uploadedPhotos.length} / {plan?.maxPhotosPerListing || 5})
                 </label>
-                <textarea
-                  value={photosInput}
-                  onChange={(e) => setPhotosInput(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-md border border-input bg-background p-2 text-xs font-mono"
-                  placeholder="https://images.unsplash.com/photo-1&#10;https://images.unsplash.com/photo-2"
-                />
+                <label className="cursor-pointer inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold text-white">
+                  <span>Importer des images depuis votre appareil</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={async (e) => {
+                      const files = e.target.files;
+                      if (!files) return;
+                      const maxPhotos = plan?.maxPhotosPerListing || 5;
+                      const next: string[] = [];
+                      for (const file of Array.from(files).slice(0, maxPhotos - uploadedPhotos.length)) {
+                        const dataUrl = await new Promise<string>((resolve) => {
+                          const r = new FileReader();
+                          r.onload = () => resolve(String(r.result || ''));
+                          r.readAsDataURL(file);
+                        });
+                        if (dataUrl) next.push(dataUrl);
+                      }
+                      if (next.length > 0) setUploadedPhotos((prev) => [...prev, ...next]);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                {uploadedPhotos.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2 pt-1">
+                    {uploadedPhotos.map((u, idx) => (
+                      <div key={idx} className="relative h-16 rounded-lg overflow-hidden border border-border">
+                        <img src={u} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

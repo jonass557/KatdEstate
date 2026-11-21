@@ -141,17 +141,9 @@ export function PublishListingModal({
   const [gettingLocation, setGettingLocation] = useState(false);
 
   // Photos
-  const [photoUrls, setPhotoUrls] = useState<string[]>([
-    'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-  ]);
-  const [newPhotoInput, setNewPhotoInput] = useState('');
-  const [photoExterieur, setPhotoExterieur] = useState(
-    'https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=800&q=80',
-  );
-  const [photoInterieur, setPhotoInterieur] = useState(
-    'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-  );
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [photoExterieur, setPhotoExterieur] = useState('');
+  const [photoInterieur, setPhotoInterieur] = useState('');
 
   // Specs
   const [surfaceM2, setSurfaceM2] = useState<number>(35);
@@ -228,10 +220,41 @@ export function PublishListingModal({
     }
   };
 
-  const handleAddPhoto = () => {
-    if (!newPhotoInput.trim()) return;
-    setPhotoUrls([...photoUrls, newPhotoInput.trim()]);
-    setNewPhotoInput('');
+  const compressImageFile = (file: File): Promise<string> =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 900;
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.78));
+          } else {
+            resolve(String(reader.result || ''));
+          }
+        };
+        img.onerror = () => resolve(String(reader.result || ''));
+        img.src = String(reader.result || '');
+      };
+      reader.readAsDataURL(file);
+    });
+
+  const handleUploadSingleCarabotPhoto = async (
+    file: File | undefined,
+    setter: (val: string) => void,
+  ) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const dataUrl = await compressImageFile(file);
+    if (dataUrl) {
+      setter(dataUrl);
+      toast({ title: 'Photo importée !', variant: 'success' });
+    }
   };
 
   const handleUploadImageFiles = async (files: FileList | null) => {
@@ -239,29 +262,7 @@ export function PublishListingModal({
     const compressedUrls: string[] = [];
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) continue;
-      const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const img = new Image();
-          img.onload = () => {
-            const maxDim = 900;
-            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.round(img.width * scale);
-            canvas.height = Math.round(img.height * scale);
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              resolve(canvas.toDataURL('image/jpeg', 0.78));
-            } else {
-              resolve(String(reader.result || ''));
-            }
-          };
-          img.onerror = () => resolve(String(reader.result || ''));
-          img.src = String(reader.result || '');
-        };
-        reader.readAsDataURL(file);
-      });
+      const dataUrl = await compressImageFile(file);
       if (dataUrl) compressedUrls.push(dataUrl);
     }
     if (compressedUrls.length > 0) {
@@ -612,24 +613,30 @@ export function PublishListingModal({
             <div className="space-y-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                  3. Photos Maison en carabot (2 URLs obligatoires : Extérieur + Intérieur) *
+                  3. Photos Maison en carabot (2 photos obligatoires : Extérieur + Intérieur) *
                 </label>
                 <span className="rounded bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">
                   Obligatoire
                 </span>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs text-purple-200 font-semibold">
-                    1. Photo Façade Extérieure (URL) *
+                <div className="space-y-2">
+                  <label className="text-xs text-purple-200 font-semibold block">
+                    1. Photo Façade Extérieure *
                   </label>
-                  <Input
-                    value={photoExterieur}
-                    onChange={(e) => setPhotoExterieur(e.target.value)}
-                    placeholder="https://... (photo extérieur carabot)"
-                    required
-                    className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9"
-                  />
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 px-3 py-2 text-xs font-bold text-slate-950 shadow-sm">
+                    <Plus className="size-4" />
+                    <span>{photoExterieur ? 'Changer la photo extérieur' : 'Importer photo extérieur'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        void handleUploadSingleCarabotPhoto(e.target.files?.[0], setPhotoExterieur);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
                   {photoExterieur && (
                     <div className="relative h-28 overflow-hidden rounded-xl border border-purple-700/60">
                       <img
@@ -644,17 +651,23 @@ export function PublishListingModal({
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs text-purple-200 font-semibold">
-                    2. Photo Pièce Intérieure (URL) *
+                <div className="space-y-2">
+                  <label className="text-xs text-purple-200 font-semibold block">
+                    2. Photo Pièce Intérieure *
                   </label>
-                  <Input
-                    value={photoInterieur}
-                    onChange={(e) => setPhotoInterieur(e.target.value)}
-                    placeholder="https://... (photo intérieur carabot)"
-                    required
-                    className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9"
-                  />
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 px-3 py-2 text-xs font-bold text-slate-950 shadow-sm">
+                    <Plus className="size-4" />
+                    <span>{photoInterieur ? 'Changer la photo intérieur' : 'Importer photo intérieur'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        void handleUploadSingleCarabotPhoto(e.target.files?.[0], setPhotoInterieur);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
                   {photoInterieur && (
                     <div className="relative h-28 overflow-hidden rounded-xl border border-purple-700/60">
                       <img
@@ -673,12 +686,12 @@ export function PublishListingModal({
           ) : (
             <div className="space-y-3">
               <label className="text-xs font-bold uppercase tracking-wider text-[#00e676]">
-                3. Galerie Photos du Bien ({photoUrls.length} photos) *
+                3. Galerie Photos du Bien ({photoUrls.length} photo(s) importée(s)) *
               </label>
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold text-white shadow-sm">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="cursor-pointer inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm">
                   <Plus className="size-4" />
-                  <span>Importer plusieurs images (Appareil)</span>
+                  <span>Importer plusieurs images depuis votre appareil</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -690,23 +703,11 @@ export function PublishListingModal({
                     }}
                   />
                 </label>
-                <div className="flex flex-1 gap-2 min-w-[220px]">
-                  <Input
-                    value={newPhotoInput}
-                    onChange={(e) => setNewPhotoInput(e.target.value)}
-                    placeholder="Ou collez l'URL d'une photo..."
-                    className="bg-purple-950/60 border-purple-800/80 text-white text-xs h-9 flex-1"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleAddPhoto}
-                    size="sm"
-                    variant="outline"
-                    className="border-emerald-500/40 text-emerald-300 font-bold text-xs"
-                  >
-                    Ajouter URL
-                  </Button>
-                </div>
+                {photoUrls.length === 0 && (
+                  <span className="text-[11px] text-amber-300">
+                    Importez au moins une photo de votre propriété pour publier.
+                  </span>
+                )}
               </div>
 
               {/* Thumbnails */}
