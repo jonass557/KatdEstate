@@ -667,8 +667,13 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
           justification: overrideOverlap && isAdmin ? overrideReason : undefined,
         });
 
+        setGpsFocusTarget({
+          boundary: finalBoundary,
+          key: `updated-blk-${selectedBlockId}-${Date.now()}`,
+        });
         toast({
-          title: 'Frontière du bloc mise à jour',
+          title: 'Frontière du bloc mise à jour sur la carte',
+          description: 'Le Chef de Bloc verra immédiatement cette zone mise à jour sur son tableau de bord.',
           variant: 'success',
         });
       }
@@ -1078,7 +1083,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
           )}
 
           <div className="flex flex-wrap justify-end gap-2">
-            {mapMode === 'CREATE_BLOCK' && (
+            {(mapMode === 'CREATE_BLOCK' || mapMode === 'EDIT_BLOCK') && (
               <Button
                 type="button"
                 size="sm"
@@ -1088,7 +1093,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
                   setDraftBoundary(poly);
                   setGpsFocusTarget({ boundary: poly, key: `auto-blk-${Date.now()}` });
                   toast({
-                    title: 'Zone de bloc pré-tracée dans votre quartier',
+                    title: 'Zone de bloc placée dans votre quartier',
                     description: 'Vous pouvez ajuster les points sur la carte ou valider directement.',
                     variant: 'success',
                   });
@@ -1096,7 +1101,9 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
                 className="text-xs gap-1.5 border-emerald-500/40 text-emerald-500"
               >
                 <LocateFixed className="size-3.5" />
-                Générer la zone dans mon quartier
+                {mapMode === 'EDIT_BLOCK'
+                  ? 'Recentrer dans mon quartier'
+                  : 'Générer la zone dans mon quartier'}
               </Button>
             )}
             <Button
@@ -1110,7 +1117,11 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
               className="bg-cyan-600 hover:bg-cyan-500 text-white gap-1.5"
             >
               <CheckCircle2 className="size-4" />
-              {saving ? 'Validation...' : 'Valider et enregistrer la zone du bloc'}
+              {saving
+                ? 'Validation...'
+                : mapMode === 'EDIT_BLOCK'
+                  ? 'Enregistrer les modifications du bloc'
+                  : 'Valider et enregistrer la zone du bloc'}
             </Button>
           </div>
         </Card>
@@ -1211,13 +1222,25 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
                     setDraftBoundary(blk.boundary ?? null);
                     setNewBlockName(blk.name);
                     setNewBlockCode(blk.code);
+                    setBlockTargetArea(blk.targetAreaM2 ? String(blk.targetAreaM2) : '');
                     setNewBlockColor(blk.color || BLOCK_COLORS[idx % BLOCK_COLORS.length]!);
+                    const matchedLeader = availableLeaders.find(
+                      (l) => l.email?.toLowerCase() === blk.leaderEmail?.toLowerCase(),
+                    );
+                    setSelectedLeaderId(matchedLeader?.id ?? '');
                     setLeaderName(blk.leaderName ?? '');
                     setLeaderEmail(blk.leaderEmail ?? '');
                     setLeaderPhone(blk.leaderPhone ?? '+225 ');
+                    setGpsFocusTarget({
+                      boundary: blk.boundary ?? activeNeighborhood.boundary ?? null,
+                      key: `edit-blk-${blk.id}-${Date.now()}`,
+                    });
+                    if (typeof window !== 'undefined') {
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
                   }}
                 >
-                  <Edit3 className="size-3.5 mr-1" /> Limites
+                  <Edit3 className="size-3.5 mr-1" /> Modifier / Limites
                 </Button>
                 <Button
                   size="sm"

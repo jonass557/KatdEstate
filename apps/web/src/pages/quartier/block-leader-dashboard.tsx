@@ -748,6 +748,14 @@ export function BlockLeaderDashboard() {
                 : 'Périmètre assigné par votre Chef de Quartier'
             }
             heightClassName="h-[540px]"
+            initialCenter={(() => {
+              const b = activeBlock.boundary || activeNeighborhood.boundary;
+              const ring = b?.type === 'Polygon' ? b.coordinates?.[0] : b?.coordinates?.[0]?.[0];
+              if (!Array.isArray(ring) || ring.length === 0) return undefined;
+              const lng = ring.reduce((s: number, c: any) => s + Number(c[0]), 0) / ring.length;
+              const lat = ring.reduce((s: number, c: any) => s + Number(c[1]), 0) / ring.length;
+              return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined;
+            })()}
             overlays={[
               ...(activeNeighborhood.boundary
                 ? [
