@@ -1266,17 +1266,35 @@ export function BlockLeaderDashboard() {
           </Card>
 
           <Card className="p-4 space-y-2 border-border">
-            <h3 className="text-xs font-bold text-foreground">Messages envoyés au Chef de Quartier</h3>
-            <div className="space-y-2">
+            <h3 className="text-xs font-bold text-foreground">
+              Fil de discussion avec votre Chef de Quartier
+            </h3>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
               {hierarchyMsgs
-                .filter((m) => m.recipientType === 'NEIGHBORHOOD_LEADER' && m.blockId === activeBlock.id)
+                .filter(
+                  (m) =>
+                    (m.recipientType === 'NEIGHBORHOOD_LEADER' && m.blockId === activeBlock.id) ||
+                    (m.senderRole === 'NEIGHBORHOOD_LEADER' &&
+                      (!m.blockId ||
+                        m.blockId === activeBlock.id ||
+                        (emailNorm && m.recipientEmail?.trim().toLowerCase() === emailNorm))),
+                )
                 .map((m) => (
-                  <div key={m.id} className="rounded-xl border border-border bg-muted/20 p-3 text-xs space-y-1">
+                  <div
+                    key={m.id}
+                    className={`rounded-xl border p-3 text-xs space-y-1 ${
+                      m.senderRole === 'NEIGHBORHOOD_LEADER'
+                        ? 'border-purple-500/30 bg-purple-500/10 mr-4'
+                        : 'border-indigo-500/30 bg-indigo-500/10 ml-4'
+                    }`}
+                  >
                     <div className="flex justify-between text-[10px] text-muted-foreground">
-                      <strong className="text-foreground">{m.subject}</strong>
+                      <strong className="text-foreground">
+                        {m.senderName} ({m.senderRole === 'NEIGHBORHOOD_LEADER' ? 'Chef de Quartier' : 'Moi — Chef de Bloc'}) · {m.subject}
+                      </strong>
                       <span>{new Date(m.createdAt).toLocaleString('fr-FR')}</span>
                     </div>
-                    <p className="text-muted-foreground">{m.body}</p>
+                    <p className="text-foreground">{m.body}</p>
                   </div>
                 ))}
             </div>

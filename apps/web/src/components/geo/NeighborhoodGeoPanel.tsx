@@ -161,6 +161,36 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
     return toGeoJsonPolygon(pts);
   };
 
+  const buildBlockInsideNeighborhood = (areaM2?: number): GeoJsonBoundary => {
+    const neighPts = activeNeighborhood.boundary
+      ? fromGeoJsonBoundary(activeNeighborhood.boundary)
+      : [];
+    let centerLat = 5.3599;
+    let centerLng = -4.0082;
+    let maxSpanLat = 0.002;
+    let maxSpanLng = 0.002;
+
+    if (neighPts.length >= 3) {
+      const lats = neighPts.map((p) => p.lat);
+      const lngs = neighPts.map((p) => p.lng);
+      centerLat = lats.reduce((a, b) => a + b, 0) / lats.length;
+      centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
+      maxSpanLat = Math.max(0.0005, (Math.max(...lats) - Math.min(...lats)) * 0.22);
+      maxSpanLng = Math.max(0.0005, (Math.max(...lngs) - Math.min(...lngs)) * 0.22);
+    }
+
+    const idx = blocks.filter((b) => b.neighborhoodId === activeNeighborhood.id).length;
+    const angle = (idx * 2 * Math.PI) / 6;
+    const offsetLat = idx === 0 ? 0 : Math.sin(angle) * maxSpanLat * 0.85;
+    const offsetLng = idx === 0 ? 0 : Math.cos(angle) * maxSpanLng * 0.85;
+
+    const targetRadius = areaM2 && areaM2 > 0
+      ? Math.min(180, Math.max(35, Math.sqrt(areaM2 / Math.PI)))
+      : 75;
+
+    return buildAutoPolygonAroundPoint(centerLat + offsetLat, centerLng + offsetLng, targetRadius);
+  };
+
   const handleAutoDelimitFromGps = async (targetMode: 'EDIT_NEIGHBORHOOD' | 'CREATE_BLOCK') => {
     setIsAutoDelimitingGps(true);
     try {
@@ -529,7 +559,12 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
   };
 
   const handleSaveBlockBoundary = async () => {
-    if (!draftBoundary || validation.error) return;
+    const finalBoundary =
+      draftBoundary ||
+      (mapMode === 'CREATE_BLOCK'
+        ? buildBlockInsideNeighborhood(Number(blockTargetArea) || undefined)
+        : null);
+    if (!finalBoundary || validation.error) return;
     if (mapMode === 'CREATE_BLOCK' && !newBlockName.trim()) {
       toast({ title: 'Nom du bloc requis', variant: 'error' });
       return;
@@ -549,13 +584,13 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
             name: newBlockName.trim(),
             code,
             color: newBlockColor,
-            boundary: draftBoundary,
+            boundary: finalBoundary,
             overrideOverlap: isAdmin ? overrideOverlap : false,
             overrideReason: isAdmin ? overrideReason : undefined,
           },
         }).catch(() => null);
 
-        const computedArea = Math.round(computePolygonAreaM2(draftBoundary));
+        const computedArea = Math.round(computePolygonAreaM2(finalBoundary));
         const created: BlockRecord = {
           id: `block-${Date.now()}`,
           code,
@@ -567,7 +602,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
           leaderPhone: leaderPhone.trim() || undefined,
           color: newBlockColor,
           isActive: true,
-          boundary: draftBoundary,
+          boundary: finalBoundary,
           targetAreaM2: Number(blockTargetArea) || computedArea,
           totalResidences: 0,
           totalHabitants: 0,
@@ -582,7 +617,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
           action: overrideOverlap && isAdmin ? 'DEROGATION_GRANTED' : 'CREATE_BOUNDARY',
           performedByName: user?.displayName || 'Chef de Quartier',
           performedByRole: userRole,
-          newBoundary: draftBoundary,
+          newBoundary: finalBoundary,
           justification: overrideOverlap && isAdmin ? overrideReason : undefined,
         });
 
@@ -590,9 +625,10 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
         setNewBlockCode('');
         setLeaderName('');
         setLeaderEmail('');
+        setGpsFocusTarget({ boundary: finalBoundary, key: `saved-blk-${created.id}` });
         toast({
-          title: 'Zone Chef de Bloc créée',
-          description: `${created.name} est désormais délimitée dans le quartier.`,
+          title: `Zone « ${created.name} » créée et affichée sur la carte !`,
+          description: `${created.name} est désormais délimitée dans le quartier ${activeNeighborhood.name}.`,
           variant: 'success',
         });
       } else if (mapMode === 'EDIT_BLOCK' && selectedBlockId) {
@@ -600,7 +636,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
         await apiRequest(`${base}/quartier/blocks/${selectedBlockId}/boundary`, {
           method: 'PATCH',
           body: {
-            boundary: draftBoundary,
+            boundary: finalBoundary,
             name: newBlockName.trim() || current?.name,
             color: newBlockColor,
             overrideOverlap: isAdmin ? overrideOverlap : false,
@@ -609,7 +645,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
         }).catch(() => null);
 
         updateStoredBlock(selectedBlockId, {
-          boundary: draftBoundary,
+          boundary: finalBoundary,
           ...(newBlockName.trim() || current?.name
             ? { name: (newBlockName.trim() || current?.name)! }
             : {}),
@@ -627,7 +663,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
           performedByName: user?.displayName || 'Chef de Quartier',
           performedByRole: userRole,
           previousBoundary: current?.boundary,
-          newBoundary: draftBoundary,
+          newBoundary: finalBoundary,
           justification: overrideOverlap && isAdmin ? overrideReason : undefined,
         });
 
@@ -1041,10 +1077,35 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
             </div>
           )}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            {mapMode === 'CREATE_BLOCK' && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const poly = buildBlockInsideNeighborhood(Number(blockTargetArea) || undefined);
+                  setDraftBoundary(poly);
+                  setGpsFocusTarget({ boundary: poly, key: `auto-blk-${Date.now()}` });
+                  toast({
+                    title: 'Zone de bloc pré-tracée dans votre quartier',
+                    description: 'Vous pouvez ajuster les points sur la carte ou valider directement.',
+                    variant: 'success',
+                  });
+                }}
+                className="text-xs gap-1.5 border-emerald-500/40 text-emerald-500"
+              >
+                <LocateFixed className="size-3.5" />
+                Générer la zone dans mon quartier
+              </Button>
+            )}
             <Button
               size="sm"
-              disabled={!draftBoundary || Boolean(validation.error) || saving}
+              disabled={
+                saving ||
+                Boolean(validation.error) ||
+                (mapMode === 'CREATE_BLOCK' ? !newBlockName.trim() : !draftBoundary)
+              }
               onClick={() => void handleSaveBlockBoundary()}
               className="bg-cyan-600 hover:bg-cyan-500 text-white gap-1.5"
             >

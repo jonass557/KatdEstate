@@ -42,7 +42,10 @@ import {
   createBlock,
   updateStoredBlock,
   getStoredHabitants,
+  getHierarchyMessages,
+  sendHierarchyMessage,
   reassignHabitantBlock,
+  type DirectHierarchyMessage,
   getWorkflowListings,
   getOfficialCertificates,
   saveOfficialCertificate,
@@ -117,6 +120,7 @@ export function NeighborhoodLeaderDashboard() {
     setHabitants(getStoredHabitants());
     setListings(getWorkflowListings());
     setCertificates(getOfficialCertificates());
+    setHierarchyMsgs(getHierarchyMessages());
   };
 
   // Modals state
@@ -152,9 +156,12 @@ export function NeighborhoodLeaderDashboard() {
   const [plotNumber, setPlotNumber] = useState('');
   const [certSurface, setCertSurface] = useState(300);
 
-  // Broadcast state (Envoi groupé à tous les blocs OU bloc précis)
+  // Broadcast state (Envoi groupé à tous les blocs OU conversation directe avec un Chef de Bloc)
   const [broadcastTarget, setBroadcastTarget] = useState<string>('ALL');
   const [globalMessage, setGlobalMessage] = useState('');
+  const [hierarchyMsgs, setHierarchyMsgs] = useState<DirectHierarchyMessage[]>(() =>
+    getHierarchyMessages(),
+  );
   const [sentBroadcasts, setSentBroadcasts] = useState<
     Array<{ id: string; targetLabel: string; message: string; sentAt: string }>
   >([]);
@@ -338,6 +345,20 @@ export function NeighborhoodLeaderDashboard() {
       broadcastTarget === 'ALL'
         ? `Tous les blocs du quartier (${blocks.length} blocs)`
         : `${targetBlock?.name || 'Bloc sélectionné'} (Chef : ${targetBlock?.leaderName || 'Non assigné'})`;
+
+    sendHierarchyMessage({
+      senderEmail: user?.email || 'chef.quartier@katdestate.immo',
+      senderName: user?.displayName || 'Chef de Quartier',
+      senderRole: 'NEIGHBORHOOD_LEADER',
+      recipientType: broadcastTarget === 'ALL' ? 'ALL_BLOCK_OWNERS' : 'BLOCK_LEADER',
+      recipientEmail: targetBlock?.leaderEmail,
+      recipientName: targetBlock?.leaderName || targetLabel,
+      blockId: broadcastTarget === 'ALL' ? undefined : targetBlock?.id,
+      blockName: broadcastTarget === 'ALL' ? 'Tous les blocs' : targetBlock?.name,
+      subject: broadcastTarget === 'ALL' ? 'Message global du Chef de Quartier' : `Message direct — ${targetBlock?.name || 'Bloc'}`,
+      body: globalMessage.trim(),
+    });
+    setHierarchyMsgs(getHierarchyMessages());
 
     setSentBroadcasts((prev) => [
       {
@@ -1111,24 +1132,53 @@ export function NeighborhoodLeaderDashboard() {
             </form>
           </Card>
 
-          {sentBroadcasts.length > 0 && (
-            <Card className="p-4 space-y-2.5 border-border">
-              <h3 className="text-xs font-bold text-foreground">Messages envoyés récemment</h3>
-              <div className="space-y-2">
-                {sentBroadcasts.map((m) => (
-                  <div key={m.id} className="rounded-xl border border-border bg-muted/20 p-3 text-xs space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-purple-600">{m.targetLabel}</span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {new Date(m.sentAt).toLocaleString('fr-FR')}
-                      </span>
+          <Card className="p-4 space-y-3 border-border">
+            <h3 className="text-xs font-bold text-foreground">
+              Fil de discussion bidirectionnel (Chef de Quartier ↔ Chefs de Bloc)
+            </h3>
+            {hierarchyMsgs.filter(
+              (m) =>
+                m.senderRole === 'NEIGHBORHOOD_LEADER' ||
+                m.recipientType === 'NEIGHBORHOOD_LEADER' ||
+                m.senderRole === 'BLOCK_LEADER',
+            ).length === 0 && sentBroadcasts.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Aucun message échangé avec vos Chefs de Bloc pour le moment.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {hierarchyMsgs
+                  .filter(
+                    (m) =>
+                      m.senderRole === 'NEIGHBORHOOD_LEADER' ||
+                      m.recipientType === 'NEIGHBORHOOD_LEADER' ||
+                      (m.senderRole === 'BLOCK_LEADER' &&
+                        (broadcastTarget === 'ALL' || m.blockId === broadcastTarget)),
+                  )
+                  .map((m) => (
+                    <div
+                      key={m.id}
+                      className={`rounded-xl border p-3 text-xs space-y-1 ${
+                        m.senderRole === 'NEIGHBORHOOD_LEADER'
+                          ? 'border-purple-500/30 bg-purple-500/10 ml-4'
+                          : 'border-cyan-500/30 bg-cyan-500/10 mr-4'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-foreground">
+                          {m.senderName} ({m.senderRole === 'NEIGHBORHOOD_LEADER' ? 'Chef de Quartier' : 'Chef de Bloc'})
+                          {m.blockName ? ` · ${m.blockName}` : ''}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(m.createdAt).toLocaleString('fr-FR')}
+                        </span>
+                      </div>
+                      <p className="text-foreground">{m.body}</p>
                     </div>
-                    <p className="text-foreground">{m.message}</p>
-                  </div>
-                ))}
+                  ))}
               </div>
-            </Card>
-          )}
+            )}
+          </Card>
         </div>
       )}
 

@@ -17,6 +17,7 @@ import { useToast } from '../ui/toast';
 import { useSession } from '../../app/session';
 import { GeoMapCanvas } from '../geo/GeoMapCanvas';
 import { getPreciseUserLocation } from '../../lib/geo/geolocation-helper';
+import { reverseGeocodeWithNominatim } from '../../lib/geo/nominatim-geocoder';
 import {
   updateCustomMarketplaceListing,
   type CustomMarketplaceListing,
@@ -206,11 +207,19 @@ export function PublishListingModal({
     setGettingLocation(true);
     try {
       const pos = await getPreciseUserLocation();
-      setLatitude(Number(pos.lat.toFixed(6)));
-      setLongitude(Number(pos.lng.toFixed(6)));
+      const lat = Number(pos.lat.toFixed(6));
+      const lng = Number(pos.lng.toFixed(6));
+      setLatitude(lat);
+      setLongitude(lng);
+      try {
+        const geo = await reverseGeocodeWithNominatim(lat, lng);
+        if (geo?.city) setCity(geo.city);
+        if (geo?.neighborhood) setDistrict(geo.neighborhood);
+        if (geo?.address) setAddress(geo.address.split(',')[0] || geo.address);
+      } catch {}
       toast({
-        title: 'Position GPS exacte capturée !',
-        description: `Lat: ${pos.lat.toFixed(5)}, Long: ${pos.lng.toFixed(5)}`,
+        title: 'Position GPS exacte capturée et pointée sur la carte !',
+        description: `Lat: ${lat.toFixed(5)}, Long: ${lng.toFixed(5)}`,
         variant: 'success',
       });
     } catch {
@@ -391,8 +400,8 @@ export function PublishListingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
-      <div className="bg-[#15042c] border border-purple-500/40 rounded-3xl p-6 sm:p-8 max-w-3xl w-full my-8 space-y-6 shadow-2xl text-white">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+      <div className="bg-[#15042c] border border-purple-500/40 rounded-3xl p-5 sm:p-8 max-w-3xl w-full my-2 sm:my-4 max-h-[calc(100vh-2rem)] overflow-y-auto space-y-6 shadow-2xl text-white">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-purple-800/60 pb-4">
           <div className="flex items-center gap-3">
@@ -828,6 +837,26 @@ export function PublishListingModal({
                 initialZoom={14}
                 allowMarkerPlacement={true}
                 activeMarker={{ lat: latitude, lng: longitude }}
+                markers={[
+                  {
+                    id: editingListing?._id || 'draft-listing-marker',
+                    level: 'PROPERTY',
+                    position: { lat: latitude, lng: longitude },
+                    title: title || 'Propriété à publier',
+                    subtitle: [address, district, city].filter(Boolean).join(', '),
+                    propertyDetails: {
+                      propertyId: editingListing?._id || 'draft-listing-marker',
+                      name: title || 'Propriété à publier',
+                      type: category,
+                      priceMinor,
+                      currency,
+                      address: address || 'Position GPS',
+                      city: city || '',
+                      neighborhood: district || '',
+                      photoUrl: photoUrls[0] || photoExterieur || undefined,
+                    },
+                  },
+                ]}
                 focusTarget={{ lat: latitude, lng: longitude, zoom: 15, key: `${latitude}-${longitude}` }}
                 onMarkerChange={(pt, geocode) => {
                   setLatitude(Number(pt.lat.toFixed(6)));
