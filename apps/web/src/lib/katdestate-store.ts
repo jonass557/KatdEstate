@@ -2941,3 +2941,22 @@ export function saveLocalIkeepayConfig(cfg: LocalIkeepayConfig): void {
     );
   } catch {}
 }
+
+export const STORAGE_SUBSCRIPTIONS_ENABLED_KEY = 'katdestate_subscriptions_enabled';
+
+export function getSubscriptionsEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const raw = localStorage.getItem(STORAGE_SUBSCRIPTIONS_ENABLED_KEY);
+    return raw === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function setSubscriptionsEnabled(enabled: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_SUBSCRIPTIONS_ENABLED_KEY, enabled ? 'true' : 'false');
+  } catch {}
+}

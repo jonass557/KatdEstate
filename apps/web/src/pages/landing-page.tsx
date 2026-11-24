@@ -30,6 +30,7 @@ import { HeroCarousel } from '../components/landing/hero-carousel';
 import {
   getCustomMarketplaceListings,
   getSubscriptionPlans,
+  getSubscriptionsEnabled,
 } from '../lib/katdestate-store';
 
 interface PublicListing {
@@ -215,13 +216,16 @@ export function LandingPage() {
     safePage * PAGE_SIZE,
   );
 
-  const landingPlans = getSubscriptionPlans().filter(
-    (p) =>
-      p.isActive &&
-      (p.roleKey === 'AGENT' ||
-        p.roleKey === 'INDEPENDENT_OWNER' ||
-        p.roleKey === 'NEIGHBORHOOD_LEADER'),
-  );
+  const subscriptionsEnabled = getSubscriptionsEnabled();
+  const landingPlans = subscriptionsEnabled
+    ? getSubscriptionPlans().filter(
+        (p) =>
+          p.isActive &&
+          (p.roleKey === 'AGENT' ||
+            p.roleKey === 'INDEPENDENT_OWNER' ||
+            p.roleKey === 'NEIGHBORHOOD_LEADER'),
+      )
+    : [];
 
   return (
     <div className="min-h-screen bg-[#110222] text-slate-100 selection:bg-[#00e676] selection:text-slate-950">
@@ -919,8 +923,9 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* 5b. Plans d'Abonnement Officiels (Agent Immobilier, Propriétaire Indépendant, Chef de Quartier) */}
-      <section id="plans" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 border-t border-slate-800/70">
+      {/* 5b. Plans d'Abonnement Officiels (uniquement si activés par le Super Admin) */}
+      {subscriptionsEnabled && landingPlans.length > 0 && (
+        <section id="plans" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 border-t border-slate-800/70">
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
             <CreditCard className="size-3.5" />
@@ -970,6 +975,7 @@ export function LandingPage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* 6. Chefferie, Foncier & Ikeepay Payment Highlight */}
       <section

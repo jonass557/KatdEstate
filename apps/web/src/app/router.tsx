@@ -68,6 +68,7 @@ import {
   AdminSubscriptionsPage,
   UserOrdersPage,
 } from '../pages/admin-super-hub';
+import { HotelModulePage } from '../pages/hotel-hub';
 import type { ReactNode } from 'react';
 
 /**
@@ -209,6 +210,7 @@ const router = createBrowserRouter([
       { path: 'admin/agents', element: <AdminAgentsPage /> },
       { path: 'admin/subscriptions', element: <AdminSubscriptionsPage /> },
       { path: 'user/orders', element: <UserOrdersPage /> },
+      { path: 'hotel/:module', element: <HotelModulePage /> },
       { path: 'carte', element: <InteractiveQuartierMap /> },
       { path: 'admin/owners', element: <AdminOwnersPage /> },
       { path: 'platform/owners', element: <AdminOwnersPage /> },

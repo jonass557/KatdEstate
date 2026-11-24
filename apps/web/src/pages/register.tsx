@@ -25,7 +25,11 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ApiError } from '../lib/api-client';
 import { IkeepayModal } from '../components/payments/ikeepay-modal';
-import { getSubscriptionPlans, upsertUserSubscription } from '../lib/katdestate-store';
+import {
+  getSubscriptionPlans,
+  getSubscriptionsEnabled,
+  upsertUserSubscription,
+} from '../lib/katdestate-store';
 
 type RegisterFormValues = z.input<typeof registerSchema>;
 
@@ -33,6 +37,7 @@ interface RoleCard {
   id:
     | 'OWNER'
     | 'INDEPENDENT_OWNER'
+    | 'HOTEL_MANAGER'
     | 'TENANT'
     | 'AGENT'
     | 'NEIGHBORHOOD_LEADER'
@@ -143,6 +148,20 @@ const ROLES_LIST: RoleCard[] = [
       'Gestion des alertes de sécurité',
     ],
   },
+  {
+    id: 'HOTEL_MANAGER',
+    title: 'Gestion des Hôtels',
+    badge: 'Hôtellerie & PMS',
+    icon: Building2,
+    gradient: 'from-amber-500 to-rose-600',
+    description:
+      'Pilotez votre établissement hôtelier : chambres, réservations, check-in/out, restaurant, stocks & comptabilité.',
+    features: [
+      'Chambres, Réservations & Check-in/out',
+      'Restaurant, Services & Housekeeping',
+      'Comptabilité, Stocks, RH & Site Public',
+    ],
+  },
 ];
 
 const PAID_PLAN_ROLES = new Set(['AGENT', 'INDEPENDENT_OWNER', 'NEIGHBORHOOD_LEADER']);
@@ -154,11 +173,16 @@ export function RegisterPage() {
   const [selectedRole, setSelectedRole] = useState<RoleCard['id']>(
     ROLES_LIST.some((r) => r.id === initialRole) ? initialRole : 'USER',
   );
+  const subscriptionsEnabled = getSubscriptionsEnabled();
   const allPlans = getSubscriptionPlans().filter((p) => p.isActive);
-  const rolePlans = allPlans.filter((p) => p.roleKey === selectedRole);
+  const rolePlans = subscriptionsEnabled
+    ? allPlans.filter((p) => p.roleKey === selectedRole)
+    : [];
   const [selectedPlanId, setSelectedPlanId] = useState(initialPlanId);
   const activePlan =
-    rolePlans.find((p) => p._id === selectedPlanId) || rolePlans[0] || null;
+    subscriptionsEnabled && PAID_PLAN_ROLES.has(selectedRole)
+      ? rolePlans.find((p) => p._id === selectedPlanId) || rolePlans[0] || null
+      : null;
 
   const [pendingValues, setPendingValues] = useState<RegisterFormValues | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -229,7 +253,7 @@ export function RegisterPage() {
   };
 
   const onSubmit = handleSubmit(async (values) => {
-    if (PAID_PLAN_ROLES.has(selectedRole) && activePlan) {
+    if (subscriptionsEnabled && PAID_PLAN_ROLES.has(selectedRole) && activePlan) {
       setPendingValues(values);
       setPaymentModalOpen(true);
       return;
@@ -457,8 +481,8 @@ export function RegisterPage() {
                 )}
               </div>
 
-              {/* Plan d'abonnement si profil payant (Agent, Propriétaire Indépendant, Chef de Quartier) */}
-              {PAID_PLAN_ROLES.has(selectedRole) && rolePlans.length > 0 && (
+              {/* Plan d'abonnement si activé par le Super Admin */}
+              {subscriptionsEnabled && PAID_PLAN_ROLES.has(selectedRole) && rolePlans.length > 0 && (
                 <div className="space-y-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
                   <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
                     Plan d’abonnement requis avant accès au dashboard
@@ -490,9 +514,9 @@ export function RegisterPage() {
                 </div>
               )}
 
-              {selectedRole === 'USER' && (
+              {(!subscriptionsEnabled || selectedRole === 'USER') && (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300 font-semibold">
-                  ✓ Inscription 100% gratuite — aucune souscription requise pour les utilisateurs / visiteurs.
+                  ✓ Inscription libre — aucun abonnement requis actuellement.
                 </div>
               )}
 
@@ -504,7 +528,7 @@ export function RegisterPage() {
               >
                 {formState.isSubmitting
                   ? 'Création de votre espace en cours...'
-                  : PAID_PLAN_ROLES.has(selectedRole) && activePlan
+                  : subscriptionsEnabled && PAID_PLAN_ROLES.has(selectedRole) && activePlan
                     ? `S'inscrire & Payer (${activePlan.priceMinor.toLocaleString('fr-FR')} FCFA)`
                     : `Créer mon compte ${currentRoleCard.title}`}
               </Button>

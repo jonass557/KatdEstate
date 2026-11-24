@@ -37,8 +37,10 @@ import {
   getStoredBlocks,
   getStoredNeighborhoods,
   getSubscriptionPlans,
+  getSubscriptionsEnabled,
   getUserPropertyOrders,
   getUserSubscriptions,
+  setSubscriptionsEnabled,
   toggleUserSubscriptionStatus,
   updateSubscriptionPlan,
   type SubscriptionPlan,
@@ -644,6 +646,10 @@ export function AdminSubscriptionsPage() {
     void tick;
     return getSubscriptionPlans();
   }, [tick]);
+  const subscriptionsEnabled = useMemo(() => {
+    void tick;
+    return getSubscriptionsEnabled();
+  }, [tick]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [roleKey, setRoleKey] = useState<SubscriptionPlan['roleKey']>('AGENT');
@@ -708,8 +714,59 @@ export function AdminSubscriptionsPage() {
       <BackButton to="/dashboard" label="Retour au Dashboard" />
       <PageHeader
         title="Gestion des Abonnements & Tarifs"
-        description="Créez, modifiez et supprimez les plans d'abonnement pour chaque profil utilisateur. Les plans actifs sont affichés sur la page d'accueil et à l'inscription."
+        description="Activez ou désactivez les abonnements sur la plateforme, et créez/modifiez les plans d'abonnement pour chaque profil utilisateur."
       />
+
+      {/* Interrupteur global Super Admin : Activer / Désactiver les abonnements */}
+      <Card
+        className={`border ${
+          subscriptionsEnabled
+            ? 'border-emerald-500/40 bg-emerald-500/5'
+            : 'border-amber-500/40 bg-amber-500/5'
+        }`}
+      >
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge
+                className={
+                  subscriptionsEnabled
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-amber-500 text-slate-950 font-black'
+                }
+              >
+                {subscriptionsEnabled ? 'ABONNEMENTS ACTIVÉS' : 'ABONNEMENTS DÉSACTIVÉS (INSCRIPTION LIBRE)'}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {subscriptionsEnabled
+                ? 'Les plans sont affichés sur la page d’accueil et le paiement est requis lors de l’inscription des comptes professionnels.'
+                : 'Les abonnements sont actuellement désactivés : tout utilisateur peut s’inscrire gratuitement sans choisir de plan.'}
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={() => {
+              const next = !subscriptionsEnabled;
+              setSubscriptionsEnabled(next);
+              setTick((t) => t + 1);
+              toast({
+                title: next
+                  ? 'Abonnements activés sur toute la plateforme !'
+                  : 'Abonnements désactivés — inscription libre activée !',
+                variant: 'success',
+              });
+            }}
+            className={
+              subscriptionsEnabled
+                ? 'bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shrink-0'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shrink-0'
+            }
+          >
+            {subscriptionsEnabled ? 'Désactiver les abonnements' : 'Activer les abonnements'}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card className="border-border">
         <CardHeader>

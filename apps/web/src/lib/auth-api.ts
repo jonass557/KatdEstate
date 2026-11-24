@@ -86,6 +86,11 @@ export const DEMO_PROFILES: Record<
     name: 'M. Yao Konan (Visiteur)',
     orgName: 'Espace Visiteur KatdEstate',
   },
+  'hotel@katdestate.immo': {
+    role: 'HOTEL_MANAGER',
+    name: 'Hôtel La Palmeraie',
+    orgName: 'Complexe Hôtelier La Palmeraie',
+  },
   'admin@kadtestate.immo': {
     role: 'SUPER_ADMIN',
     name: 'Direction Super Admin',

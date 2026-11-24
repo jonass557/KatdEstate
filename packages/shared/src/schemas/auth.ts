@@ -33,6 +33,7 @@ export const registerSchema = z
       .enum([
         'OWNER',
         'INDEPENDENT_OWNER',
+        'HOTEL_MANAGER',
         'TENANT',
         'AGENT',
         'NEIGHBORHOOD_LEADER',

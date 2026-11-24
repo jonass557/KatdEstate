@@ -33,6 +33,11 @@ import {
   Gauge,
   BarChart3,
   BedDouble,
+  UtensilsCrossed,
+  ClipboardList,
+  Package,
+  PieChart,
+  LogIn,
 } from 'lucide-react';
 import { PublishListingModal } from '../components/marketplace/publish-listing-modal';
 import { useOrganization } from '../app/organization';
@@ -672,6 +677,116 @@ export function DashboardPage() {
           },
         ];
 
+      case 'HOTEL_MANAGER':
+        return [
+          {
+            title: 'DASHBOARD PRINCIPAL DE GESTION HÔTELIÈRE',
+            subtitle:
+              'Pilotez votre établissement hôtelier : chambres, réservations, clients, restaurant, housekeeping, stocks & finances',
+            buttons: [
+              {
+                title: 'Établissements\nHôteliers',
+                icon: Building2,
+                colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
+                glowClass: 'shadow-amber-500/25',
+                to: '/hotel/establishments',
+                badge: 'HÔTEL',
+                badgeBg: 'bg-amber-300 text-black',
+              },
+              {
+                title: 'Chambres &\nCatégories',
+                icon: BedDouble,
+                colorClass: 'bg-gradient-to-tr from-emerald-600 to-teal-700 text-white',
+                glowClass: 'shadow-emerald-500/25',
+                to: '/hotel/rooms',
+              },
+              {
+                title: 'Réservations\nHôtelières',
+                icon: Calendar,
+                colorClass: 'bg-gradient-to-tr from-blue-600 to-indigo-700 text-white',
+                glowClass: 'shadow-blue-500/25',
+                to: '/hotel/reservations',
+                badge: 'PLANNING',
+                badgeBg: 'bg-blue-300 text-black',
+              },
+              {
+                title: 'CRM &\nClients',
+                icon: Users,
+                colorClass: 'bg-gradient-to-tr from-purple-600 to-violet-700 text-white',
+                glowClass: 'shadow-purple-500/25',
+                to: '/hotel/crm',
+              },
+              {
+                title: 'Arrivées &\nDéparts (In/Out)',
+                icon: LogIn,
+                colorClass: 'bg-gradient-to-tr from-cyan-600 to-sky-700 text-white',
+                glowClass: 'shadow-cyan-500/25',
+                to: '/hotel/checkin-out',
+                badge: 'RÉCEPTION',
+                badgeBg: 'bg-cyan-300 text-black',
+              },
+              {
+                title: 'Facturation &\nPaiements',
+                icon: Receipt,
+                colorClass: 'bg-gradient-to-tr from-emerald-500 to-green-600 text-white',
+                glowClass: 'shadow-emerald-500/25',
+                to: '/hotel/billing',
+              },
+              {
+                title: 'Restaurant &\nCommandes',
+                icon: UtensilsCrossed,
+                colorClass: 'bg-gradient-to-tr from-rose-600 to-pink-700 text-white',
+                glowClass: 'shadow-rose-500/25',
+                to: '/hotel/restaurant',
+              },
+              {
+                title: 'Services\nSupplémentaires',
+                icon: Sparkles,
+                colorClass: 'bg-gradient-to-tr from-fuchsia-600 to-purple-700 text-white',
+                glowClass: 'shadow-fuchsia-500/25',
+                to: '/hotel/services',
+              },
+              {
+                title: 'Housekeeping &\nEntretien',
+                icon: ClipboardList,
+                colorClass: 'bg-gradient-to-tr from-teal-600 to-emerald-700 text-white',
+                glowClass: 'shadow-teal-500/25',
+                to: '/hotel/housekeeping',
+              },
+              {
+                title: 'Employés &\nRessources Humaines',
+                icon: UserCheck,
+                colorClass: 'bg-gradient-to-tr from-indigo-600 to-blue-700 text-white',
+                glowClass: 'shadow-indigo-500/25',
+                to: '/hotel/hr',
+              },
+              {
+                title: 'Stocks &\nApprovisionnements',
+                icon: Package,
+                colorClass: 'bg-gradient-to-tr from-orange-600 to-amber-700 text-white',
+                glowClass: 'shadow-orange-500/25',
+                to: '/hotel/stocks',
+              },
+              {
+                title: 'Comptabilité &\nRapports Financiers',
+                icon: PieChart,
+                colorClass: 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white',
+                glowClass: 'shadow-slate-500/25',
+                to: '/hotel/accounting',
+              },
+              {
+                title: 'Site Public &\nAutomatisations',
+                icon: Globe,
+                colorClass: 'bg-gradient-to-tr from-violet-600 to-indigo-700 text-white',
+                glowClass: 'shadow-violet-500/25',
+                to: '/hotel/public-notifications',
+                badge: 'EN LIGNE',
+                badgeBg: 'bg-emerald-400 text-black',
+              },
+            ],
+          },
+        ];
+
       case 'OWNER':
       case 'LANDLORD':
       default: // OWNER / Propriétaire
@@ -907,6 +1022,11 @@ export function DashboardPage() {
       label: 'Propriétaire Indépendant',
       icon: Home,
       color: 'text-teal-400 bg-teal-400/10 border-teal-400/30',
+    },
+    HOTEL_MANAGER: {
+      label: 'Gestion des Hôtels',
+      icon: Building2,
+      color: 'text-amber-400 bg-amber-400/10 border-amber-400/30',
     },
     TENANT: {
       label: 'Locataire Résident',

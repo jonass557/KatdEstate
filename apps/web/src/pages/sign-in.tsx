@@ -81,6 +81,13 @@ const TEST_ACCOUNTS = [
     icon: Users,
     color: 'text-emerald-400 bg-emerald-400/10',
   },
+  {
+    role: 'HOTEL_MANAGER',
+    label: 'Gestion des Hôtels',
+    email: 'hotel@katdestate.immo',
+    icon: Building2,
+    color: 'text-amber-400 bg-amber-400/10',
+  },
 ];
 
 export function SignInPage() {
