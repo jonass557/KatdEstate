@@ -1621,23 +1621,81 @@ export function BlockLeaderDashboard() {
               <label className="font-semibold block mb-1">Nom du bien principal</label>
               <Input
                 value={propertyName}
-                onChange={(e) => setPropertyName(e.target.value)}
+              onChange={(e) => setPropertyName(e.target.value)}
                 placeholder="Ex : Immeuble Émeraude"
               />
             </div>
             <div>
-              <label className="font-semibold block mb-1">Type de bien</label>
-              <select
-                value={propertyType}
-                onChange={(e) => setPropertyType(e.target.value)}
-                className="w-full h-9 rounded-xl border border-input px-2 bg-background text-xs"
-              >
-                <option value="Immeuble résidentiel">Immeuble résidentiel</option>
-                <option value="Cour commune">Cour commune</option>
-                <option value="Villa duplex">Villa duplex</option>
-                <option value="Terrain bâti">Terrain bâti</option>
-              </select>
+              <label className="font-semibold block mb-1">Ville / Secteur assigné</label>
+              <Input
+                value={`${activeNeighborhood.city || activeNeighborhood.name} — ${activeBlock.name}`}
+                disabled
+              />
             </div>
+          </div>
+
+          <div className="rounded-xl overflow-hidden border border-cyan-500/30">
+            <GeoMapCanvas
+              title={`Ville : ${activeNeighborhood.city || activeNeighborhood.name} · Mon Bloc : ${activeBlock.name}`}
+              subtitle="Tous les propriétaires créés seront automatiquement rattachés à votre bloc ci-dessous."
+              heightClassName="h-52"
+              initialCenter={(() => {
+                const b = activeBlock.boundary || activeNeighborhood.boundary;
+                const ring = b?.type === 'Polygon' ? b.coordinates?.[0] : b?.coordinates?.[0]?.[0];
+                if (!Array.isArray(ring) || ring.length === 0) return undefined;
+                const lng = ring.reduce((s: number, c: any) => s + Number(c[0]), 0) / ring.length;
+                const lat = ring.reduce((s: number, c: any) => s + Number(c[1]), 0) / ring.length;
+                return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined;
+              })()}
+              overlays={[
+                ...(activeNeighborhood.boundary
+                  ? [
+                      {
+                        id: activeNeighborhood.id,
+                        level: 'NEIGHBORHOOD' as const,
+                        label: `Quartier : ${activeNeighborhood.name}`,
+                        boundary: activeNeighborhood.boundary,
+                        color: '#7c3aed',
+                        fillOpacity: 0.05,
+                        strokeWeight: 2,
+                        locked: true,
+                      },
+                    ]
+                  : []),
+                ...(activeBlock.boundary
+                  ? [
+                      {
+                        id: activeBlock.id,
+                        level: 'BLOCK' as const,
+                        label: `Mon Bloc : ${activeBlock.name}`,
+                        boundary: activeBlock.boundary,
+                        color: activeBlock.color || '#06b6d4',
+                        fillOpacity: 0.22,
+                        strokeWeight: 3,
+                        locked: true,
+                      },
+                    ]
+                  : []),
+              ]}
+              focusTarget={{
+                boundary: activeBlock.boundary || activeNeighborhood.boundary || null,
+                key: `modal-owner-${activeBlock.id}`,
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="font-semibold block mb-1">Type de bien</label>
+            <select
+              value={propertyType}
+              onChange={(e) => setPropertyType(e.target.value)}
+              className="w-full h-9 rounded-xl border border-input px-2 bg-background text-xs"
+            >
+              <option value="Immeuble résidentiel">Immeuble résidentiel</option>
+              <option value="Cour commune">Cour commune</option>
+              <option value="Villa duplex">Villa duplex</option>
+              <option value="Terrain bâti">Terrain bâti</option>
+            </select>
           </div>
           <div>
             <label className="font-semibold block mb-1">Cotisation / Loyer mensuel attendu (FCFA)</label>

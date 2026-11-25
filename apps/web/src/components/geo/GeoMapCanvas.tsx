@@ -373,6 +373,19 @@ export function GeoMapCanvas({
 
       const m = L.marker([position.lat, position.lng], { icon: customIcon });
 
+      // Étiquette visible directement sur la carte avec nom et adresse de la propriété
+      m.bindTooltip(
+        `<div style="font-weight:700;font-size:11px;line-height:1.2;">${mTitle}</div>${
+          mSubtitle ? `<div style="font-size:10px;color:#334155;">📍 ${mSubtitle}</div>` : ''
+        }`,
+        {
+          permanent: markers.length <= 20,
+          direction: 'top',
+          offset: [0, -28],
+          className: 'domora-leaflet-tooltip',
+        },
+      );
+
       // Popup Leaflet complet conforme aux exigences
       const propId = propertyDetails?.propertyId || markerOverlay.id;
       const popupContent = document.createElement('div');

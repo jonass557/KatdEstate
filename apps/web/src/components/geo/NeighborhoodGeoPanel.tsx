@@ -38,6 +38,7 @@ import { useOrgPath } from '../../lib/query';
 import { apiRequest } from '../../lib/api-client';
 import {
   appendGeoAuditLogLocal,
+  getBlockOwners,
   getGeoAuditLogsLocal,
   getStoredBlocks,
   getStoredNeighborhoods,
@@ -48,7 +49,8 @@ import {
   type GeoAuditRecord,
   type NeighborhoodGeoRecord,
 } from '../../lib/katdestate-store';
-import type { GeoPolygonOverlay } from '../../lib/geo/map-provider';
+import type { GeoMarkerOverlay, GeoPolygonOverlay } from '../../lib/geo/map-provider';
+import { getLocalProperties } from '../../pages/properties';
 import { GeoMapCanvas } from './GeoMapCanvas';
 
 const BLOCK_COLORS = ['#06b6d4', '#8b5cf6', '#f59e0b', '#ec4899', '#10b981', '#3b82f6', '#f97316'];
@@ -501,6 +503,50 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
       }
     });
     return items;
+  }, [activeNeighborhood, blocks]);
+
+  // Marqueurs des propriétés des propriétaires rattachés aux blocs du quartier
+  const propertyMarkers = useMemo<GeoMarkerOverlay[]>(() => {
+    const allProps = getLocalProperties();
+    const blockIds = new Set(blocks.filter((b) => b.neighborhoodId === activeNeighborhood.id).map((b) => b.id));
+    const neighOwners = getBlockOwners().filter(
+      (o) => !o.neighborhoodId || o.neighborhoodId === activeNeighborhood.id || blockIds.has(o.blockId),
+    );
+    const ownerIds = new Set(neighOwners.map((o) => o.id));
+    return allProps
+      .filter((p: any) => {
+        const lat = typeof p.latitude === 'number' ? p.latitude : p.location?.coordinates?.[1];
+        const lng = typeof p.longitude === 'number' ? p.longitude : p.location?.coordinates?.[0];
+        if (typeof lat !== 'number' || typeof lng !== 'number') return false;
+        return (
+          !p.neighborhoodId ||
+          p.neighborhoodId === activeNeighborhood.id ||
+          (p.blockId && blockIds.has(p.blockId)) ||
+          (p.geoOwnerId && ownerIds.has(p.geoOwnerId))
+        );
+      })
+      .map((p: any) => {
+        const lat = typeof p.latitude === 'number' ? p.latitude : p.location.coordinates[1];
+        const lng = typeof p.longitude === 'number' ? p.longitude : p.location.coordinates[0];
+        return {
+          id: p._id,
+          level: 'PROPERTY' as const,
+          position: { lat, lng },
+          title: p.name,
+          subtitle: p.address || p.neighborhoodName || activeNeighborhood.name,
+          color: '#f59e0b',
+          propertyDetails: {
+            propertyId: p._id,
+            name: p.name,
+            type: p.type,
+            priceMinor: p.priceMinor,
+            currency: p.currency || 'FCFA',
+            address: p.address || '',
+            city: p.city || activeNeighborhood.city || '',
+            neighborhood: p.sectorName || p.neighborhoodName || activeNeighborhood.name,
+          },
+        };
+      });
   }, [activeNeighborhood, blocks]);
 
   const handleSaveNeighborhoodBoundary = async () => {
@@ -1141,6 +1187,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
           return { lat, lng };
         })()}
         overlays={overlays}
+        markers={propertyMarkers}
         activeBoundary={mapMode === 'VIEW' ? null : draftBoundary}
         onBoundaryChange={mapMode === 'VIEW' ? undefined : setDraftBoundary}
         allowPolygonDraw={mapMode !== 'VIEW'}

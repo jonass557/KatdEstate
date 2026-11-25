@@ -674,9 +674,47 @@ export function PropertyGeoSection({
       {/* Carte interactive OpenStreetMap / Leaflet : placement marqueur + contour parcelle */}
       <GeoMapCanvas
         title="Positionnement mondial & parcelle"
-        subtitle="Placez le marqueur sur votre bien ou tracez les limites exactes de la parcelle à l’intérieur de votre zone autorisée."
+        subtitle="Placez le marqueur sur votre bien dans votre bloc : l'adresse s'affiche directement sur la carte."
         heightClassName="h-[380px]"
+        initialCenter={(() => {
+          if (activeMarker) return activeMarker;
+          const b = selectedBlock?.boundary || selectedNeighborhood?.boundary;
+          const ring = b?.type === 'Polygon' ? b.coordinates?.[0] : b?.coordinates?.[0]?.[0];
+          if (!Array.isArray(ring) || ring.length === 0) return undefined;
+          const lng = ring.reduce((s: number, c: any) => s + Number(c[0]), 0) / ring.length;
+          const lat = ring.reduce((s: number, c: any) => s + Number(c[1]), 0) / ring.length;
+          return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined;
+        })()}
+        focusTarget={
+          activeMarker
+            ? { point: activeMarker, zoom: 16, key: `prop-${activeMarker.lat}-${activeMarker.lng}` }
+            : selectedBlock?.boundary || selectedNeighborhood?.boundary
+              ? {
+                  boundary: selectedBlock?.boundary || selectedNeighborhood?.boundary || null,
+                  key: `blk-${selectedBlock?.id || selectedNeighborhood?.id}`,
+                }
+              : null
+        }
         overlays={referenceOverlays}
+        markers={
+          activeMarker
+            ? [
+                {
+                  id: 'draft-property-marker',
+                  level: 'PROPERTY',
+                  position: activeMarker,
+                  title: selectedBlock?.name
+                    ? `Ma propriété (${selectedBlock.name})`
+                    : 'Ma propriété',
+                  subtitle:
+                    [value.neighborhoodName, value.arrondissement, value.department]
+                      .filter(Boolean)
+                      .join(', ') ||
+                    `${activeMarker.lat.toFixed(5)}, ${activeMarker.lng.toFixed(5)}`,
+                },
+              ]
+            : []
+        }
         activeMarker={activeMarker}
         activeBoundary={value.boundary ?? null}
         allowMarkerPlacement={true}
