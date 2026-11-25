@@ -51,8 +51,10 @@ import { AdminNotificationApiSettingsModal } from '../components/admin/notificat
 import { OwnerReportProblemModal } from '../components/quartier/OwnerReportProblemModal';
 import { Modal } from '../components/ui/dialog';
 import {
+  getBlockLeaders,
   getBlockOwners,
   getStoredBlocks,
+  getStoredNeighborhoods,
   getHierarchyMessages,
   sendHierarchyMessage,
 } from '../lib/katdestate-store';
@@ -1134,6 +1136,53 @@ export function DashboardPage() {
             <p className="text-xs text-muted-foreground mt-0.5">
               Accès strictement restreint à vos attributions et prérogatives officielles.
             </p>
+            {(() => {
+              if (userRole === 'BLOCK_LEADER') {
+                const ldr = normalizedUserEmail
+                  ? getBlockLeaders().find((l) => l.email?.trim().toLowerCase() === normalizedUserEmail)
+                  : undefined;
+                const blk = ldr
+                  ? getStoredBlocks().find((b) => b.id === ldr.blockId)
+                  : getStoredBlocks().find((b) => b.leaderEmail?.trim().toLowerCase() === normalizedUserEmail);
+                const neigh = getStoredNeighborhoods().find((n) => n.id === (blk?.neighborhoodId || ldr?.neighborhoodId)) || getStoredNeighborhoods()[0];
+                const chiefName = ldr?.createdByLeaderName || blk?.createdByLeaderName || neigh?.leaderName;
+                const chiefEmail = ldr?.createdByLeaderEmail || blk?.createdByLeaderEmail || neigh?.leaderEmail;
+                if (chiefName) {
+                  return (
+                    <p className="text-xs font-semibold text-purple-400 mt-1">
+                      Chef de Quartier : {chiefName}{chiefEmail ? ` (${chiefEmail})` : ''}
+                    </p>
+                  );
+                }
+              }
+              if ((userRole === 'OWNER' || userRole === 'LANDLORD') && isCreatedByBlockLeader && matchedBlockOwner) {
+                const blkLeaderName =
+                  matchedBlockOwner.createdByBlockLeaderName || assignedLeaderBlock?.leaderName || 'Chef de Bloc';
+                return (
+                  <p className="text-xs font-semibold text-cyan-400 mt-1">
+                    Rattaché par votre Chef de Bloc : {blkLeaderName} · {matchedBlockOwner.blockName}
+                  </p>
+                );
+              }
+              if (userRole === 'TENANT') {
+                try {
+                  const leasesRaw = localStorage.getItem('katdestate_custom_leases');
+                  const leases: any[] = leasesRaw ? JSON.parse(leasesRaw) : [];
+                  const matchedLease = normalizedUserEmail
+                    ? leases.find((l) => l.tenantEmail?.toLowerCase() === normalizedUserEmail) || leases[0]
+                    : leases[0];
+                  const ownerLabel = matchedLease?.ownerName;
+                  if (ownerLabel) {
+                    return (
+                      <p className="text-xs font-semibold text-emerald-400 mt-1">
+                        Votre Propriétaire : {ownerLabel}{matchedLease?.ownerEmail ? ` (${matchedLease.ownerEmail})` : ''}
+                      </p>
+                    );
+                  }
+                } catch {}
+              }
+              return null;
+            })()}
           </div>
         </div>
 

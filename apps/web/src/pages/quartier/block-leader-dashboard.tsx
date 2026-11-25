@@ -38,6 +38,8 @@ import {
   getStoredNeighborhoods,
   getWorkflowListings,
   saveBlockOwner,
+  updateBlockOwner,
+  dispatchCredentialsEmailAndLog,
   saveRegisteredUser,
   saveStoredHabitant,
   saveStoredIncident,
@@ -105,24 +107,42 @@ export function BlockLeaderDashboard() {
   const allNeighborhoods = useMemo(() => getStoredNeighborhoods(), []);
   const allLeaders = useMemo(() => getBlockLeaders(), []);
 
+  const matchedLeaderRecord = useMemo(
+    () =>
+      emailNorm
+        ? allLeaders.find((l) => l.email?.trim().toLowerCase() === emailNorm)
+        : undefined,
+    [allLeaders, emailNorm],
+  );
+
   const activeBlock = useMemo(() => {
+    if (matchedLeaderRecord) {
+      const blk = allBlocks.find((b) => b.id === matchedLeaderRecord.blockId);
+      if (blk) return blk;
+    }
     if (emailNorm) {
-      const byLeader = allLeaders.find((l) => l.email?.trim().toLowerCase() === emailNorm);
-      if (byLeader) {
-        const blk = allBlocks.find((b) => b.id === byLeader.blockId);
-        if (blk) return blk;
-      }
       const byBlockEmail = allBlocks.find((b) => b.leaderEmail?.trim().toLowerCase() === emailNorm);
       if (byBlockEmail) return byBlockEmail;
     }
     return allBlocks[0]!;
-  }, [allBlocks, allLeaders, emailNorm]);
+  }, [allBlocks, matchedLeaderRecord, emailNorm]);
 
   const activeNeighborhood = useMemo(
     () =>
       allNeighborhoods.find((n) => n.id === activeBlock?.neighborhoodId) || allNeighborhoods[0]!,
     [allNeighborhoods, activeBlock],
   );
+
+  const trueChiefName =
+    matchedLeaderRecord?.createdByLeaderName ||
+    activeBlock?.createdByLeaderName ||
+    activeNeighborhood?.leaderName ||
+    'Chef de Quartier';
+  const trueChiefEmail =
+    matchedLeaderRecord?.createdByLeaderEmail ||
+    activeBlock?.createdByLeaderEmail ||
+    activeNeighborhood?.leaderEmail ||
+    'chef.quartier@katdestate.immo';
 
   // Données locales cloisonnées au bloc actif
   const [owners, setOwners] = useState<BlockOwnerRecord[]>(() =>
@@ -163,6 +183,7 @@ export function BlockLeaderDashboard() {
 
   // --- GESTION DES PROPRIÉTAIRES ---
   const [newOwnerOpen, setNewOwnerOpen] = useState(false);
+  const [editingOwnerId, setEditingOwnerId] = useState<string | null>(null);
   const [ownerName, setOwnerName] = useState('');
   const [ownerPhone, setOwnerPhone] = useState('+225 ');
   const [ownerEmail, setOwnerEmail] = useState('');
@@ -170,8 +191,33 @@ export function BlockLeaderDashboard() {
   const [propertyName, setPropertyName] = useState('');
   const [propertyType, setPropertyType] = useState('Immeuble résidentiel');
   const [monthlyDues, setMonthlyDues] = useState(150000);
+  const [roomsCount, setRoomsCount] = useState<string>('');
+  const [roomsStyle, setRoomsStyle] = useState<'SIMPLE' | 'MODERNE'>('SIMPLE');
+  const [studiosCount, setStudiosCount] = useState<string>('');
+  const [studiosStyle, setStudiosStyle] = useState<'SIMPLE' | 'MODERNE'>('SIMPLE');
+  const [apartmentsCount, setApartmentsCount] = useState<string>('');
+  const [apartmentsStyle, setApartmentsStyle] = useState<'SIMPLE' | 'MODERNE'>('SIMPLE');
   const [ownerBoundary, setOwnerBoundary] = useState<GeoJsonBoundary | null>(null);
   const [lastCreatedOwner, setLastCreatedOwner] = useState<BlockOwnerRecord | null>(null);
+  const [lastCreatedOwnerWhatsappUrl, setLastCreatedOwnerWhatsappUrl] = useState<string>('');
+
+  const resetOwnerForm = () => {
+    setEditingOwnerId(null);
+    setOwnerName('');
+    setOwnerEmail('');
+    setOwnerPhone('+225 ');
+    setPropertyName('');
+    setPropertyType('Immeuble résidentiel');
+    setMonthlyDues(150000);
+    setRoomsCount('');
+    setRoomsStyle('SIMPLE');
+    setStudiosCount('');
+    setStudiosStyle('SIMPLE');
+    setApartmentsCount('');
+    setApartmentsStyle('SIMPLE');
+    setOwnerBoundary(null);
+    setOwnerPassword(`Proprio${Math.floor(1000 + Math.random() * 9000)}!`);
+  };
 
   const handleCreateOwner = (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,6 +228,41 @@ export function BlockLeaderDashboard() {
     const cleanEmail = ownerEmail.trim().toLowerCase();
     const generatedPwd =
       ownerPassword.trim() || `Proprio${Math.floor(1000 + Math.random() * 9000)}!`;
+    const leaderDisplayName = user?.displayName || activeBlock.leaderName || 'Chef de Bloc';
+    const leaderDisplayEmail = emailNorm || activeBlock.leaderEmail;
+
+    const optionalHousing = {
+      ...(roomsCount !== '' ? { roomsCount: Number(roomsCount), roomsStyle } : {}),
+      ...(studiosCount !== '' ? { studiosCount: Number(studiosCount), studiosStyle } : {}),
+      ...(apartmentsCount !== '' ? { apartmentsCount: Number(apartmentsCount), apartmentsStyle } : {}),
+    };
+
+    if (editingOwnerId) {
+      updateBlockOwner(editingOwnerId, {
+        fullName: ownerName.trim(),
+        email: cleanEmail,
+        phone: ownerPhone.trim(),
+        password: generatedPwd,
+        propertyName: propertyName.trim() || 'Propriété du bloc',
+        propertyType,
+        monthlyRentOrDues: Number(monthlyDues) || 0,
+        ...(ownerBoundary ? { assignedBoundary: ownerBoundary } : {}),
+        ...optionalHousing,
+      });
+      saveRegisteredUser({
+        email: cleanEmail,
+        password: generatedPwd,
+        displayName: ownerName.trim(),
+        role: 'OWNER',
+        phone: ownerPhone.trim(),
+        createdAt: new Date().toISOString(),
+      });
+      refreshAll();
+      setNewOwnerOpen(false);
+      resetOwnerForm();
+      toast({ title: 'Informations du propriétaire mises à jour !', variant: 'success' });
+      return;
+    }
 
     const newO: BlockOwnerRecord = {
       id: `own-${Date.now()}`,
@@ -192,7 +273,11 @@ export function BlockLeaderDashboard() {
       blockId: activeBlock.id,
       blockName: activeBlock.name,
       neighborhoodId: activeNeighborhood.id,
-      ...(ownerBoundary ? { assignedBoundary: ownerBoundary } : {}),
+      ...(ownerBoundary
+        ? { assignedBoundary: ownerBoundary }
+        : activeBlock.boundary
+          ? { assignedBoundary: activeBlock.boundary }
+          : {}),
       propertyName: propertyName.trim() || 'Propriété du bloc',
       propertyType,
       monthlyRentOrDues: Number(monthlyDues) || 0,
@@ -200,6 +285,9 @@ export function BlockLeaderDashboard() {
       paymentStatus: 'PAID',
       createdAt: new Date().toISOString(),
       createdByBlockLeader: true,
+      createdByBlockLeaderName: leaderDisplayName,
+      createdByBlockLeaderEmail: leaderDisplayEmail,
+      ...optionalHousing,
     };
     saveBlockOwner(newO);
 
@@ -213,18 +301,24 @@ export function BlockLeaderDashboard() {
       createdAt: new Date().toISOString(),
     });
 
+    void dispatchCredentialsEmailAndLog({
+      email: cleanEmail,
+      phone: ownerPhone.trim(),
+      fullName: ownerName.trim(),
+      password: generatedPwd,
+      roleLabel: 'Propriétaire',
+      createdByName: leaderDisplayName,
+    }).then((res) => {
+      setLastCreatedOwnerWhatsappUrl(res.whatsappUrl);
+    });
+
     refreshAll();
     setLastCreatedOwner(newO);
     setNewOwnerOpen(false);
-    setOwnerName('');
-    setOwnerEmail('');
-    setOwnerPhone('+225 ');
-    setPropertyName('');
-    setOwnerBoundary(null);
-    setOwnerPassword(`Proprio${Math.floor(1000 + Math.random() * 9000)}!`);
+    resetOwnerForm();
     toast({
-      title: 'Propriétaire & identifiants créés !',
-      description: `${newO.fullName} peut se connecter sur /sign-in avec ${newO.email} / ${newO.password}`,
+      title: 'Propriétaire créé & identifiants envoyés par Email !',
+      description: `${newO.fullName} peut se connecter avec ${newO.email} / ${newO.password}`,
       variant: 'success',
     });
   };
@@ -373,8 +467,8 @@ export function BlockLeaderDashboard() {
       senderName: `${user?.displayName || activeBlock.leaderName || 'Chef de Bloc'} (${activeBlock.name})`,
       senderRole: 'BLOCK_LEADER',
       recipientType: 'NEIGHBORHOOD_LEADER',
-      recipientEmail: activeNeighborhood.leaderEmail || 'chef.quartier@katdestate.immo',
-      recipientName: activeNeighborhood.leaderName || 'Chef de Quartier',
+      recipientEmail: trueChiefEmail,
+      recipientName: trueChiefName,
       blockId: activeBlock.id,
       blockName: activeBlock.name,
       subject: msgQuartierSubject.trim() || `Message du ${activeBlock.name}`,
@@ -384,8 +478,8 @@ export function BlockLeaderDashboard() {
     setMsgQuartierSubject('');
     setMsgQuartierBody('');
     toast({
-      title: 'Message envoyé à votre Chef de Quartier !',
-      description: `Destinataire : ${activeNeighborhood.leaderName || 'Chef de Quartier'}`,
+      title: `Message envoyé à ${trueChiefName} !`,
+      description: `Destinataire : ${trueChiefName} (${trueChiefEmail})`,
       variant: 'success',
     });
   };
@@ -861,6 +955,16 @@ export function BlockLeaderDashboard() {
                   <Copy className="size-3 mr-1" />
                   Copier
                 </Button>
+                {lastCreatedOwnerWhatsappUrl && (
+                  <a
+                    href={lastCreatedOwnerWhatsappUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2.5 py-1 text-[11px]"
+                  >
+                    Envoyer sur WhatsApp
+                  </a>
+                )}
               </div>
             </Card>
           )}
@@ -883,9 +987,36 @@ export function BlockLeaderDashboard() {
                         {o.propertyName} ({o.propertyType}) • Tél : <strong>{o.phone}</strong>
                       </p>
                     </div>
-                    <span className="rounded bg-cyan-500/20 text-cyan-600 px-2 py-0.5 text-[10px] font-bold">
-                      RATTACHÉ BLOC
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={() => {
+                          setEditingOwnerId(o.id);
+                          setOwnerName(o.fullName);
+                          setOwnerEmail(o.email);
+                          setOwnerPhone(o.phone);
+                          setOwnerPassword(o.password);
+                          setPropertyName(o.propertyName);
+                          setPropertyType(o.propertyType);
+                          setMonthlyDues(o.monthlyRentOrDues);
+                          setRoomsCount(o.roomsCount ? String(o.roomsCount) : '');
+                          setRoomsStyle(o.roomsStyle || 'SIMPLE');
+                          setStudiosCount(o.studiosCount ? String(o.studiosCount) : '');
+                          setStudiosStyle(o.studiosStyle || 'SIMPLE');
+                          setApartmentsCount(o.apartmentsCount ? String(o.apartmentsCount) : '');
+                          setApartmentsStyle(o.apartmentsStyle || 'SIMPLE');
+                          setOwnerBoundary(o.assignedBoundary ?? null);
+                          setNewOwnerOpen(true);
+                        }}
+                      >
+                        Modifier
+                      </Button>
+                      <span className="rounded bg-cyan-500/20 text-cyan-600 px-2 py-0.5 text-[10px] font-bold">
+                        RATTACHÉ BLOC
+                      </span>
+                    </div>
                   </div>
 
                   {/* Statistiques Propriétés & Locataires */}
@@ -1050,7 +1181,8 @@ export function BlockLeaderDashboard() {
                 Envoyer un signalement à votre Chef de Quartier
               </h2>
               <p className="text-xs text-muted-foreground">
-                Destinataire : <strong>{activeNeighborhood.leaderName || 'Chef de Quartier'}</strong> ({activeNeighborhood.name})
+                Destinataire : <strong>{trueChiefName}</strong> ({trueChiefEmail} ·{' '}
+                {activeNeighborhood.name})
               </p>
             </div>
 
@@ -1242,7 +1374,8 @@ export function BlockLeaderDashboard() {
                 Écrire à mon Chef de Quartier
               </h2>
               <p className="text-xs text-muted-foreground">
-                Destinataire : <strong>{activeNeighborhood.leaderName || 'Chef de Quartier'}</strong> ({activeNeighborhood.name})
+                Destinataire : <strong>{trueChiefName}</strong> ({trueChiefEmail} ·{' '}
+                {activeNeighborhood.name})
               </p>
             </div>
 
@@ -1558,11 +1691,18 @@ export function BlockLeaderDashboard() {
         </div>
       )}
 
-      {/* MODAL : CRÉER UN PROPRIÉTAIRE + IDENTIFIANTS */}
+      {/* MODAL : CRÉER OU MODIFIER UN PROPRIÉTAIRE + IDENTIFIANTS */}
       <Modal
         open={newOwnerOpen}
-        onOpenChange={setNewOwnerOpen}
-        title="Créer un Propriétaire & ses Identifiants de connexion"
+        onOpenChange={(open) => {
+          setNewOwnerOpen(open);
+          if (!open) resetOwnerForm();
+        }}
+        title={
+          editingOwnerId
+            ? 'Modifier les informations du Propriétaire'
+            : 'Créer un Propriétaire & ses Identifiants de connexion'
+        }
         className="max-w-2xl"
       >
         <form onSubmit={handleCreateOwner} className="space-y-3 text-xs">
@@ -1694,8 +1834,76 @@ export function BlockLeaderDashboard() {
               <option value="Immeuble résidentiel">Immeuble résidentiel</option>
               <option value="Cour commune">Cour commune</option>
               <option value="Villa duplex">Villa duplex</option>
+              <option value="Maison commerciale">Maison commerciale</option>
               <option value="Terrain bâti">Terrain bâti</option>
             </select>
+          </div>
+
+          {/* Champs optionnels : Chambres, Studios, Appartements (Simple ou Moderne) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 rounded-xl border border-border bg-muted/20 p-2.5">
+            <div className="space-y-1">
+              <label className="font-semibold block text-[11px]">Nb Chambres (optionnel)</label>
+              <div className="flex gap-1">
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={roomsCount}
+                  onChange={(e) => setRoomsCount(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <select
+                  value={roomsStyle}
+                  onChange={(e) => setRoomsStyle(e.target.value as 'SIMPLE' | 'MODERNE')}
+                  className="h-8 rounded-lg border border-input bg-background px-1.5 text-[11px]"
+                >
+                  <option value="SIMPLE">Simple</option>
+                  <option value="MODERNE">Moderne</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="font-semibold block text-[11px]">Studios (optionnel)</label>
+              <div className="flex gap-1">
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={studiosCount}
+                  onChange={(e) => setStudiosCount(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <select
+                  value={studiosStyle}
+                  onChange={(e) => setStudiosStyle(e.target.value as 'SIMPLE' | 'MODERNE')}
+                  className="h-8 rounded-lg border border-input bg-background px-1.5 text-[11px]"
+                >
+                  <option value="SIMPLE">Simple</option>
+                  <option value="MODERNE">Moderne</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="font-semibold block text-[11px]">Appartements (optionnel)</label>
+              <div className="flex gap-1">
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={apartmentsCount}
+                  onChange={(e) => setApartmentsCount(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <select
+                  value={apartmentsStyle}
+                  onChange={(e) => setApartmentsStyle(e.target.value as 'SIMPLE' | 'MODERNE')}
+                  className="h-8 rounded-lg border border-input bg-background px-1.5 text-[11px]"
+                >
+                  <option value="SIMPLE">Simple</option>
+                  <option value="MODERNE">Moderne</option>
+                </select>
+              </div>
+            </div>
           </div>
           <div>
             <label className="font-semibold block mb-1">Cotisation / Loyer mensuel attendu (FCFA)</label>

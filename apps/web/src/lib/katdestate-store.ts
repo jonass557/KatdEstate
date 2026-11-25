@@ -805,6 +805,8 @@ export interface BlockLeaderRecord {
   blockName: string;
   neighborhoodId: string;
   neighborhoodName: string;
+  createdByLeaderName?: string | undefined;
+  createdByLeaderEmail?: string | undefined;
   createdAt: string;
 }
 
@@ -817,6 +819,8 @@ export interface BlockRecord {
   leaderName?: string | undefined;
   leaderEmail?: string | undefined;
   leaderPhone?: string | undefined;
+  createdByLeaderName?: string | undefined;
+  createdByLeaderEmail?: string | undefined;
   color?: string | undefined;
   isActive?: boolean | undefined;
   boundary?: GeoJsonBoundary | undefined;
@@ -874,6 +878,14 @@ export interface BlockOwnerRecord {
   paymentStatus: 'PAID' | 'PENDING' | 'OVERDUE';
   createdAt: string;
   createdByBlockLeader?: boolean | undefined;
+  createdByBlockLeaderName?: string | undefined;
+  createdByBlockLeaderEmail?: string | undefined;
+  roomsCount?: number | undefined;
+  roomsStyle?: 'SIMPLE' | 'MODERNE' | undefined;
+  studiosCount?: number | undefined;
+  studiosStyle?: 'SIMPLE' | 'MODERNE' | undefined;
+  apartmentsCount?: number | undefined;
+  apartmentsStyle?: 'SIMPLE' | 'MODERNE' | undefined;
 }
 
 export interface HabitantRecord {
@@ -1818,6 +1830,88 @@ export function updateStoredBlock(blockId: string, patch: Partial<BlockRecord>):
   list[idx] = updated;
   saveStoredBlocks(list);
   return updated;
+}
+
+export function updateBlockOwner(
+  ownerId: string,
+  patch: Partial<BlockOwnerRecord>,
+): BlockOwnerRecord | null {
+  const list = getBlockOwners();
+  const idx = list.findIndex((o) => o.id === ownerId);
+  if (idx < 0 || !list[idx]) return null;
+  const updated: BlockOwnerRecord = { ...list[idx]!, ...patch };
+  list[idx] = updated;
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_BLOCK_OWNERS_KEY, JSON.stringify(list));
+    } catch {}
+  }
+  return updated;
+}
+
+export async function dispatchCredentialsEmailAndLog(params: {
+  email: string;
+  phone?: string | undefined;
+  fullName: string;
+  password: string;
+  roleLabel: string;
+  createdByName: string;
+}): Promise<{
+  emailStatus: 'SENT' | 'SIMULATED_LOCAL' | 'FAILED';
+  whatsappUrl: string;
+  messageText: string;
+}> {
+  const messageText = `Bonjour ${params.fullName}, votre compte ${params.roleLabel} sur KatdEstate a été créé par ${params.createdByName}.\nEmail : ${params.email}\nMot de passe : ${params.password}\nConnectez-vous sur la plateforme KatdEstate.`;
+  const cleanPhone = (params.phone || '').replace(/[^0-9]/g, '');
+  const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
+
+  const cfg = getAdminNotificationApiConfig();
+  let emailStatus: 'SENT' | 'SIMULATED_LOCAL' | 'FAILED' = 'SIMULATED_LOCAL';
+
+  if (cfg.email.enabled && cfg.email.apiUrl.trim() && params.email.trim()) {
+    try {
+      const res = await fetch(cfg.email.apiUrl.trim(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(cfg.email.apiKey ? { Authorization: `Bearer ${cfg.email.apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          from: `${cfg.email.fromName} <${cfg.email.fromEmail}>`,
+          to: params.email.trim(),
+          subject: `Vos identifiants KatdEstate (${params.roleLabel})`,
+          text: messageText,
+        }),
+      });
+      emailStatus = res.ok ? 'SENT' : 'FAILED';
+    } catch {
+      emailStatus = 'FAILED';
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const prev = getNotificationDispatchLogs();
+      const logEntry: NotificationDispatchLog = {
+        _id: `cred-${Date.now()}`,
+        stayId: 'credentials',
+        meubleTitle: `Identifiants ${params.roleLabel}`,
+        clientName: params.fullName,
+        channel: 'EMAIL',
+        recipient: params.email,
+        provider: cfg.email.provider || 'Email KatdEstate',
+        status: emailStatus,
+        message: messageText,
+        createdAt: new Date().toISOString(),
+      };
+      localStorage.setItem(
+        STORAGE_NOTIF_DISPATCH_LOGS_KEY,
+        JSON.stringify([logEntry, ...prev].slice(0, 200)),
+      );
+    } catch {}
+  }
+
+  return { emailStatus, whatsappUrl, messageText };
 }
 
 export function getGeoAuditLogsLocal(): GeoAuditRecord[] {

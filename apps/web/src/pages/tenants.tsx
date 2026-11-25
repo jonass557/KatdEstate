@@ -11,6 +11,7 @@ import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/toast';
 import { apiRequest } from '../lib/api-client';
 import { useOrgList, useOrgPath } from '../lib/query';
+import { useSession } from '../app/session';
 import {
   KeyRound,
   Copy,
@@ -43,6 +44,7 @@ import {
 import { getLocalProperties, getLocalUnits, saveLocalUnits, type Property } from './properties';
 import {
   createLocalChatThread,
+  dispatchCredentialsEmailAndLog,
   getRentValidations,
   getStoredChatThreads,
   replyToLocalChatThread,
@@ -1813,6 +1815,7 @@ function CompleteTenantEnrollmentForm({
   onClose: () => void;
   onSuccess: (card: TenantAccessCard, contract: LeaseContractData, createdTenant: Tenant) => void;
 }) {
+  const { user } = useSession();
   const base = useOrgPath();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -2125,8 +2128,8 @@ function CompleteTenantEnrollmentForm({
         tenantPhone: phone.trim(),
         tenantEmail,
         tenantIdNumber: identityDocumentNumber.trim(),
-        ownerName: 'M. Amadou Diallo (Bailleur)',
-        ownerEmail: 'proprietaire@katdestate.immo',
+        ownerName: user?.displayName || 'Propriétaire Bailleur',
+        ownerEmail: user?.email || 'proprietaire@katdestate.immo',
         ownerPhone: '+225 07 10 20 30 40',
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
@@ -2136,6 +2139,15 @@ function CompleteTenantEnrollmentForm({
         depositAmountMinor: tenantCategory === 'NEW' ? Number(advanceAmount) || 0 : 0,
         currency: 'FCFA',
       };
+
+      void dispatchCredentialsEmailAndLog({
+        email: tenantEmail,
+        phone: phone.trim(),
+        fullName: fullName.trim(),
+        password: generatedPassword.trim(),
+        roleLabel: 'Locataire',
+        createdByName: user?.displayName || 'Propriétaire Bailleur',
+      });
 
       onSuccess(accessCard, contractData, createdTenant);
     } catch (err: unknown) {

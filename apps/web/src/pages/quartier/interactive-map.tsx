@@ -276,8 +276,20 @@ export function InteractiveQuartierMap() {
     point?: LatLngPoint | null;
     key?: string;
   } | null>(() => {
+    if (searchParams.get('navToLat')) return null;
+    if (userRole === 'OWNER') {
+      const emailLow = user?.email?.trim().toLowerCase();
+      const myOwn = emailLow
+        ? getBlockOwners().find((o) => o.email.trim().toLowerCase() === emailLow)
+        : undefined;
+      if (myOwn) {
+        const blk = getStoredBlocks().find((b) => b.id === myOwn.blockId);
+        const bnd = blk?.boundary || myOwn.assignedBoundary;
+        if (bnd) return { boundary: bnd, key: `init-owner-${myOwn.id}` };
+      }
+    }
     const firstNeigh = getStoredNeighborhoods()[0];
-    if (firstNeigh?.boundary && !searchParams.get('navToLat')) {
+    if (firstNeigh?.boundary) {
       return { boundary: firstNeigh.boundary, key: `init-${firstNeigh.id}` };
     }
     return null;

@@ -39,6 +39,8 @@ import {
   deleteBlockLeader,
   getStoredBlocks,
   getStoredNeighborhoods,
+  saveNeighborhoodGeo,
+  dispatchCredentialsEmailAndLog,
   createBlock,
   updateStoredBlock,
   getStoredHabitants,
@@ -124,6 +126,12 @@ export function NeighborhoodLeaderDashboard() {
   };
 
   // Modals state
+  const [lastCreatedLeaderCreds, setLastCreatedLeaderCreds] = useState<{
+    fullName: string;
+    email: string;
+    password: string;
+    whatsappUrl: string;
+  } | null>(null);
   const [newLeaderModalOpen, setNewLeaderModalOpen] = useState(false);
   const [newBlockModalOpen, setNewBlockModalOpen] = useState(false);
   const [newCertModalOpen, setNewCertModalOpen] = useState(false);
@@ -176,6 +184,18 @@ export function NeighborhoodLeaderDashboard() {
 
     const emailClean = leaderEmail.trim().toLowerCase();
     const passwordClean = leaderPassword.trim();
+    const activeNeigh = getStoredNeighborhoods()[0];
+    const chiefName = user?.displayName || activeNeigh?.leaderName || 'Chef de Quartier';
+    const chiefEmail = user?.email?.trim().toLowerCase() || activeNeigh?.leaderEmail;
+
+    if (activeNeigh) {
+      saveNeighborhoodGeo({
+        ...activeNeigh,
+        leaderName: chiefName,
+        ...(chiefEmail ? { leaderEmail: chiefEmail } : {}),
+        updatedAt: new Date().toISOString(),
+      });
+    }
 
     let targetBlock: BlockRecord | undefined;
     if (leaderBlockId === '__new__') {
@@ -186,11 +206,13 @@ export function NeighborhoodLeaderDashboard() {
       targetBlock = createBlock({
         name: leaderNewZoneName.trim(),
         code: `BLOC-${Math.floor(100 + Math.random() * 900)}`,
-        neighborhoodId: 'neigh-cocody',
-        neighborhoodName: 'Cocody Riviera Palmeraie',
+        neighborhoodId: activeNeigh?.id || 'neigh-1',
+        neighborhoodName: activeNeigh?.name || 'Quartier',
         leaderName: leaderName.trim(),
         leaderEmail: emailClean,
         leaderPhone: leaderPhone.trim(),
+        createdByLeaderName: chiefName,
+        createdByLeaderEmail: chiefEmail,
         totalResidences: 0,
         totalHabitants: 0,
         boundary: leaderBoundary ?? undefined,
@@ -202,6 +224,8 @@ export function NeighborhoodLeaderDashboard() {
           leaderName: leaderName.trim(),
           leaderEmail: emailClean,
           leaderPhone: leaderPhone.trim(),
+          createdByLeaderName: chiefName,
+          createdByLeaderEmail: chiefEmail,
           ...(leaderBoundary ? { boundary: leaderBoundary } : {}),
         });
       }
@@ -214,9 +238,11 @@ export function NeighborhoodLeaderDashboard() {
       phone: leaderPhone.trim(),
       password: passwordClean,
       blockId: targetBlock?.id || 'block-1',
-      blockName: targetBlock?.name || 'Bloc Riviera Palmeraie 2',
-      neighborhoodId: 'neigh-cocody',
-      neighborhoodName: 'Cocody',
+      blockName: targetBlock?.name || 'Bloc assigné',
+      neighborhoodId: activeNeigh?.id || 'neigh-1',
+      neighborhoodName: activeNeigh?.name || 'Quartier',
+      createdByLeaderName: chiefName,
+      createdByLeaderEmail: chiefEmail,
       createdAt: new Date().toISOString(),
     };
     saveBlockLeader(newLdr);
@@ -229,6 +255,22 @@ export function NeighborhoodLeaderDashboard() {
       role: 'BLOCK_LEADER',
       phone: leaderPhone.trim(),
       createdAt: new Date().toISOString(),
+    });
+
+    void dispatchCredentialsEmailAndLog({
+      email: emailClean,
+      phone: leaderPhone.trim(),
+      fullName: leaderName.trim(),
+      password: passwordClean,
+      roleLabel: 'Chef de Bloc',
+      createdByName: chiefName,
+    }).then((res) => {
+      setLastCreatedLeaderCreds({
+        fullName: leaderName.trim(),
+        email: emailClean,
+        password: passwordClean,
+        whatsappUrl: res.whatsappUrl,
+      });
     });
 
     refreshAll();
@@ -615,6 +657,40 @@ export function NeighborhoodLeaderDashboard() {
             </Button>
           </div>
 
+          {lastCreatedLeaderCreds && (
+            <Card className="p-4 border-emerald-500/40 bg-emerald-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <p className="font-bold text-emerald-500">
+                  ✓ Identifiants envoyés à {lastCreatedLeaderCreds.email} !
+                </p>
+                <p className="text-muted-foreground">
+                  {lastCreatedLeaderCreds.fullName} · Mot de passe :{' '}
+                  <strong className="font-mono text-foreground">
+                    {lastCreatedLeaderCreds.password}
+                  </strong>
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <a
+                  href={lastCreatedLeaderCreds.whatsappUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 text-xs"
+                >
+                  Envoyer sur WhatsApp
+                </a>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs"
+                  onClick={() => setLastCreatedLeaderCreds(null)}
+                >
+                  Fermer
+                </Button>
+              </div>
+            </Card>
+          )}
+
           <div className="space-y-4">
             {leaders.map((ldr) => {
               const blockOwnersList = owners.filter((o) => o.blockId === ldr.blockId);
@@ -890,6 +966,40 @@ export function NeighborhoodLeaderDashboard() {
               </p>
             </Card>
           </div>
+
+          {lastCreatedLeaderCreds && (
+            <Card className="p-4 border-emerald-500/40 bg-emerald-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <p className="font-bold text-emerald-500">
+                  ✓ Identifiants envoyés à {lastCreatedLeaderCreds.email} !
+                </p>
+                <p className="text-muted-foreground">
+                  {lastCreatedLeaderCreds.fullName} · Mot de passe :{' '}
+                  <strong className="font-mono text-foreground">
+                    {lastCreatedLeaderCreds.password}
+                  </strong>
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <a
+                  href={lastCreatedLeaderCreds.whatsappUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 text-xs"
+                >
+                  Envoyer sur WhatsApp
+                </a>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs"
+                  onClick={() => setLastCreatedLeaderCreds(null)}
+                >
+                  Fermer
+                </Button>
+              </div>
+            </Card>
+          )}
 
           <div className="space-y-4">
             {blocks.map((b) => {

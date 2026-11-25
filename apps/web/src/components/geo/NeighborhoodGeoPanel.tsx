@@ -646,6 +646,8 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
           leaderName: leaderName.trim() || undefined,
           leaderEmail: leaderEmail.trim().toLowerCase() || undefined,
           leaderPhone: leaderPhone.trim() || undefined,
+          createdByLeaderName: user?.displayName || activeNeighborhood.leaderName,
+          createdByLeaderEmail: user?.email?.trim().toLowerCase() || activeNeighborhood.leaderEmail,
           color: newBlockColor,
           isActive: true,
           boundary: finalBoundary,
