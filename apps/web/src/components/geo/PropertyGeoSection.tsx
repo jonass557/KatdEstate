@@ -59,6 +59,8 @@ interface PropertyGeoSectionProps {
   onChange: (next: PropertyGeoValue) => void;
   onValidationChange?: ((valid: boolean, error?: string | null) => void) | undefined;
   onSuggestedAddress?: ((address: string, city?: string) => void) | undefined;
+  propertyName?: string | undefined;
+  propertyAddress?: string | undefined;
 }
 
 export function PropertyGeoSection({
@@ -66,6 +68,8 @@ export function PropertyGeoSection({
   onChange,
   onValidationChange,
   onSuggestedAddress,
+  propertyName,
+  propertyAddress,
 }: PropertyGeoSectionProps) {
   const { user, memberships } = useSession();
   const userRole = memberships?.[0]?.role || (user as any)?.platformRole || 'OWNER';
@@ -199,6 +203,27 @@ export function PropertyGeoSection({
       neighborhoods[0];
 
     if (matchedOwner || defaultBlock || defaultNeigh) {
+      let defaultLat = value.latitude;
+      let defaultLng = value.longitude;
+      let defaultLoc = value.location;
+
+      if (
+        matchedOwner?.createdByBlockLeader &&
+        (typeof defaultLat !== 'number' || typeof defaultLng !== 'number')
+      ) {
+        const ring =
+          matchedOwner.assignedBoundary?.coordinates?.[0] ||
+          defaultBlock?.boundary?.coordinates?.[0];
+        if (ring && ring.length >= 3) {
+          const pts = ring.slice(0, -1);
+          const avgLng = pts.reduce((acc, p) => acc + Number((p as number[])[0] ?? 0), 0) / pts.length;
+          const avgLat = pts.reduce((acc, p) => acc + Number((p as number[])[1] ?? 0), 0) / pts.length;
+          defaultLat = Number(avgLat.toFixed(6));
+          defaultLng = Number(avgLng.toFixed(6));
+          defaultLoc = { type: 'Point', coordinates: [defaultLng, defaultLat] };
+        }
+      }
+
       onChange({
         ...value,
         geoOwnerId: matchedOwner?.id ?? value.geoOwnerId,
@@ -211,6 +236,9 @@ export function PropertyGeoSection({
         region: defaultNeigh?.region ?? value.region ?? 'Lagunes',
         department: defaultNeigh?.department ?? value.department ?? 'Abidjan',
         arrondissement: defaultNeigh?.arrondissement ?? value.arrondissement ?? 'Cocody',
+        latitude: defaultLat,
+        longitude: defaultLng,
+        location: defaultLoc,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -703,14 +731,25 @@ export function PropertyGeoSection({
                   id: 'draft-property-marker',
                   level: 'PROPERTY',
                   position: activeMarker,
-                  title: selectedBlock?.name
-                    ? `Ma propriété (${selectedBlock.name})`
-                    : 'Ma propriété',
+                  title:
+                    propertyName?.trim() ||
+                    (selectedBlock?.name ? `Ma propriété (${selectedBlock.name})` : 'Ma propriété'),
                   subtitle:
+                    propertyAddress?.trim() ||
                     [value.neighborhoodName, value.arrondissement, value.department]
                       .filter(Boolean)
                       .join(', ') ||
                     `${activeMarker.lat.toFixed(5)}, ${activeMarker.lng.toFixed(5)}`,
+                  propertyDetails: {
+                    propertyId: 'draft-property-marker',
+                    name:
+                      propertyName?.trim() ||
+                      (selectedBlock?.name ? `Ma propriété (${selectedBlock.name})` : 'Ma propriété'),
+                    type: 'Bien Immobilier',
+                    address: propertyAddress?.trim() || '',
+                    neighborhood: value.neighborhoodName || selectedNeighborhood?.name,
+                    city: value.department || '',
+                  },
                 },
               ]
             : []

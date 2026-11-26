@@ -508,42 +508,73 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
   // Marqueurs des propriétés des propriétaires rattachés aux blocs du quartier
   const propertyMarkers = useMemo<GeoMarkerOverlay[]>(() => {
     const allProps = getLocalProperties();
-    const blockIds = new Set(blocks.filter((b) => b.neighborhoodId === activeNeighborhood.id).map((b) => b.id));
+    const neighBlocks = blocks.filter((b) => b.neighborhoodId === activeNeighborhood.id);
+    const blockIds = new Set(neighBlocks.map((b) => b.id));
     const neighOwners = getBlockOwners().filter(
       (o) => !o.neighborhoodId || o.neighborhoodId === activeNeighborhood.id || blockIds.has(o.blockId),
     );
     const ownerIds = new Set(neighOwners.map((o) => o.id));
+    const ownerEmails = new Set(
+      neighOwners.map((o) => o.email?.trim().toLowerCase()).filter(Boolean),
+    );
+
+    const resolveCoords = (p: any): { lat: number; lng: number } | null => {
+      const lat = typeof p.latitude === 'number' ? p.latitude : p.location?.coordinates?.[1];
+      const lng = typeof p.longitude === 'number' ? p.longitude : p.location?.coordinates?.[0];
+      if (typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng };
+      }
+      const matchedBlock = p.blockId ? neighBlocks.find((b) => b.id === p.blockId) : undefined;
+      const ring = p.boundary?.coordinates?.[0] || matchedBlock?.boundary?.coordinates?.[0];
+      if (ring && ring.length >= 3) {
+        const pts = ring.slice(0, -1);
+        return {
+          lat: pts.reduce((acc: number, pt: number[]) => acc + Number(pt[1] ?? 0), 0) / pts.length,
+          lng: pts.reduce((acc: number, pt: number[]) => acc + Number(pt[0] ?? 0), 0) / pts.length,
+        };
+      }
+      return null;
+    };
+
     return allProps
       .filter((p: any) => {
-        const lat = typeof p.latitude === 'number' ? p.latitude : p.location?.coordinates?.[1];
-        const lng = typeof p.longitude === 'number' ? p.longitude : p.location?.coordinates?.[0];
-        if (typeof lat !== 'number' || typeof lng !== 'number') return false;
+        if (!resolveCoords(p)) return false;
         return (
           !p.neighborhoodId ||
           p.neighborhoodId === activeNeighborhood.id ||
           (p.blockId && blockIds.has(p.blockId)) ||
-          (p.geoOwnerId && ownerIds.has(p.geoOwnerId))
+          (p.geoOwnerId && ownerIds.has(p.geoOwnerId)) ||
+          (p.ownerEmail && ownerEmails.has(p.ownerEmail.trim().toLowerCase()))
         );
       })
       .map((p: any) => {
-        const lat = typeof p.latitude === 'number' ? p.latitude : p.location.coordinates[1];
-        const lng = typeof p.longitude === 'number' ? p.longitude : p.location.coordinates[0];
+        const coords = resolveCoords(p)!;
         return {
           id: p._id,
           level: 'PROPERTY' as const,
-          position: { lat, lng },
+          position: coords,
           title: p.name,
           subtitle: p.address || p.neighborhoodName || activeNeighborhood.name,
           color: '#f59e0b',
           propertyDetails: {
             propertyId: p._id,
             name: p.name,
-            type: p.type,
+            type: p.customPropertyType || p.type || 'Bien Immobilier',
             priceMinor: p.priceMinor,
             currency: p.currency || 'FCFA',
             address: p.address || '',
             city: p.city || activeNeighborhood.city || '',
+            country: p.country,
             neighborhood: p.sectorName || p.neighborhoodName || activeNeighborhood.name,
+            roomsCount:
+              p.roomsCount ||
+              (p.chambreSimpleCount || 0) +
+                (p.chambreModerneCount || 0) +
+                (p.studioSimpleCount || 0) +
+                (p.studioModerneCount || 0) +
+                (p.appartementCount || 0),
+            status: p.status,
+            photoUrl: p.mainPhotoUrl || p.photos?.[0],
           },
         };
       });

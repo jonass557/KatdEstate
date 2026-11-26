@@ -316,7 +316,7 @@ export function GeoMapCanvas({
         fillOpacity: overlay.fillOpacity ?? 0.18,
       });
 
-      // Tooltip élégant
+      // Tooltip élégant au survol du polygone
       polygon.bindTooltip(
         `<div class="font-bold text-xs">${overlay.label}</div>${overlay.sublabel ? `<div class="text-[10px] text-gray-500">${overlay.sublabel}</div>` : ''}`,
         { permanent: false, direction: 'center', className: 'domora-leaflet-tooltip' },
@@ -327,6 +327,37 @@ export function GeoMapCanvas({
       }
 
       group.addLayer(polygon);
+
+      // Pointeur permanent au centroïde avec le nom de la localisation délimitée (quartier / bloc / zone)
+      const cLat = pts.reduce((acc, p) => acc + p.lat, 0) / pts.length;
+      const cLng = pts.reduce((acc, p) => acc + p.lng, 0) / pts.length;
+      const pinColor = overlay.color || '#0284c7';
+      const centroidPinIcon = L.divIcon({
+        className: 'domora-zone-centroid-pin',
+        html: `
+          <div style="background-color: ${pinColor}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; cursor: pointer;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          </div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 24],
+      });
+      const centroidPin = L.marker([cLat, cLng], { icon: centroidPinIcon, zIndexOffset: 200 });
+      centroidPin.bindTooltip(
+        `<div style="font-weight:700;font-size:11px;line-height:1.2;color:#0f172a;">📍 ${overlay.label}</div>${
+          overlay.sublabel ? `<div style="font-size:10px;color:#475569;">${overlay.sublabel}</div>` : ''
+        }`,
+        {
+          permanent: true,
+          direction: 'top',
+          offset: [0, -22],
+          className: 'domora-leaflet-tooltip',
+        },
+      );
+      if (onOverlayClick) {
+        centroidPin.on('click', () => onOverlayClick(overlay));
+      }
+      group.addLayer(centroidPin);
     });
   }, [overlays, onOverlayClick]);
 
@@ -351,6 +382,15 @@ export function GeoMapCanvas({
       });
 
       const m = L.marker([activeMarker.lat, activeMarker.lng], { icon: activeIcon });
+      const hasMatchingPropertyMarker = markers.some(
+        (mk) => Math.abs(mk.position.lat - activeMarker.lat) < 1e-6 && Math.abs(mk.position.lng - activeMarker.lng) < 1e-6,
+      );
+      if (!hasMatchingPropertyMarker) {
+        m.bindTooltip(
+          `<div style="font-weight:700;font-size:11px;">📍 Position sélectionnée</div>`,
+          { permanent: true, direction: 'top', offset: [0, -30], className: 'domora-leaflet-tooltip' },
+        );
+      }
       group.addLayer(m);
     }
 

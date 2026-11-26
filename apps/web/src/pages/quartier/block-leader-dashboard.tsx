@@ -174,10 +174,14 @@ export function BlockLeaderDashboard() {
   // Propriétés appartenant au bloc ou aux propriétaires créés par ce Chef de Bloc
   const blockProperties = useMemo(() => {
     const ownerIds = new Set(owners.map((o) => o.id));
+    const ownerEmails = new Set(
+      owners.map((o) => o.email?.trim().toLowerCase()).filter(Boolean),
+    );
     return properties.filter(
       (p) =>
         p.blockId === activeBlock.id ||
-        (p.geoOwnerId && ownerIds.has(p.geoOwnerId)),
+        (p.geoOwnerId && ownerIds.has(p.geoOwnerId)) ||
+        (p.ownerEmail && ownerEmails.has(p.ownerEmail.trim().toLowerCase())),
     );
   }, [properties, owners, activeBlock.id]);
 
@@ -674,39 +678,54 @@ export function BlockLeaderDashboard() {
 
   // Préparation des marqueurs de propriétés pour les cartes du bloc
   const propertyMarkers = useMemo(() => {
-    return blockProperties
-      .filter((p) => {
-        const lat = typeof p.latitude === 'number' ? p.latitude : p.location?.coordinates?.[1];
-        const lng = typeof p.longitude === 'number' ? p.longitude : p.location?.coordinates?.[0];
-        return typeof lat === 'number' && typeof lng === 'number';
-      })
-      .map((p) => {
-        const lat = typeof p.latitude === 'number' ? p.latitude : p.location!.coordinates[1];
-        const lng = typeof p.longitude === 'number' ? p.longitude : p.location!.coordinates[0];
+    const getPropCoords = (p: Property): { lat: number; lng: number } | null => {
+      const lat = typeof p.latitude === 'number' ? p.latitude : p.location?.coordinates?.[1];
+      const lng = typeof p.longitude === 'number' ? p.longitude : p.location?.coordinates?.[0];
+      if (typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng };
+      }
+      const ring = p.boundary?.coordinates?.[0] || activeBlock.boundary?.coordinates?.[0];
+      if (ring && ring.length >= 3) {
+        const pts = ring.slice(0, -1);
         return {
-          id: p._id,
-          level: 'PROPERTY' as const,
-          title: p.name,
-          subtitle: p.address,
-          position: { lat, lng },
-          color: '#f59e0b',
-          propertyDetails: {
-            propertyId: p._id,
-            name: p.name,
-            type: p.customPropertyType || p.type || 'Bien Immobilier',
-            address: p.address,
-            city: p.city,
-            country: p.country,
-            neighborhood: p.neighborhoodName || activeNeighborhood.name,
-            roomsCount:
-              p.roomsCount || (p.chambreSimpleCount || 0) + (p.chambreModerneCount || 0),
-            status: p.status,
-            photoUrl: (p as any).mainPhotoUrl || (p as any).photos?.[0],
-            currency: 'FCFA',
-          },
+          lat: pts.reduce((acc, pt) => acc + Number((pt as number[])[1] ?? 0), 0) / pts.length,
+          lng: pts.reduce((acc, pt) => acc + Number((pt as number[])[0] ?? 0), 0) / pts.length,
         };
-      });
-  }, [blockProperties, activeNeighborhood.name]);
+      }
+      return null;
+    };
+
+    return blockProperties
+      .map((p) => ({ p, coords: getPropCoords(p) }))
+      .filter((item): item is { p: Property; coords: { lat: number; lng: number } } => Boolean(item.coords))
+      .map(({ p, coords }) => ({
+        id: p._id,
+        level: 'PROPERTY' as const,
+        title: p.name,
+        subtitle: p.address || [p.sectorName, p.neighborhoodName].filter(Boolean).join(' • '),
+        position: coords,
+        color: '#f59e0b',
+        propertyDetails: {
+          propertyId: p._id,
+          name: p.name,
+          type: p.customPropertyType || p.type || 'Bien Immobilier',
+          address: p.address,
+          city: p.city,
+          country: p.country,
+          neighborhood: p.sectorName || p.neighborhoodName || activeNeighborhood.name,
+          roomsCount:
+            p.roomsCount ||
+            (p.chambreSimpleCount || 0) +
+              (p.chambreModerneCount || 0) +
+              (p.studioSimpleCount || 0) +
+              (p.studioModerneCount || 0) +
+              (p.appartementCount || 0),
+          status: p.status,
+          photoUrl: (p as any).mainPhotoUrl || (p as any).photos?.[0],
+          currency: 'FCFA',
+        },
+      }));
+  }, [blockProperties, activeBlock.boundary, activeNeighborhood.name]);
 
   return (
     <div className="space-y-6">

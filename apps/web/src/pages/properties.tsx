@@ -39,6 +39,7 @@ import {
 import { AddUnitModal } from '../components/properties/add-unit-modal';
 import { PropertyGeoSection, type PropertyGeoValue } from '../components/geo/PropertyGeoSection';
 import { GeoMapCanvas } from '../components/geo/GeoMapCanvas';
+import { useSession } from '../app/session';
 import {
   appendGeoAuditLogLocal,
   getBlockOwners,
@@ -72,6 +73,7 @@ export interface Property {
   apartmentsCount?: number | undefined;
   otherUnitsCount?: number | undefined;
   delegation?: DelegationData | undefined;
+  ownerEmail?: string | undefined;
   geoOwnerId?: string | undefined;
   neighborhoodId?: string | undefined;
   blockId?: string | undefined;
@@ -229,9 +231,78 @@ export function PropertiesPage() {
     return allProperties.filter((p) => {
       const lat = typeof p.latitude === 'number' ? p.latitude : p.location?.coordinates?.[1];
       const lng = typeof p.longitude === 'number' ? p.longitude : p.location?.coordinates?.[0];
-      return typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng);
+      if (typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng)) {
+        return true;
+      }
+      const ring = p.boundary?.coordinates?.[0];
+      return Boolean(ring && ring.length >= 3);
     });
   }, [allProperties]);
+
+  const { user: currentUser } = useSession();
+  const ownerMapOverlays = useMemo(() => {
+    const blocks = getStoredBlocks();
+    const neighborhoods = getStoredNeighborhoods();
+    const owners = getBlockOwners();
+    const emailNorm = currentUser?.email?.trim().toLowerCase();
+    const matchedOwner = emailNorm
+      ? owners.find((o) => o.email?.trim().toLowerCase() === emailNorm)
+      : undefined;
+
+    const blockIds = new Set<string>(
+      [
+        matchedOwner?.blockId,
+        ...allProperties.map((p) => p.blockId),
+      ].filter((id): id is string => Boolean(id)),
+    );
+    const neighIds = new Set<string>(
+      [
+        matchedOwner?.neighborhoodId,
+        ...allProperties.map((p) => p.neighborhoodId),
+        ...blocks.filter((b) => blockIds.has(b.id)).map((b) => b.neighborhoodId),
+      ].filter((id): id is string => Boolean(id)),
+    );
+
+    const list: Array<{
+      id: string;
+      level: 'NEIGHBORHOOD' | 'BLOCK';
+      label: string;
+      sublabel?: string;
+      color: string;
+      boundary: GeoJsonBoundary;
+      fillOpacity?: number;
+    }> = [];
+
+    neighborhoods
+      .filter((n) => n.boundary && (neighIds.size === 0 || neighIds.has(n.id)))
+      .forEach((n) => {
+        list.push({
+          id: n.id,
+          level: 'NEIGHBORHOOD',
+          label: n.name,
+          sublabel: `Quartier • Chef: ${n.leaderName}`,
+          color: '#0284c7',
+          boundary: n.boundary!,
+          fillOpacity: 0.08,
+        });
+      });
+
+    blocks
+      .filter((b) => b.boundary && (blockIds.size === 0 || blockIds.has(b.id)))
+      .forEach((b) => {
+        list.push({
+          id: b.id,
+          level: 'BLOCK',
+          label: b.name,
+          sublabel: `Bloc • Chef: ${b.leaderName}`,
+          color: b.color || '#10b981',
+          boundary: b.boundary!,
+          fillOpacity: 0.16,
+        });
+      });
+
+    return list;
+  }, [allProperties, currentUser?.email]);
 
   // Statistiques de composition et de zones calculées en temps réel
   const stats = useMemo(() => {
@@ -584,14 +655,21 @@ export function PropertiesPage() {
               title="Patrimoine immobilier géolocalisé"
               subtitle="OpenStreetMap & Satellite — Cliquez sur un point pour ouvrir la popup avec photo, adresse et calcul d'itinéraire"
               heightClassName="h-[520px]"
+              overlays={ownerMapOverlays}
               markers={propertiesWithCoords.map((p) => {
-                const lat = typeof p.latitude === 'number' ? p.latitude : p.location!.coordinates[1];
-                const lng = typeof p.longitude === 'number' ? p.longitude : p.location!.coordinates[0];
+                let lat = typeof p.latitude === 'number' ? p.latitude : p.location?.coordinates?.[1];
+                let lng = typeof p.longitude === 'number' ? p.longitude : p.location?.coordinates?.[0];
+                if (typeof lat !== 'number' || typeof lng !== 'number') {
+                  const ring = p.boundary?.coordinates?.[0] || [];
+                  const pts = ring.slice(0, -1);
+                  lat = pts.reduce((acc, pt) => acc + Number((pt as number[])[1] ?? 0), 0) / Math.max(pts.length, 1);
+                  lng = pts.reduce((acc, pt) => acc + Number((pt as number[])[0] ?? 0), 0) / Math.max(pts.length, 1);
+                }
                 return {
                   id: p._id,
                   level: 'PROPERTY' as const,
                   title: p.name,
-                  subtitle: [p.neighborhoodName, p.city, p.country].filter(Boolean).join(' • ') || p.address,
+                  subtitle: p.address || [p.neighborhoodName, p.city, p.country].filter(Boolean).join(' • '),
                   position: { lat, lng },
                   color: '#f59e0b',
                   propertyDetails: {
@@ -812,6 +890,7 @@ export function PropertyFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const base = useOrgPath();
   const client = useQueryClient();
   const { toast } = useToast();
+  const { user } = useSession();
 
   const [localInitial] = useState<Property | undefined>(() => {
     if (mode === 'edit' && id) {
@@ -892,6 +971,7 @@ export function PropertyFormPage({ mode }: { mode: 'create' | 'edit' }) {
         studiosCount: (input.studioSimpleCount || 0) + (input.studioModerneCount || 0),
         apartmentsCount: input.appartementCount || 0,
         otherUnitsCount: input.otherCustomCount || 0,
+        ownerEmail: (effectiveInitial as any)?.ownerEmail || user?.email,
         geoOwnerId: createdProp?.geoOwnerId ?? input.geoOwnerId,
         neighborhoodId: createdProp?.neighborhoodId ?? input.neighborhoodId,
         blockId: createdProp?.blockId ?? input.blockId,
