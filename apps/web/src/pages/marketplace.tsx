@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/ui/back-button';
 import {
   Building2,
@@ -18,6 +18,8 @@ import {
   ArrowRight,
   Navigation,
   Calendar,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -30,6 +32,8 @@ import {
   createLocalChatThread,
   createScheduledVisit,
   createUserPropertyOrder,
+  deleteCustomMarketplaceListing,
+  getCustomMarketplaceListings,
   incrementListingMetric,
 } from '../lib/katdestate-store';
 
@@ -88,243 +92,9 @@ export const CATEGORY_LABELS: Record<string, string> = {
   COMMERCIAL: 'Bureau / Magasin',
 };
 
-const SEED_LISTINGS: MarketplaceListing[] = [
-  {
-    _id: 'seed-1',
-    title: 'Studio Meublé Tout Confort — Climatisation & Wifi Fibre',
-    description:
-      'Magnifique studio meublé situé au cœur de la zone résidentielle. Idéal pour séjours d’affaires, vacances ou courtes durées. Cuisine équipée, chauffe-eau, ménage inclus et sécurité 24h/24.',
-    category: 'STUDIO_MEUBLE_JOURNALIER',
-    propertyType: 'STUDIO_MEUBLE_JOURNALIER',
-    transactionType: 'RENT',
-    billingFrequency: 'DAILY',
-    priceMinor: 25000,
-    currency: 'FCFA',
-    location: {
-      city: 'Abidjan',
-      district: 'Cocody Angré 7ème Tranche',
-      address: 'Boulevard Latrille, Résidence Les Oliviers',
-      latitude: 5.378941,
-      longitude: -3.985612,
-    },
-    surfaceM2: 32,
-    bedrooms: 1,
-    bathrooms: 1,
-    isVerified: true,
-    photos: [
-      {
-        url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-        isPrimary: true,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    contact: {
-      name: 'M. Koffi N’Dri (Gestionnaire Agréé)',
-      phone: '+225 07 48 12 34 56',
-      whatsapp: '+2250748123456',
-      email: 'contact@katdestate.immo',
-    },
-  },
-  {
-    _id: 'seed-2',
-    title: 'Appartement Haut Standing 4 Pièces Meublé avec Vue Panoramique',
-    description:
-      'Superbe appartement 4 pièces meublé composé d’un vaste salon lumineux, 3 chambres autonomes, dressing, cuisine équipée avec buanderie et balcon filant. Parking sécurisé en sous-sol.',
-    category: 'APPARTEMENT_MEUBLE',
-    propertyType: 'APPARTEMENT_MEUBLE',
-    transactionType: 'RENT',
-    billingFrequency: 'MONTHLY',
-    priceMinor: 750000,
-    currency: 'FCFA',
-    location: {
-      city: 'Abidjan',
-      district: 'Marcory Zone 4',
-      address: 'Rue Paul Langevin, Tour Ivoire',
-      latitude: 5.298144,
-      longitude: -3.989721,
-    },
-    surfaceM2: 145,
-    bedrooms: 3,
-    bathrooms: 3,
-    isVerified: true,
-    isTitled: true,
-    landTitleNumber: 'TF-68421/ABJ',
-    photos: [
-      {
-        url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
-        isPrimary: true,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    contact: {
-      name: 'SCI Diallo & Associés',
-      phone: '+225 05 64 22 11 00',
-      whatsapp: '+2250564221100',
-      email: 'proprietaire@katdestate.immo',
-    },
-  },
-  {
-    _id: 'seed-3',
-    title: 'Chambre Moderne Autonome avec Douche & Balcon Privatif',
-    description:
-      'Chambre moderne spacieuse dans un immeuble récent et propre. Douche et WC internes, placard intégré, carrelage blanc et compteur individuel CIE/SODECI. Quartier paisible et accessible.',
-    category: 'CHAMBRE_MODERNE',
-    propertyType: 'CHAMBRE_MODERNE',
-    transactionType: 'RENT',
-    billingFrequency: 'MONTHLY',
-    priceMinor: 65000,
-    currency: 'FCFA',
-    location: {
-      city: 'Abidjan',
-      district: 'Yopougon Niangon Sud',
-      address: 'Carrefour Académie, Rue des Jardins',
-      latitude: 5.341255,
-      longitude: -4.089412,
-    },
-    surfaceM2: 20,
-    bedrooms: 1,
-    bathrooms: 1,
-    isVerified: true,
-    photos: [
-      {
-        url: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=800&q=80',
-        isPrimary: true,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    contact: {
-      name: 'Mme Bakayoko Fatoumata',
-      phone: '+225 01 02 03 04 05',
-      whatsapp: '+2250102030405',
-      email: 'contact@katdestate.immo',
-    },
-  },
-  {
-    _id: 'seed-4',
-    title: 'Chambre Simple Aérée dans Cour Propre et Clôturée',
-    description:
-      'Chambre simple accessible, bien aérée avec plafondStaff, fenêtre vitrée avec moustiquaire. Eau courante dans la cour, toilette extérieure carrelée et sécurité nocturne assurée.',
-    category: 'CHAMBRE_SIMPLE',
-    propertyType: 'CHAMBRE_SIMPLE',
-    transactionType: 'RENT',
-    billingFrequency: 'MONTHLY',
-    priceMinor: 35000,
-    currency: 'FCFA',
-    location: {
-      city: 'Abidjan',
-      district: 'Abobo Baoulé',
-      address: 'Proche Pharmacie du Rond-point',
-      latitude: 5.412556,
-      longitude: -4.015233,
-    },
-    surfaceM2: 16,
-    bedrooms: 1,
-    bathrooms: 1,
-    isVerified: true,
-    photos: [
-      {
-        url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
-        isPrimary: true,
-      },
-    ],
-    contact: {
-      name: 'M. Yao Konan',
-      phone: '+225 07 11 22 33 44',
-      whatsapp: '+2250711223344',
-      email: 'contact@katdestate.immo',
-    },
-  },
-  {
-    _id: 'seed-5',
-    title: 'Superbe Villa Duplex 5 Pièces avec Jardin et Piscine',
-    description:
-      'Villa contemporaine d’architecte avec finitions de luxe. Grand salon double hauteur, suite parentale avec dressing et jacuzzi, cuisine américaine, garage 2 véhicules et groupe électrogène automatique.',
-    category: 'VILLA',
-    propertyType: 'VILLA',
-    transactionType: 'SALE',
-    billingFrequency: 'TOTAL',
-    priceMinor: 285000000,
-    currency: 'FCFA',
-    location: {
-      city: 'Abidjan',
-      district: 'Cocody Ambassades',
-      address: 'Avenue Jacques Aka',
-      latitude: 5.342112,
-      longitude: -3.992544,
-    },
-    surfaceM2: 450,
-    bedrooms: 4,
-    bathrooms: 4,
-    isVerified: true,
-    isTitled: true,
-    landTitleNumber: 'ACD-0145892-CI',
-    photos: [
-      {
-        url: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80',
-        isPrimary: true,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    contact: {
-      name: 'Agence Immobilière Ivoire (Agréée KatdEstate)',
-      phone: '+225 07 77 88 99 00',
-      whatsapp: '+2250777889900',
-      email: 'agent@katdestate.immo',
-    },
-  },
-  {
-    _id: 'seed-6',
-    title: 'Terrain Foncier Borné 600 m² avec Approbation Ministérielle & Titre Foncier',
-    description:
-      'Parcelle viabilisée avec eau et électricité en bordure de voie bitumée. Idéal pour construction immédiate de villa duplex ou immeuble de rapport locatif. Acte coutumier visé par la chefferie.',
-    category: 'LAND',
-    propertyType: 'LAND',
-    transactionType: 'SALE',
-    billingFrequency: 'TOTAL',
-    priceMinor: 48000000,
-    currency: 'FCFA',
-    location: {
-      city: 'Abidjan',
-      district: 'Riviera Palmeraie',
-      address: 'Extension Rosiers 5',
-      latitude: 5.368744,
-      longitude: -3.954122,
-    },
-    surfaceM2: 600,
-    isVerified: true,
-    isTitled: true,
-    landTitleNumber: 'TF-90412-RIVIERA',
-    photos: [
-      {
-        url: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
-        isPrimary: true,
-      },
-    ],
-    contact: {
-      name: 'Chefferie Coutumière & M. Kouamé',
-      phone: '+225 07 20 30 40 50',
-      whatsapp: '+2250720304050',
-      email: 'chef.quartier@katdestate.immo',
-    },
-  },
-];
-
 export function MarketplacePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated, user } = useSession();
   const { toast } = useToast();
 
@@ -333,6 +103,8 @@ export function MarketplacePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [transactionType, setTransactionType] = useState<string>('');
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
+  const [editingListing, setEditingListing] = useState<any | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
   const [activeTab, setActiveTab] = useState<'info' | 'map' | 'contact'>('info');
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
@@ -342,21 +114,44 @@ export function MarketplacePage() {
   const [visitNotes, setVisitNotes] = useState('');
   const [quickMessage, setQuickMessage] = useState('');
 
-  // Load custom listings published by owners/agents
-  const customListings = useMemo<MarketplaceListing[]>(() => {
+  // Load custom listings published by owners/agents (sans données seed)
+  const allListings = useMemo<MarketplaceListing[]>(() => {
     try {
-      const all: any[] = JSON.parse(localStorage.getItem('katdestate_custom_listings') || '[]');
-      // Sur la marketplace publique, afficher uniquement les annonces validées "PUBLIE"
-      return all.filter((l) => l.workflowStatus === 'PUBLIE' || (!l.workflowStatus && l.status === 'PUBLISHED'));
+      const all = getCustomMarketplaceListings();
+      return all.filter(
+        (l: any) => l.workflowStatus === 'PUBLIE' || (!l.workflowStatus && l.status === 'PUBLISHED'),
+      ) as unknown as MarketplaceListing[];
     } catch {
       return [];
     }
-  }, [publishModalOpen]);
+  }, [publishModalOpen, refreshTick]);
 
-  // Combine custom listings + seed listings
-  const allListings = useMemo(() => {
-    return [...customListings, ...SEED_LISTINGS];
-  }, [customListings]);
+  // Ouvrir automatiquement une annonce si ?listingId= est présent dans l'URL
+  useEffect(() => {
+    const lid = searchParams.get('listingId');
+    if (lid && allListings.length > 0) {
+      const found = allListings.find((l) => l._id === lid);
+      if (found) setSelectedListing(found);
+    }
+  }, [searchParams, allListings]);
+
+  const isListingOwner = (item: any): boolean => {
+    if (!isAuthenticated || !user) return false;
+    const uEmail = user.email?.trim().toLowerCase();
+    const lEmail = (item.ownerEmail || item.contact?.email)?.trim().toLowerCase();
+    if (uEmail && lEmail && uEmail === lEmail) return true;
+    if (user.id && item.authorId && item.authorId !== 'habitant-local' && user.id === item.authorId) {
+      return true;
+    }
+    return false;
+  };
+
+  const handleDeleteListing = (id: string) => {
+    deleteCustomMarketplaceListing(id);
+    if (selectedListing?._id === id) setSelectedListing(null);
+    setRefreshTick((t) => t + 1);
+    toast({ title: 'Annonce supprimée de la Marketplace.', variant: 'info' });
+  };
 
   // Filtering
   const filteredListings = useMemo(() => {
@@ -609,17 +404,48 @@ export function MarketplacePage() {
                   </div>
 
                   {/* Card Footer */}
-                  <div className="bg-muted/30 px-4 py-3 border-t border-border/60 flex items-center justify-between text-xs">
-                    <span className="text-[11px] font-semibold text-muted-foreground truncate max-w-[170px]">
+                  <div className="bg-muted/30 px-4 py-3 border-t border-border/60 flex items-center justify-between gap-2 text-xs">
+                    <span className="text-[11px] font-semibold text-muted-foreground truncate max-w-[140px]">
                       {item.contact?.name || item.agentProfileId?.agencyName || 'Bailleur Vérifié'}
                     </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs font-bold rounded-lg border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
-                    >
-                      Voir détails
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      {isListingOwner(item) && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Modifier votre annonce"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingListing(item);
+                              setPublishModalOpen(true);
+                            }}
+                            className="h-7 px-2 text-xs font-bold rounded-lg border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
+                          >
+                            <Edit2 className="size-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Supprimer votre annonce"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteListing(item._id);
+                            }}
+                            className="h-7 px-2 text-xs font-bold rounded-lg border-rose-500/30 text-rose-500 hover:bg-rose-500/10"
+                          >
+                            <Trash2 className="size-3" />
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs font-bold rounded-lg border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                      >
+                        Voir détails
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               );
@@ -654,6 +480,32 @@ export function MarketplacePage() {
                   <span className="rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2.5 py-0.5 text-xs font-bold">
                     Titre Foncier / ACD
                   </span>
+                )}
+                {isListingOwner(selectedListing) && (
+                  <div className="ml-auto flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingListing(selectedListing);
+                        setSelectedListing(null);
+                        setPublishModalOpen(true);
+                      }}
+                      className="h-7 text-xs font-bold border-blue-500/30 text-blue-500 hover:bg-blue-500/10 gap-1"
+                    >
+                      <Edit2 className="size-3" />
+                      Modifier
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteListing(selectedListing._id)}
+                      className="h-7 text-xs font-bold border-rose-500/30 text-rose-500 hover:bg-rose-500/10 gap-1"
+                    >
+                      <Trash2 className="size-3" />
+                      Supprimer
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -1105,12 +957,23 @@ export function MarketplacePage() {
         </div>
       )}
 
-      {/* 5. Publish Listing Modal */}
+      {/* 5. Publish / Edit Listing Modal */}
       <PublishListingModal
         isOpen={publishModalOpen}
-        onClose={() => setPublishModalOpen(false)}
+        editingListing={editingListing}
+        onClose={() => {
+          setPublishModalOpen(false);
+          setEditingListing(null);
+        }}
         onPublished={() => {
-          toast({ title: 'Nouvelle annonce ajoutée à la marketplace !', variant: 'success' });
+          setRefreshTick((t) => t + 1);
+          setEditingListing(null);
+          toast({
+            title: editingListing
+              ? 'Annonce mise à jour sur la marketplace !'
+              : 'Nouvelle annonce ajoutée à la marketplace !',
+            variant: 'success',
+          });
         }}
       />
     </div>

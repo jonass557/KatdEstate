@@ -46,6 +46,8 @@ import {
   saveWorkflowListings,
   sendHierarchyMessage,
   type BlockOwnerRecord,
+  type BlockRecord,
+  type NeighborhoodGeoRecord,
   type DirectHierarchyMessage,
   type HabitantRecord,
   type QuartierIncidentRecord,
@@ -85,7 +87,7 @@ const PUBLISH_CATEGORIES = [
 ];
 
 export function BlockLeaderDashboard() {
-  const { user } = useSession();
+  const { user, memberships } = useSession();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const urlTab = searchParams.get('tab') as BlockTab | null;
@@ -115,7 +117,7 @@ export function BlockLeaderDashboard() {
     [allLeaders, emailNorm],
   );
 
-  const activeBlock = useMemo(() => {
+  const activeBlock = useMemo<BlockRecord>(() => {
     if (matchedLeaderRecord) {
       const blk = allBlocks.find((b) => b.id === matchedLeaderRecord.blockId);
       if (blk) return blk;
@@ -124,12 +126,39 @@ export function BlockLeaderDashboard() {
       const byBlockEmail = allBlocks.find((b) => b.leaderEmail?.trim().toLowerCase() === emailNorm);
       if (byBlockEmail) return byBlockEmail;
     }
-    return allBlocks[0]!;
-  }, [allBlocks, matchedLeaderRecord, emailNorm]);
+    return (
+      allBlocks[0] || {
+        id: `block-${user?.id || 'local'}`,
+        code: 'BLOC-1',
+        name: matchedLeaderRecord?.blockName || memberships?.[0]?.organization?.name || 'Mon Bloc',
+        neighborhoodId: matchedLeaderRecord?.neighborhoodId || 'neigh-local',
+        neighborhoodName: matchedLeaderRecord?.neighborhoodName || 'Mon Quartier',
+        leaderName: user?.displayName || 'Chef de Bloc',
+        leaderEmail: user?.email || '',
+        leaderPhone: '',
+        color: '#06b6d4',
+        isActive: true,
+        totalResidences: 0,
+        totalHabitants: 0,
+        createdAt: new Date().toISOString(),
+      }
+    );
+  }, [allBlocks, matchedLeaderRecord, emailNorm, user, memberships]);
 
-  const activeNeighborhood = useMemo(
+  const activeNeighborhood = useMemo<NeighborhoodGeoRecord>(
     () =>
-      allNeighborhoods.find((n) => n.id === activeBlock?.neighborhoodId) || allNeighborhoods[0]!,
+      allNeighborhoods.find((n) => n.id === activeBlock?.neighborhoodId) ||
+      allNeighborhoods[0] || {
+        id: activeBlock.neighborhoodId || 'neigh-local',
+        name: activeBlock.neighborhoodName || 'Mon Quartier',
+        country: 'Côte d’Ivoire',
+        city: '',
+        neighborhoodLabel: '',
+        leaderName: activeBlock.createdByLeaderName || 'Chef de Quartier',
+        leaderEmail: activeBlock.createdByLeaderEmail || '',
+        leaderPhone: '',
+        updatedAt: new Date().toISOString(),
+      },
     [allNeighborhoods, activeBlock],
   );
 
@@ -688,8 +717,8 @@ export function BlockLeaderDashboard() {
       if (ring && ring.length >= 3) {
         const pts = ring.slice(0, -1);
         return {
-          lat: pts.reduce((acc, pt) => acc + Number((pt as number[])[1] ?? 0), 0) / pts.length,
-          lng: pts.reduce((acc, pt) => acc + Number((pt as number[])[0] ?? 0), 0) / pts.length,
+          lat: pts.reduce((acc: number, pt: any) => acc + Number((pt as number[])[1] ?? 0), 0) / pts.length,
+          lng: pts.reduce((acc: number, pt: any) => acc + Number((pt as number[])[0] ?? 0), 0) / pts.length,
         };
       }
       return null;

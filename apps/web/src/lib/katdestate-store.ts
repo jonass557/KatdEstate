@@ -1,5 +1,5 @@
 import { getStoredQuittances, saveStoredQuittances, type QuittanceItem } from './quittances';
-import { toGeoJsonPolygon, type GeoJsonBoundary } from '@rentflow/shared';
+import { type GeoJsonBoundary } from '@rentflow/shared';
 
 // ============================================================================
 // 1. AUTHENTICATION & CREDENTIALS STORE (Locataires, Mandataires, Inscrits)
@@ -659,48 +659,16 @@ export interface ChatThread {
   updatedAt: string;
 }
 
-const INITIAL_CHAT_THREADS: ChatThread[] = [
-  {
-    _id: 'chat-thread-1',
-    subject: 'Bienvenue dans votre logement - Résidence Katd Les Palmiers',
-    body: 'Bonjour M. Kouamé Jean-Marc, votre contrat de bail numérique ainsi que vos quittances sont accessibles dans votre espace locataire. Vous pouvez également recharger votre portefeuille pour régler votre loyer ou votre facture d’eau.',
-    category: 'LEASE',
-    priority: 'MEDIUM',
-    status: 'OPEN',
-    senderId: 'owner-1',
-    senderName: 'M. Amadou Diallo (Propriétaire)',
-    senderRole: 'OWNER',
-    tenantId: 'ten-default-1',
-    tenantName: 'Kouamé Jean-Marc',
-    tenantEmail: 'jean.kouame@gmail.com',
-    propertyName: 'Résidence Katd Les Palmiers',
-    unitName: 'Chambre Moderne Porte 3B',
-    recipientName: 'Kouamé Jean-Marc',
-    replies: [
-      {
-        senderId: 'ten-default-1',
-        senderName: 'Kouamé Jean-Marc (Locataire)',
-        senderRole: 'TENANT',
-        body: 'Merci beaucoup Monsieur le Propriétaire ! J’ai bien reçu mes identifiants et mon contrat de bail.',
-        createdAt: new Date(Date.now() - 3600 * 1000 * 12).toISOString(),
-      },
-    ],
-    createdAt: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
-    updatedAt: new Date(Date.now() - 3600 * 1000 * 12).toISOString(),
-  },
-];
 
 export function getStoredChatThreads(): ChatThread[] {
-  if (typeof window === 'undefined') return INITIAL_CHAT_THREADS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_CHAT_THREADS_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_CHAT_THREADS_KEY, JSON.stringify(INITIAL_CHAT_THREADS));
-      return INITIAL_CHAT_THREADS;
-    }
-    return JSON.parse(raw);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_CHAT_THREADS;
+    return [];
   }
 }
 
@@ -1012,463 +980,24 @@ export const STORAGE_QUARTIER_INCIDENTS_KEY = 'katdestate_quartier_incidents';
 export const STORAGE_QUARTIER_ANNOUNCEMENTS_KEY = 'katdestate_quartier_announcements';
 export const STORAGE_OFFICIAL_CERTIFICATES_KEY = 'katdestate_official_certificates';
 
-const INITIAL_NEIGHBORHOODS: NeighborhoodGeoRecord[] = [
-  {
-    id: 'neigh-cocody',
-    name: 'Cocody Riviera Palmeraie',
-    region: 'District Autonome d’Abidjan',
-    department: 'Abidjan',
-    arrondissement: 'Cocody',
-    administrativeAddress: 'Carrefour Duncan / Riviera Palmeraie, Cocody, Abidjan',
-    leaderName: 'Nanan Kouamé N’Guessan',
-    leaderEmail: 'chef.quartier@katdestate.immo',
-    leaderPhone: '+225 07 00 11 00 01',
-    boundary: toGeoJsonPolygon([
-      { lat: 5.352, lng: -3.992 },
-      { lat: 5.352, lng: -3.964 },
-      { lat: 5.376, lng: -3.964 },
-      { lat: 5.376, lng: -3.992 },
-    ]),
-    updatedAt: '2026-01-10T10:00:00Z',
-  },
-];
 
-// Seed Blocs (délimités sans chevauchement à l'intérieur du quartier Cocody)
-const INITIAL_BLOCKS: BlockRecord[] = [
-  {
-    id: 'block-1',
-    code: 'BLOC-PALM-2',
-    name: 'Bloc Riviera Palmeraie 2',
-    neighborhoodId: 'neigh-cocody',
-    neighborhoodName: 'Cocody Riviera Palmeraie',
-    leaderName: 'M. Bakary Diarra',
-    leaderEmail: 'chef.bloc@katdestate.immo',
-    leaderPhone: '+225 07 11 22 33 44',
-    color: '#06b6d4',
-    isActive: true,
-    boundary: toGeoJsonPolygon([
-      { lat: 5.360, lng: -3.990 },
-      { lat: 5.360, lng: -3.978 },
-      { lat: 5.374, lng: -3.978 },
-      { lat: 5.374, lng: -3.990 },
-    ]),
-    totalResidences: 48,
-    totalHabitants: 165,
-    createdAt: '2026-01-10T10:00:00Z',
-  },
-  {
-    id: 'block-2',
-    code: 'BLOC-ROSIERS',
-    name: 'Bloc Les Rosiers Programme 3',
-    neighborhoodId: 'neigh-cocody',
-    neighborhoodName: 'Cocody Riviera Palmeraie',
-    leaderName: 'Mme Affoué Konan',
-    leaderEmail: 'affoue.konan@katdestate.immo',
-    leaderPhone: '+225 05 22 33 44 55',
-    color: '#8b5cf6',
-    isActive: true,
-    boundary: toGeoJsonPolygon([
-      { lat: 5.360, lng: -3.978 },
-      { lat: 5.360, lng: -3.966 },
-      { lat: 5.374, lng: -3.966 },
-      { lat: 5.374, lng: -3.978 },
-    ]),
-    totalResidences: 36,
-    totalHabitants: 128,
-    createdAt: '2026-01-15T11:00:00Z',
-  },
-  {
-    id: 'block-3',
-    code: 'BLOC-AKOUEDO',
-    name: 'Bloc Akouédo Attié Extension',
-    neighborhoodId: 'neigh-cocody',
-    neighborhoodName: 'Cocody Riviera Palmeraie',
-    leaderName: 'M. Séka Patrick',
-    leaderEmail: 'seka.patrick@katdestate.immo',
-    leaderPhone: '+225 07 55 44 33 22',
-    color: '#f59e0b',
-    isActive: true,
-    boundary: toGeoJsonPolygon([
-      { lat: 5.353, lng: -3.990 },
-      { lat: 5.353, lng: -3.978 },
-      { lat: 5.360, lng: -3.978 },
-      { lat: 5.360, lng: -3.990 },
-    ]),
-    totalResidences: 29,
-    totalHabitants: 94,
-    createdAt: '2026-02-01T09:00:00Z',
-  },
-  {
-    id: 'block-4',
-    code: 'BLOC-ABATTA',
-    name: 'Bloc Abatta Village Sud',
-    neighborhoodId: 'neigh-cocody',
-    neighborhoodName: 'Cocody Riviera Palmeraie',
-    leaderName: 'M. Gnakpa Denis',
-    leaderEmail: 'gnakpa.denis@katdestate.immo',
-    leaderPhone: '+225 01 44 55 66 77',
-    color: '#ec4899',
-    isActive: true,
-    boundary: toGeoJsonPolygon([
-      { lat: 5.353, lng: -3.978 },
-      { lat: 5.353, lng: -3.966 },
-      { lat: 5.360, lng: -3.966 },
-      { lat: 5.360, lng: -3.978 },
-    ]),
-    totalResidences: 42,
-    totalHabitants: 150,
-    createdAt: '2026-02-10T08:30:00Z',
-  },
-];
 
-// Seed Block Leaders
-const INITIAL_BLOCK_LEADERS: BlockLeaderRecord[] = [
-  {
-    id: 'ldr-1',
-    name: 'M. Bakary Diarra',
-    email: 'chef.bloc@katdestate.immo',
-    phone: '+225 07 11 22 33 44',
-    password: 'ChefBloc2026!',
-    blockId: 'block-1',
-    blockName: 'Bloc Riviera Palmeraie 2',
-    neighborhoodId: 'neigh-cocody',
-    neighborhoodName: 'Cocody',
-    createdAt: '2026-01-10T10:00:00Z',
-  },
-  {
-    id: 'ldr-2',
-    name: 'Mme Affoué Konan',
-    email: 'affoue.konan@katdestate.immo',
-    phone: '+225 05 22 33 44 55',
-    password: 'ChefBloc2026!',
-    blockId: 'block-2',
-    blockName: 'Bloc Les Rosiers Programme 3',
-    neighborhoodId: 'neigh-cocody',
-    neighborhoodName: 'Cocody',
-    createdAt: '2026-01-15T11:00:00Z',
-  },
-];
 
-// Seed Habitants
-const INITIAL_HABITANTS: HabitantRecord[] = [
-  {
-    id: 'hab-1',
-    fullName: 'Yao Kouadio Serge',
-    phone: '+225 07 44 55 66 77',
-    email: 'yao.serge@gmail.com',
-    blockId: 'block-1',
-    blockName: 'Bloc Riviera Palmeraie 2',
-    residenceName: 'Villa N°14 Rue des Manguiers',
-    dwellingType: 'Maison individuelle',
-    isOwner: true,
-    rentOrCotisationAmount: 15000,
-    isPaid: true,
-    paidAt: '2026-11-01T10:00:00Z',
-    createdAt: '2026-02-01T10:00:00Z',
-  },
-  {
-    id: 'hab-2',
-    fullName: 'Aïcha Coulibaly',
-    phone: '+225 05 55 66 77 88',
-    email: 'aicha.coulibaly@yahoo.fr',
-    blockId: 'block-1',
-    blockName: 'Bloc Riviera Palmeraie 2',
-    residenceName: 'Cour Commune N°07 Porte B',
-    dwellingType: 'Maison en carabot',
-    isOwner: false,
-    rentOrCotisationAmount: 30000,
-    isPaid: false,
-    createdAt: '2026-02-15T14:30:00Z',
-  },
-  {
-    id: 'hab-3',
-    fullName: 'Mamadou Touré',
-    phone: '+225 01 22 33 44 55',
-    email: 'toure.mamadou@hotmail.com',
-    blockId: 'block-1',
-    blockName: 'Bloc Riviera Palmeraie 2',
-    residenceName: 'Immeuble Le Grand Palmier Apto 3',
-    dwellingType: 'Appartement 3 pièces',
-    isOwner: false,
-    rentOrCotisationAmount: 150000,
-    isPaid: true,
-    paidAt: '2026-11-03T11:20:00Z',
-    createdAt: '2026-03-01T09:00:00Z',
-  },
-  {
-    id: 'hab-4',
-    fullName: 'Clarisse Bamba',
-    phone: '+225 07 99 88 77 66',
-    email: 'clarisse.bamba@gmail.com',
-    blockId: 'block-2',
-    blockName: 'Bloc Les Rosiers Programme 3',
-    residenceName: 'Lot 245 Rue des Orchidées',
-    dwellingType: 'Villa duplex',
-    isOwner: true,
-    rentOrCotisationAmount: 20000,
-    isPaid: true,
-    paidAt: '2026-11-02T16:00:00Z',
-    createdAt: '2026-03-10T12:00:00Z',
-  },
-];
 
-// Seed Block Owners
-const INITIAL_BLOCK_OWNERS: BlockOwnerRecord[] = [
-  {
-    id: 'own-blk-1',
-    fullName: 'M. Adama Koné',
-    email: 'adama.kone@katdestate.immo',
-    phone: '+225 07 33 44 55 66',
-    password: 'Proprio2026!',
-    blockId: 'block-1',
-    blockName: 'Bloc Riviera Palmeraie 2',
-    neighborhoodId: 'neigh-cocody',
-    createdByBlockLeader: true,
-    assignedBoundary: toGeoJsonPolygon([
-      { lat: 5.362, lng: -3.988 },
-      { lat: 5.362, lng: -3.983 },
-      { lat: 5.369, lng: -3.983 },
-      { lat: 5.369, lng: -3.988 },
-    ]),
-    propertyName: 'Immeuble La Paix (8 logements)',
-    propertyType: 'Immeuble résidentiel',
-    monthlyRentOrDues: 1200000,
-    status: 'ACTIVE',
-    paymentStatus: 'PAID',
-    createdAt: '2026-01-20T10:00:00Z',
-  },
-  {
-    id: 'own-blk-2',
-    fullName: 'Mme Simone Gnahoré',
-    email: 'simone.gnahore@katdestate.immo',
-    phone: '+225 05 66 77 88 99',
-    password: 'Proprio2026!',
-    blockId: 'block-1',
-    blockName: 'Bloc Riviera Palmeraie 2',
-    neighborhoodId: 'neigh-cocody',
-    assignedBoundary: toGeoJsonPolygon([
-      { lat: 5.362, lng: -3.983 },
-      { lat: 5.362, lng: -3.979 },
-      { lat: 5.369, lng: -3.979 },
-      { lat: 5.369, lng: -3.983 },
-    ]),
-    propertyName: 'Concession Gnahoré (3 Maisons en carabot)',
-    propertyType: 'Maison en carabot',
-    monthlyRentOrDues: 90000,
-    status: 'ACTIVE',
-    paymentStatus: 'PENDING',
-    createdAt: '2026-02-12T14:00:00Z',
-  },
-];
 
-// Seed Incidents
-const INITIAL_INCIDENTS: QuartierIncidentRecord[] = [
-  {
-    id: 'inc-1',
-    title: 'Coupure éclairage public Carrefour Duncan',
-    description: 'Le candélabre principal ne fonctionne plus depuis 48h, zone sombre propice aux agressions.',
-    category: 'SECURITY',
-    severity: 'MEDIUM',
-    status: 'REPORTED',
-    blockId: 'block-1',
-    blockName: 'Bloc Riviera Palmeraie 2',
-    reportedBy: 'Kouamé Jean (Habitant)',
-    reporterPhone: '+225 07 00 11 22 33',
-    createdAt: '2026-11-05T19:30:00Z',
-  },
-  {
-    id: 'inc-2',
-    title: 'Caniveau bouché avec risque de débordement',
-    description: 'Encombrement de déchets plastiques après la dernière pluie devant la pharmacie.',
-    category: 'SANITATION',
-    severity: 'LOW',
-    status: 'IN_PROGRESS',
-    blockId: 'block-1',
-    blockName: 'Bloc Riviera Palmeraie 2',
-    reportedBy: 'Bakary Diarra (Chef de Bloc)',
-    reporterPhone: '+225 07 11 22 33 44',
-    resolutionNotes: 'Équipe de curage municipale contactée',
-    createdAt: '2026-11-04T10:15:00Z',
-  },
-];
 
-// Seed Workflow Listings (including Maison en carabot)
-const INITIAL_WORKFLOW_LISTINGS: WorkflowListingItem[] = [
-  {
-    _id: 'wlist-1',
-    title: 'Maison en carabot moderne rénovée avec cour privative',
-    description: 'Authentique maison en carabot parfaitement ventilée et renforcée. Composée d’un salon carrelé, une chambre séparée, point d’eau individuel et compteur prépayé. Proximité axe principal.',
-    category: 'CARABOT',
-    propertyType: 'CARABOT',
-    transactionType: 'RENT',
-    billingFrequency: 'MONTHLY',
-    priceMinor: 35000,
-    currency: 'FCFA',
-    surfaceM2: 28,
-    bedrooms: 1,
-    bathrooms: 1,
-    location: {
-      city: 'Abidjan',
-      district: 'Cocody Riviera Palmeraie',
-      blockId: 'block-1',
-      blockName: 'Bloc Riviera Palmeraie 2',
-      address: 'Rue L12, Carré 4',
-      latitude: 5.3621,
-      longitude: -3.9785,
-    },
-    photos: [
-      {
-        url: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=800&q=80',
-        label: 'EXTERIEUR',
-        isPrimary: true,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-        label: 'INTERIEUR',
-      },
-    ],
-    contact: {
-      name: 'Mme Simone Gnahoré',
-      phone: '+225 05 66 77 88 99',
-      whatsapp: '+2250566778899',
-      email: 'simone.gnahore@katdestate.immo',
-    },
-    authorId: 'own-blk-2',
-    authorRole: 'OWNER',
-    authorName: 'Mme Simone Gnahoré',
-    workflowStatus: 'PUBLIE',
-    status: 'PUBLISHED',
-    approvedByBlockLeaderAt: '2026-11-02T14:00:00Z',
-    approvedByBlockLeaderName: 'M. Bakary Diarra',
-    publishedByNeighborhoodLeaderAt: '2026-11-03T09:00:00Z',
-    publishedByNeighborhoodLeaderName: 'Nanan Kouamé N’Guessan',
-    createdAt: '2026-11-01T10:00:00Z',
-    updatedAt: '2026-11-03T09:00:00Z',
-  },
-  {
-    _id: 'wlist-2',
-    title: 'Maison en carabot 2 Chambres avec Terrasse Ombragée',
-    description: 'Charmant logement en carabot de 32m² idéal pour jeune couple. 2 chambres, terrasse avant, installation électrique aux normes et eau potable disponible.',
-    category: 'CARABOT',
-    propertyType: 'CARABOT',
-    transactionType: 'RENT',
-    billingFrequency: 'MONTHLY',
-    priceMinor: 45000,
-    currency: 'FCFA',
-    surfaceM2: 32,
-    bedrooms: 2,
-    bathrooms: 1,
-    location: {
-      city: 'Abidjan',
-      district: 'Cocody Riviera Palmeraie',
-      blockId: 'block-1',
-      blockName: 'Bloc Riviera Palmeraie 2',
-      address: 'Derrière le collège moderne',
-      latitude: 5.364,
-      longitude: -3.98,
-    },
-    photos: [
-      {
-        url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80',
-        label: 'EXTERIEUR',
-        isPrimary: true,
-      },
-      {
-        url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
-        label: 'INTERIEUR',
-      },
-    ],
-    contact: {
-      name: 'Yao Kouadio Serge',
-      phone: '+225 07 44 55 66 77',
-      whatsapp: '+2250744556677',
-      email: 'yao.serge@gmail.com',
-    },
-    authorId: 'hab-1',
-    authorRole: 'RESIDENT',
-    authorName: 'Yao Kouadio Serge',
-    workflowStatus: 'APPROUVE_BLOC',
-    status: 'PENDING',
-    approvedByBlockLeaderAt: '2026-11-06T11:00:00Z',
-    approvedByBlockLeaderName: 'M. Bakary Diarra',
-    createdAt: '2026-11-05T15:00:00Z',
-    updatedAt: '2026-11-06T11:00:00Z',
-  },
-  {
-    _id: 'wlist-3',
-    title: 'Studio Moderne Climatisation Riviera Palmeraie',
-    description: 'Studio neuf carrelé dans immeuble sécurisé avec gardien. Balcon, placard et cuisine équipée.',
-    category: 'STUDIO_MODERNE',
-    propertyType: 'STUDIO_MODERNE',
-    transactionType: 'RENT',
-    billingFrequency: 'MONTHLY',
-    priceMinor: 110000,
-    currency: 'FCFA',
-    surfaceM2: 35,
-    bedrooms: 1,
-    bathrooms: 1,
-    location: {
-      city: 'Abidjan',
-      district: 'Cocody Riviera Palmeraie',
-      blockId: 'block-1',
-      blockName: 'Bloc Riviera Palmeraie 2',
-      address: 'Boulevard Mitterrand',
-    },
-    photos: [
-      {
-        url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-        isPrimary: true,
-      },
-    ],
-    contact: {
-      name: 'M. Adama Koné',
-      phone: '+225 07 33 44 55 66',
-      whatsapp: '+2250733445566',
-      email: 'adama.kone@katdestate.immo',
-    },
-    authorId: 'own-blk-1',
-    authorRole: 'OWNER',
-    authorName: 'M. Adama Koné',
-    workflowStatus: 'EN_ATTENTE',
-    status: 'PENDING',
-    createdAt: '2026-11-07T08:00:00Z',
-    updatedAt: '2026-11-07T08:00:00Z',
-  },
-];
 
-// Seed Certificates
-const INITIAL_CERTIFICATES: OfficialCertificateRecord[] = [
-  {
-    id: 'cert-1',
-    certificateNumber: 'ACT-CHEFF-2026-0042',
-    type: 'RESIDENCE',
-    title: 'Certificat de Résidence & Recensement Coutumier',
-    beneficiaryName: 'Yao Kouadio Serge',
-    beneficiaryPhone: '+225 07 44 55 66 77',
-    beneficiaryNationalId: 'CNI-CI-01293847',
-    blockId: 'block-1',
-    blockName: 'Bloc Riviera Palmeraie 2',
-    plotNumber: 'Lot 14 Îlot 3',
-    surfaceM2: 350,
-    qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=KATDESTATE-CERT-0042-VERIFIED',
-    issuedAt: '2026-10-15T10:00:00Z',
-    issuedByName: 'Nanan Kouamé N’Guessan',
-    status: 'DELIVERED',
-  },
-];
 
 // Helper functions for Blocs
 export function getStoredBlocks(): BlockRecord[] {
-  if (typeof window === 'undefined') return INITIAL_BLOCKS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_BLOCKS_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_BLOCKS_KEY, JSON.stringify(INITIAL_BLOCKS));
-      return INITIAL_BLOCKS;
-    }
-    return JSON.parse(raw);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_BLOCKS;
+    return [];
   }
 }
 
@@ -1492,16 +1021,14 @@ export function createBlock(block: Omit<BlockRecord, 'id' | 'createdAt'>): Block
 
 // Helper functions for Block Leaders
 export function getBlockLeaders(): BlockLeaderRecord[] {
-  if (typeof window === 'undefined') return INITIAL_BLOCK_LEADERS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_BLOCK_LEADERS_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_BLOCK_LEADERS_KEY, JSON.stringify(INITIAL_BLOCK_LEADERS));
-      return INITIAL_BLOCK_LEADERS;
-    }
-    return JSON.parse(raw);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_BLOCK_LEADERS;
+    return [];
   }
 }
 
@@ -1549,16 +1076,14 @@ export function deleteBlockLeader(id: string): void {
 
 // Helper functions for Block Owners (created by Chef de Bloc)
 export function getBlockOwners(): BlockOwnerRecord[] {
-  if (typeof window === 'undefined') return INITIAL_BLOCK_OWNERS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_BLOCK_OWNERS_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_BLOCK_OWNERS_KEY, JSON.stringify(INITIAL_BLOCK_OWNERS));
-      return INITIAL_BLOCK_OWNERS;
-    }
-    return JSON.parse(raw);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_BLOCK_OWNERS;
+    return [];
   }
 }
 
@@ -1585,16 +1110,14 @@ export function saveBlockOwner(owner: BlockOwnerRecord): void {
 
 // Helper functions for Habitants
 export function getStoredHabitants(): HabitantRecord[] {
-  if (typeof window === 'undefined') return INITIAL_HABITANTS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_HABITANTS_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_HABITANTS_KEY, JSON.stringify(INITIAL_HABITANTS));
-      return INITIAL_HABITANTS;
-    }
-    return JSON.parse(raw);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_HABITANTS;
+    return [];
   }
 }
 
@@ -1631,16 +1154,14 @@ export function reassignHabitantBlock(habitantId: string, newBlockId: string, ne
 
 // Helper functions for Incidents
 export function getStoredIncidents(): QuartierIncidentRecord[] {
-  if (typeof window === 'undefined') return INITIAL_INCIDENTS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_QUARTIER_INCIDENTS_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_QUARTIER_INCIDENTS_KEY, JSON.stringify(INITIAL_INCIDENTS));
-      return INITIAL_INCIDENTS;
-    }
-    return JSON.parse(raw);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_INCIDENTS;
+    return [];
   }
 }
 
@@ -1660,18 +1181,12 @@ export function saveStoredIncident(incident: QuartierIncidentRecord): void {
 
 // Helper functions for Workflow Listings
 export function getWorkflowListings(): WorkflowListingItem[] {
-  if (typeof window === 'undefined') return INITIAL_WORKFLOW_LISTINGS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem('katdestate_custom_listings');
-    if (!raw) {
-      localStorage.setItem('katdestate_custom_listings', JSON.stringify(INITIAL_WORKFLOW_LISTINGS));
-      return INITIAL_WORKFLOW_LISTINGS;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem('katdestate_custom_listings', JSON.stringify(INITIAL_WORKFLOW_LISTINGS));
-      return INITIAL_WORKFLOW_LISTINGS;
-    }
+    if (!Array.isArray(parsed) || parsed.length === 0) return [];
     // ensure each listing has a valid workflowStatus
     return parsed.map((item: any) => ({
       ...item,
@@ -1679,7 +1194,7 @@ export function getWorkflowListings(): WorkflowListingItem[] {
       status: item.status || (item.workflowStatus === 'PUBLIE' ? 'PUBLISHED' : 'PENDING'),
     }));
   } catch {
-    return INITIAL_WORKFLOW_LISTINGS;
+    return [];
   }
 }
 
@@ -1768,16 +1283,14 @@ export function deleteWorkflowListingPermanently(listingId: string): boolean {
 
 // Helper functions for Official Certificates
 export function getOfficialCertificates(): OfficialCertificateRecord[] {
-  if (typeof window === 'undefined') return INITIAL_CERTIFICATES;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_OFFICIAL_CERTIFICATES_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_OFFICIAL_CERTIFICATES_KEY, JSON.stringify(INITIAL_CERTIFICATES));
-      return INITIAL_CERTIFICATES;
-    }
-    return JSON.parse(raw);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_CERTIFICATES;
+    return [];
   }
 }
 
@@ -1795,16 +1308,14 @@ export function saveOfficialCertificate(cert: OfficialCertificateRecord): void {
 // ============================================================================
 
 export function getStoredNeighborhoods(): NeighborhoodGeoRecord[] {
-  if (typeof window === 'undefined') return INITIAL_NEIGHBORHOODS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_NEIGHBORHOODS_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_NEIGHBORHOODS_KEY, JSON.stringify(INITIAL_NEIGHBORHOODS));
-      return INITIAL_NEIGHBORHOODS;
-    }
-    return JSON.parse(raw);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_NEIGHBORHOODS;
+    return [];
   }
 }
 

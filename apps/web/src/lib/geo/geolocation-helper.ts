@@ -77,7 +77,7 @@ function acquireHighAccuracyFix(maxWaitMs = 12000): Promise<GeolocationPosition>
       {
         enableHighAccuracy: true,
         timeout: maxWaitMs,
-        maximumAge: 15000,
+        maximumAge: 0,
       },
     );
   });
@@ -90,13 +90,10 @@ function acquireHighAccuracyFix(maxWaitMs = 12000): Promise<GeolocationPosition>
  * 3. Repli IP uniquement si `requireRealGps` n'est pas activé
  */
 export async function getPreciseUserLocation(
-  options?: GeolocationOptions,
+  _options?: GeolocationOptions,
 ): Promise<ResolvedLocation> {
   if (typeof window === 'undefined' || !navigator.geolocation) {
-    if (options?.requireRealGps) {
-      throw new Error('Votre navigateur ne supporte pas la géolocalisation GPS.');
-    }
-    return getIpLocationFallback();
+    throw new Error('Votre navigateur ne supporte pas la géolocalisation GPS.');
   }
 
   // Étape 1 : Essai GPS Haute Précision réel (satellite / mobile)
@@ -110,23 +107,20 @@ export async function getPreciseUserLocation(
       isApproximate: false,
     };
   } catch (err: any) {
-    // Si l'utilisateur a explicitement refusé la permission, ne pas masquer avec une fausse position IP
-    if (
-      err?.message?.includes('refusée') ||
-      err?.code === 1
-    ) {
+    // Si l'utilisateur a explicitement refusé la permission, ne pas masquer avec une fausse position
+    if (err?.message?.includes('refusée') || err?.code === 1) {
       throw err instanceof Error
         ? err
         : new Error('Permission GPS refusée. Veuillez autoriser la géolocalisation.');
     }
 
-    // Étape 2 : Essai Réseau / WiFi du navigateur (accepte un fix récent jusqu'à 60s)
+    // Étape 2 : Essai Réseau / WiFi réel du navigateur (sans cache périmé, sans fausse position IP/Abidjan)
     try {
       const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: false,
           timeout: 12000,
-          maximumAge: 60000,
+          maximumAge: 0,
         });
       });
       return {
@@ -137,40 +131,9 @@ export async function getPreciseUserLocation(
         isApproximate: (pos.coords.accuracy || 100) > 1500,
       };
     } catch {
-      if (options?.requireRealGps) {
-        throw new Error(
-          'Impossible d’obtenir un signal GPS réel sur cet appareil. Vérifiez que la localisation (GPS) de votre téléphone est activée ou utilisez les champs Pays → Ville → Quartier.',
-        );
-      }
-      return getIpLocationFallback();
+      throw new Error(
+        'Impossible d’obtenir votre position GPS réelle. Vérifiez que la localisation (GPS) de votre appareil est activée et autorisée dans le navigateur.',
+      );
     }
   }
-}
-
-async function getIpLocationFallback(): Promise<ResolvedLocation> {
-  try {
-    const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
-    if (res.ok) {
-      const data = await res.json();
-      if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
-        return {
-          lat: Number(data.latitude.toFixed(6)),
-          lng: Number(data.longitude.toFixed(6)),
-          accuracy: 15000,
-          source: 'IP_FALLBACK',
-          isApproximate: true,
-        };
-      }
-    }
-  } catch {
-    // Si offline ou bloqué
-  }
-
-  return {
-    lat: 5.3364,
-    lng: -4.0267,
-    accuracy: 20000,
-    source: 'IP_FALLBACK',
-    isApproximate: true,
-  };
 }

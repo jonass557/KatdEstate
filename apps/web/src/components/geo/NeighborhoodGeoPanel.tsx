@@ -72,7 +72,17 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
   const [blocks, setBlocks] = useState<BlockRecord[]>(() => getStoredBlocks());
   const [auditLogs, setAuditLogs] = useState<GeoAuditRecord[]>(() => getGeoAuditLogsLocal());
 
-  const activeNeighborhood = neighborhoods[0]!;
+  const activeNeighborhood: NeighborhoodGeoRecord = neighborhoods[0] || {
+    id: `neigh-${user?.id || 'local'}`,
+    name: memberships?.[0]?.organization?.name || 'Mon Quartier',
+    country: 'Côte d’Ivoire',
+    city: '',
+    neighborhoodLabel: '',
+    leaderName: user?.displayName || 'Chef de Quartier',
+    leaderEmail: user?.email || '',
+    leaderPhone: '',
+    updatedAt: new Date().toISOString(),
+  };
 
   // Mode d'édition sur la carte : 'VIEW' | 'EDIT_NEIGHBORHOOD' | 'CREATE_BLOCK' | 'EDIT_BLOCK'
   const [mapMode, setMapMode] = useState<'VIEW' | 'EDIT_NEIGHBORHOOD' | 'CREATE_BLOCK' | 'EDIT_BLOCK'>('VIEW');
@@ -196,14 +206,7 @@ export function NeighborhoodGeoPanel({ onDataChanged }: NeighborhoodGeoPanelProp
   const handleAutoDelimitFromGps = async (targetMode: 'EDIT_NEIGHBORHOOD' | 'CREATE_BLOCK') => {
     setIsAutoDelimitingGps(true);
     try {
-      let loc;
-      try {
-        loc = await getPreciseUserLocation({ requireRealGps: true });
-      } catch {
-        // Si le navigateur bloque le GPS matériel (ex: contexte HTTP ou signal faible en intérieur),
-        // on utilise le repli réseau/IP ou la localité déjà saisie plutôt que de bloquer l'utilisateur
-        loc = await getPreciseUserLocation({ requireRealGps: false });
-      }
+      const loc = await getPreciseUserLocation({ requireRealGps: true });
       let geocode: any = null;
       try {
         geocode = await reverseGeocodeWithNominatim(loc.lat, loc.lng);

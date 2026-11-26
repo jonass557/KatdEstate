@@ -294,12 +294,11 @@ function checkAuthorizedLocalAccount(
     }
 
     // 3. Vérifier les chefs de bloc créés par le chef de quartier
-    const isDemoAccount = Boolean(DEMO_PROFILES[emailLower]);
     const blockLeaders = getBlockLeaders();
     const matchedBlockLeader = blockLeaders.find(
       (l) => l.email.trim().toLowerCase() === emailLower,
     );
-    if (matchedBlockLeader && !isDemoAccount) {
+    if (matchedBlockLeader) {
       if (matchedBlockLeader.password && pwd !== matchedBlockLeader.password.trim()) {
         throw new Error(
           'Mot de passe Chef de Bloc incorrect. Veuillez vérifier les identifiants transmis par le Chef de Quartier.',
@@ -348,12 +347,6 @@ function checkAuthorizedLocalAccount(
         'Espace KatdEstate',
       );
     }
-  }
-
-  // 4. Vérifier les comptes démo officiels
-  const demo = DEMO_PROFILES[emailLower];
-  if (demo) {
-    return createSessionForRole(emailLower, demo.role, demo.name, demo.orgName);
   }
 
   return null;

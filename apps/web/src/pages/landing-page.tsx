@@ -28,86 +28,14 @@ import { apiRequest } from '../lib/api-client';
 import { Button } from '../components/ui/button';
 import { HeroCarousel } from '../components/landing/hero-carousel';
 import {
+  deleteCustomMarketplaceListing,
   getCustomMarketplaceListings,
   getSubscriptionPlans,
   getSubscriptionsEnabled,
 } from '../lib/katdestate-store';
 
-interface PublicListing {
-  id: string;
-  title: string;
-  type: 'SALE' | 'RENTAL' | 'LAND';
-  price: number;
-  currency: string;
-  location: string;
-  city: string;
-  surface: string;
-  badge: string;
-  image: string;
-  certified: boolean;
-}
-
-const SEED_MARKETPLACE_ITEMS: PublicListing[] = [
-  {
-    id: 'prop-1',
-    title: 'Superbe Villa Duplex 5 Pièces avec Piscine',
-    type: 'SALE',
-    price: 280000000,
-    currency: 'FCFA',
-    location: 'Cocody Ambassades',
-    city: 'Abidjan',
-    surface: '450 m²',
-    badge: 'Titre Foncier (ACD)',
-    image:
-      'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80',
-    certified: true,
-  },
-  {
-    id: 'prop-2',
-    title: 'Appartement Haut Standing 3 Pièces Meublé',
-    type: 'RENTAL',
-    price: 450000,
-    currency: 'FCFA / mois',
-    location: 'Plateau Dokui, Bd Latrille',
-    city: 'Abidjan',
-    surface: '110 m²',
-    badge: 'Location Vérifiée',
-    image:
-      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
-    certified: true,
-  },
-  {
-    id: 'prop-3',
-    title: 'Terrain Viabilisé & Borné avec Approbation',
-    type: 'LAND',
-    price: 45000000,
-    currency: 'FCFA',
-    location: 'Riviera Palmeraie — Extension Est',
-    city: 'Abidjan',
-    surface: '600 m²',
-    badge: 'Certifié Chefferie',
-    image:
-      'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
-    certified: true,
-  },
-  {
-    id: 'prop-4',
-    title: 'Immeuble R+3 Rapport Locatif Immédiat (8 Logements)',
-    type: 'SALE',
-    price: 380000000,
-    currency: 'FCFA',
-    location: 'Angré 8ème Tranche',
-    city: 'Abidjan',
-    surface: '850 m²',
-    badge: 'Rendement 11.4%',
-    image:
-      'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=800&q=80',
-    certified: true,
-  },
-];
-
 export function LandingPage() {
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated, user } = useSession();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<'ALL' | 'SALE' | 'RENTAL' | 'LAND'>(
@@ -173,7 +101,17 @@ export function LandingPage() {
   };
 
   const [marketPage, setMarketPage] = useState(1);
+  const [marketRefresh, setMarketRefresh] = useState(0);
   const PAGE_SIZE = 4;
+
+  const isListingOwner = (l: any): boolean => {
+    if (!isAuthenticated || !user) return false;
+    const uEmail = user.email?.trim().toLowerCase();
+    const lEmail = (l.ownerEmail || l.contact?.email)?.trim().toLowerCase();
+    if (uEmail && lEmail && uEmail === lEmail) return true;
+    if (user.id && l.authorId && l.authorId !== 'habitant-local' && user.id === l.authorId) return true;
+    return false;
+  };
 
   const customPublished = getCustomMarketplaceListings()
     .filter((l) => l.workflowStatus === 'PUBLIE' || !l.workflowStatus)
@@ -197,12 +135,11 @@ export function LandingPage() {
         l.photos?.[0]?.url ||
         'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
       photosCount: l.photos?.length || 1,
+      canManage: isListingOwner(l),
     }));
 
-  const combinedProperties = [
-    ...customPublished,
-    ...SEED_MARKETPLACE_ITEMS.map((item) => ({ ...item, photosCount: 1 })),
-  ];
+  const combinedProperties = customPublished;
+  void marketRefresh;
 
   const filteredProperties = combinedProperties.filter((item) => {
     if (selectedCategory === 'ALL') return true;
@@ -765,7 +702,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* 5. Live Marketplace Preview Section (Seed Data) */}
+      {/* 5. Live Marketplace Preview Section */}
       <section id="marketplace" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-3">
@@ -806,6 +743,21 @@ export function LandingPage() {
         </div>
 
         {/* Properties Grid */}
+        {paginatedProperties.length === 0 ? (
+          <div className="rounded-3xl bg-slate-900/50 border border-slate-800 p-10 text-center space-y-3">
+            <p className="text-base font-bold text-white">Aucune annonce publiée pour le moment</p>
+            <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
+              Les annonces publiées sur la Marketplace apparaîtront automatiquement ici. Seul leur auteur pourra les modifier ou les supprimer.
+            </p>
+            <Link
+              to="/marketplace"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-colors"
+            >
+              <span>Accéder à la Marketplace</span>
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {paginatedProperties.map((prop) => (
             <div
@@ -854,22 +806,45 @@ export function LandingPage() {
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                  <span className="text-slate-400 font-medium">
+                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+                  <span className="text-slate-400 font-medium truncate">
                     Superficie : <strong className="text-white">{prop.surface}</strong>
                   </span>
-                  <Link
-                    to="/marketplace"
-                    className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-semibold"
-                  >
-                    <span>Détails</span>
-                    <ArrowRight className="size-3" />
-                  </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {prop.canManage && (
+                      <>
+                        <Link
+                          to={`/marketplace?listingId=${prop.id}`}
+                          className="text-blue-400 hover:text-blue-300 font-semibold"
+                        >
+                          Modifier
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            deleteCustomMarketplaceListing(prop.id);
+                            setMarketRefresh((t) => t + 1);
+                          }}
+                          className="text-rose-400 hover:text-rose-300 font-semibold"
+                        >
+                          Supprimer
+                        </button>
+                      </>
+                    )}
+                    <Link
+                      to={`/marketplace?listingId=${prop.id}`}
+                      className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-semibold"
+                    >
+                      <span>Détails</span>
+                      <ArrowRight className="size-3" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
+        )}
 
         {/* Pagination Marketplace */}
         {totalPages > 1 && (

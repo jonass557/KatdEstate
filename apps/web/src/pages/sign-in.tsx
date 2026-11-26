@@ -8,14 +8,9 @@ import {
   Building2,
   AlertCircle,
   ArrowLeft,
-  Crown,
-  ShieldCheck,
-  Users,
-  Briefcase,
-  Home,
   Lock,
   Mail,
-  Key,
+  ShieldCheck,
 } from 'lucide-react';
 import { useSession } from '../app/session';
 import { Button } from '../components/ui/button';
@@ -23,72 +18,6 @@ import { Input } from '../components/ui/input';
 import { ApiError } from '../lib/api-client';
 
 type SignInValues = z.input<typeof loginSchema>;
-
-const TEST_ACCOUNTS = [
-  {
-    role: 'SUPER_ADMIN',
-    label: 'Super Admin',
-    email: 'admin@katdestate.immo',
-    icon: Crown,
-    color: 'text-amber-400 bg-amber-400/10',
-  },
-  {
-    role: 'OWNER',
-    label: 'Propriétaire',
-    email: 'proprietaire@katdestate.immo',
-    icon: Building2,
-    color: 'text-blue-400 bg-blue-400/10',
-  },
-  {
-    role: 'INDEPENDENT_OWNER',
-    label: 'Propriétaire Indép.',
-    email: 'proprietaire.independant@katdestate.immo',
-    icon: Home,
-    color: 'text-teal-400 bg-teal-400/10',
-  },
-  {
-    role: 'TENANT',
-    label: 'Locataire',
-    email: 'locataire@katdestate.immo',
-    icon: Home,
-    color: 'text-emerald-400 bg-emerald-400/10',
-  },
-  {
-    role: 'AGENT',
-    label: 'Agent Immobilier',
-    email: 'agent@katdestate.immo',
-    icon: Briefcase,
-    color: 'text-orange-400 bg-orange-400/10',
-  },
-  {
-    role: 'NEIGHBORHOOD_LEADER',
-    label: 'Chef de Quartier',
-    email: 'chef.quartier@katdestate.immo',
-    icon: Crown,
-    color: 'text-purple-400 bg-purple-400/10',
-  },
-  {
-    role: 'BLOCK_LEADER',
-    label: 'Chef de Bloc',
-    email: 'chef.bloc@katdestate.immo',
-    icon: ShieldCheck,
-    color: 'text-cyan-400 bg-cyan-400/10',
-  },
-  {
-    role: 'USER',
-    label: 'Utilisateur / Visiteur',
-    email: 'utilisateur@katdestate.immo',
-    icon: Users,
-    color: 'text-emerald-400 bg-emerald-400/10',
-  },
-  {
-    role: 'HOTEL_MANAGER',
-    label: 'Gestion des Hôtels',
-    email: 'hotel@katdestate.immo',
-    icon: Building2,
-    color: 'text-amber-400 bg-amber-400/10',
-  },
-];
 
 export function SignInPage() {
   const { signIn } = useSession();
@@ -98,7 +27,7 @@ export function SignInPage() {
   const prefillEmail = searchParams.get('email') || '';
   const [formError, setFormError] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState, setError, setValue } = useForm<SignInValues>({
+  const { register, handleSubmit, formState, setError } = useForm<SignInValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: prefillEmail, password: '' },
   });
@@ -128,18 +57,6 @@ export function SignInPage() {
       setFormError('Une erreur inattendue est survenue. Merci de réessayer.');
     }
   });
-
-  const handleFillAccount = async (email: string) => {
-    setValue('email', email);
-    setValue('password', 'Password123!');
-    setFormError(null);
-    try {
-      await signIn({ email, password: 'Password123!' });
-      navigate('/dashboard', { replace: true });
-    } catch (err: any) {
-      setFormError(err?.message || 'Erreur de connexion');
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -236,41 +153,6 @@ export function SignInPage() {
               {formState.isSubmitting ? 'Connexion en cours…' : 'Se connecter'}
             </Button>
           </form>
-
-          {/* Quick Demo Test Accounts Box */}
-          <div className="pt-4 border-t border-slate-800/80 space-y-3">
-            <div className="flex items-center justify-between text-[11px] text-slate-400">
-              <span className="flex items-center gap-1 font-semibold text-slate-300">
-                <Key className="size-3 text-emerald-400" />
-                Comptes de Test (1 clic) :
-              </span>
-              <span className="font-mono text-[10px] text-slate-500">Mdp : Password123!</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {TEST_ACCOUNTS.map((acc) => {
-                const Icon = acc.icon;
-                return (
-                  <button
-                    type="button"
-                    key={acc.email}
-                    onClick={() => handleFillAccount(acc.email)}
-                    className="flex items-center gap-2 p-2 rounded-xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 hover:border-slate-700 text-left transition-all group"
-                  >
-                    <div className={`p-1.5 rounded-lg ${acc.color} shrink-0`}>
-                      <Icon className="size-3" />
-                    </div>
-                    <div className="overflow-hidden">
-                      <p className="text-[11px] font-bold text-slate-200 group-hover:text-emerald-400 truncate">
-                        {acc.label}
-                      </p>
-                      <p className="text-[9px] text-slate-500 truncate">{acc.email}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
       </div>
     </div>
