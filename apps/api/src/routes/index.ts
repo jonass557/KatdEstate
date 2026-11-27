@@ -25,6 +25,7 @@ import {
 } from '../modules/quartier/quartier.routes.js';
 import { createIkeepayRouter } from '../modules/payments/ikeepay.routes.js';
 import { createMarketingRouter } from '../modules/marketing/marketing.routes.js';
+import { createHotelRouter } from '../modules/hotel/hotel.routes.js';
 
 export function createApiRouter(config: AppConfig) {
   const router = Router();
@@ -52,6 +53,7 @@ export function createApiRouter(config: AppConfig) {
   organization.use(createMaintenanceRouter(config));
   organization.use(createAccountingRouter(config));
   organization.use(createUtilityRouter(config));
+  organization.use(createHotelRouter(config));
   router.use('/organizations/:organizationId', organization);
 
   // Organizations management & memberships

@@ -18,6 +18,7 @@ import { BackButton } from '../components/ui/back-button';
 import { PageHeader } from '../components/page-header';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { EstablishmentsManager } from '../components/hotel/EstablishmentsManager';
 
 const HOTEL_MODULES: Record<
   string,
@@ -118,22 +119,26 @@ export function HotelModulePage() {
       <BackButton to="/dashboard" label="Retour au Dashboard" />
       <PageHeader title={info.title} description={info.subtitle} />
 
-      <Card className="border-border">
-        <CardContent className="p-8 text-center space-y-4">
-          <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-500 border border-amber-500/30">
-            <IconComp className="size-7" />
-          </div>
-          <div className="space-y-2">
-            <Badge className="bg-amber-500 text-slate-950 font-black">{info.badge}</Badge>
-            <h3 className="text-lg font-bold text-foreground">{info.title}</h3>
-            <p className="text-xs text-muted-foreground max-w-lg mx-auto">{info.subtitle}</p>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs text-emerald-500 font-semibold">
-            <Bell className="size-4" />
-            <span>Module prêt — en attente de vos instructions détaillées de contenu et design.</span>
-          </div>
-        </CardContent>
-      </Card>
+      {module === 'establishments' ? (
+        <EstablishmentsManager />
+      ) : (
+        <Card className="border-border">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-500 border border-amber-500/30">
+              <IconComp className="size-7" />
+            </div>
+            <div className="space-y-2">
+              <Badge className="bg-amber-500 text-slate-950 font-black">{info.badge}</Badge>
+              <h3 className="text-lg font-bold text-foreground">{info.title}</h3>
+              <p className="text-xs text-muted-foreground max-w-lg mx-auto">{info.subtitle}</p>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs text-emerald-500 font-semibold">
+              <Bell className="size-4" />
+              <span>Module prêt — en attente de vos instructions détaillées de contenu et design.</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
