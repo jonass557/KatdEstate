@@ -20,6 +20,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { EstablishmentsManager } from '../components/hotel/EstablishmentsManager';
 import { HotelOverviewDashboard } from '../components/hotel/HotelOverviewDashboard';
+import { RoomsManager } from '../components/hotel/RoomsManager';
 
 const HOTEL_MODULES: Record<
   string,
@@ -130,6 +131,8 @@ export function HotelModulePage() {
         <HotelOverviewDashboard />
       ) : module === 'establishments' ? (
         <EstablishmentsManager />
+      ) : module === 'rooms' ? (
+        <RoomsManager />
       ) : (
         <Card className="border-border">
           <CardContent className="p-8 text-center space-y-4">

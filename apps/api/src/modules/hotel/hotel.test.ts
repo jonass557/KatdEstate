@@ -159,4 +159,79 @@ describe('Gestion des établissements hôteliers', () => {
     expect(Array.isArray(dash.body.data.charts.bookingBreakdown)).toBe(true);
     expect(Array.isArray(dash.body.data.charts.monthlyComparison)).toBe(true);
   });
+
+  it('gère les catégories et chambres, empêche le chevauchement et protège la suppression', async () => {
+    const owner = await createActor('OWNER');
+    const base = `/api/v1/organizations/${owner.organizationId}`;
+
+    const est = await api()
+      .post(`${base}/establishments`)
+      .set(authed(owner))
+      .send(establishmentPayload);
+    const estId = est.body.data._id as string;
+
+    // 1. Catégorie
+    const cat = await api()
+      .post(`${base}/room-categories`)
+      .set(authed(owner))
+      .send({
+        establishmentId: estId,
+        name: 'Suite Royale',
+        basePrice: 85000,
+        defaultBedsCount: 2,
+        defaultMaxCapacity: 4,
+      });
+    expect(cat.status).toBe(201);
+
+    // 2. Chambre
+    const room = await api()
+      .post(`${base}/rooms`)
+      .set(authed(owner))
+      .send({
+        establishmentId: estId,
+        roomNumber: '101',
+        categoryId: cat.body.data._id,
+        categoryName: 'Suite Royale',
+        floor: 1,
+        bedsCount: 2,
+        maxCapacity: 4,
+        pricePerNight: 85000,
+      });
+    expect(room.status).toBe(201);
+    const roomId = room.body.data._id as string;
+
+    // 3. Réservation future
+    const checkIn1 = new Date(Date.now() + 86400000 * 2).toISOString();
+    const checkOut1 = new Date(Date.now() + 86400000 * 5).toISOString();
+    const res1 = await api()
+      .post(`${base}/reservations`)
+      .set(authed(owner))
+      .send({
+        establishmentId: estId,
+        roomId,
+        guestName: 'M. Kouassi',
+        checkInDate: checkIn1,
+        checkOutDate: checkOut1,
+      });
+    expect(res1.status).toBe(201);
+
+    // 4. Chevauchement refusé (409)
+    const overlapCheckIn = new Date(Date.now() + 86400000 * 3).toISOString();
+    const overlapCheckOut = new Date(Date.now() + 86400000 * 6).toISOString();
+    const resOverlap = await api()
+      .post(`${base}/reservations`)
+      .set(authed(owner))
+      .send({
+        establishmentId: estId,
+        roomId,
+        guestName: 'Mme Traoré',
+        checkInDate: overlapCheckIn,
+        checkOutDate: overlapCheckOut,
+      });
+    expect(resOverlap.status).toBe(409);
+
+    // 5. Suppression bloquée tant qu'une réservation est active (409)
+    const deleteBlocked = await api().delete(`${base}/rooms/${roomId}`).set(authed(owner));
+    expect(deleteBlocked.status).toBe(409);
+  });
 });

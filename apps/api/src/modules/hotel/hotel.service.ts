@@ -10,6 +10,7 @@ import {
   HotelReservation,
   HotelRestaurantOrder,
   HotelRoom,
+  HotelRoomCategory,
   type HotelEstablishmentStatus,
   type HotelEstablishmentType,
 } from '../../models/hotel.js';
@@ -668,4 +669,371 @@ export async function getHotelDashboard(req: Request, res: Response): Promise<vo
     recentActivities: activityLogs,
     alerts,
   };
+}
+
+// ============================================================================
+// Room Categories CRUD
+// ============================================================================
+
+export async function listRoomCategories(req: Request, res: Response): Promise<void> {
+  const organizationId = new Types.ObjectId(req.organizationContext!.organizationId);
+  const filter: Record<string, unknown> = { organizationId };
+  if (typeof req.query.establishmentId === 'string' && Types.ObjectId.isValid(req.query.establishmentId)) {
+    filter.establishmentId = new Types.ObjectId(req.query.establishmentId);
+  }
+  const items = await HotelRoomCategory.find(filter).sort({ name: 1 }).lean();
+  res.locals.data = items;
+}
+
+export async function createRoomCategory(req: Request, res: Response): Promise<void> {
+  const organizationId = new Types.ObjectId(req.organizationContext!.organizationId);
+  const body = req.body as {
+    establishmentId: string;
+    name: string;
+    description?: string;
+    basePrice?: number;
+    defaultBedsCount?: number;
+    defaultMaxCapacity?: number;
+    currency?: string;
+  };
+  const created = await HotelRoomCategory.create({
+    organizationId,
+    establishmentId: new Types.ObjectId(body.establishmentId),
+    name: body.name,
+    description: body.description ?? '',
+    basePrice: body.basePrice ?? 0,
+    defaultBedsCount: body.defaultBedsCount ?? 1,
+    defaultMaxCapacity: body.defaultMaxCapacity ?? 2,
+    currency: body.currency ?? 'FCFA',
+  });
+  res.status(201);
+  res.locals.data = created.toObject();
+}
+
+export async function deleteRoomCategory(req: Request, res: Response): Promise<void> {
+  const organizationId = new Types.ObjectId(req.organizationContext!.organizationId);
+  const deleted = await HotelRoomCategory.findOneAndDelete({
+    _id: req.params.id,
+    organizationId,
+  }).lean();
+  if (!deleted) {
+    throw new AppError('NOT_FOUND', 'Catégorie introuvable.', 404);
+  }
+  res.locals.data = { deleted: true, id: req.params.id };
+}
+
+// ============================================================================
+// Rooms CRUD & Occupancy Sync
+// ============================================================================
+
+async function syncEstablishmentRoomCounts(organizationId: Types.ObjectId, establishmentId: Types.ObjectId) {
+  const [totalRooms, occupiedRooms] = await Promise.all([
+    HotelRoom.countDocuments({ organizationId, establishmentId }),
+    HotelRoom.countDocuments({ organizationId, establishmentId, status: 'OCCUPIED' }),
+  ]);
+  await HotelEstablishment.updateOne(
+    { _id: establishmentId, organizationId },
+    { $set: { totalRooms, occupiedRooms } },
+  );
+}
+
+export async function listRooms(req: Request, res: Response): Promise<void> {
+  const organizationId = new Types.ObjectId(req.organizationContext!.organizationId);
+  const filter: Record<string, unknown> = { organizationId };
+
+  if (typeof req.query.establishmentId === 'string' && Types.ObjectId.isValid(req.query.establishmentId)) {
+    filter.establishmentId = new Types.ObjectId(req.query.establishmentId);
+  }
+  if (typeof req.query.status === 'string' && req.query.status !== 'ALL') {
+    filter.status = req.query.status;
+  }
+  if (typeof req.query.floor === 'string' && req.query.floor !== 'ALL') {
+    const f = Number(req.query.floor);
+    if (!Number.isNaN(f)) filter.floor = f;
+  }
+  if (typeof req.query.category === 'string' && req.query.category !== 'ALL') {
+    filter.categoryName = req.query.category;
+  }
+  if (typeof req.query.search === 'string' && req.query.search.trim()) {
+    const regex = new RegExp(req.query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    filter.$or = [{ roomNumber: regex }, { categoryName: regex }, { description: regex }];
+  }
+
+  const baseScope: Record<string, unknown> = { organizationId };
+  if (filter.establishmentId) baseScope.establishmentId = filter.establishmentId;
+
+  const [rooms, allRooms] = await Promise.all([
+    HotelRoom.find(filter).sort({ floor: 1, roomNumber: 1 }).lean(),
+    HotelRoom.find(baseScope).select('status floor categoryName').lean(),
+  ]);
+
+  const floorsSet = new Set<number>();
+  const categoriesSet = new Set<string>();
+  const stats = allRooms.reduce(
+    (acc, r) => {
+      acc.total += 1;
+      if (r.status === 'AVAILABLE') acc.available += 1;
+      else if (r.status === 'OCCUPIED') acc.occupied += 1;
+      else if (r.status === 'RESERVED') acc.reserved += 1;
+      else if (r.status === 'CLEANING') acc.cleaning += 1;
+      else if (r.status === 'MAINTENANCE') acc.maintenance += 1;
+      if (typeof r.floor === 'number') floorsSet.add(r.floor);
+      if (r.categoryName) categoriesSet.add(r.categoryName);
+      return acc;
+    },
+    { total: 0, available: 0, occupied: 0, reserved: 0, cleaning: 0, maintenance: 0 },
+  );
+
+  res.locals.data = rooms;
+  res.locals.meta = {
+    stats,
+    floors: Array.from(floorsSet).sort((a, b) => a - b),
+    categories: Array.from(categoriesSet).sort(),
+  };
+}
+
+export async function getRoomDetail(req: Request, res: Response): Promise<void> {
+  const organizationId = new Types.ObjectId(req.organizationContext!.organizationId);
+  const room = await HotelRoom.findOne({ _id: req.params.id, organizationId }).lean();
+  if (!room) {
+    throw new AppError('NOT_FOUND', 'Chambre introuvable.', 404);
+  }
+
+  const reservations = await HotelReservation.find({
+    organizationId,
+    roomId: room._id,
+  })
+    .sort({ checkInDate: -1 })
+    .limit(20)
+    .lean();
+
+  res.locals.data = {
+    room,
+    reservations,
+    occupancyHistory: reservations.filter((r) => r.status !== 'CANCELLED'),
+  };
+}
+
+export async function createRoom(req: Request, res: Response): Promise<void> {
+  const orgId = req.organizationContext!.organizationId;
+  const organizationId = new Types.ObjectId(orgId);
+  const body = req.body as {
+    establishmentId: string;
+    roomNumber: string;
+    categoryId?: string;
+    categoryName?: string;
+    floor?: number;
+    bedsCount?: number;
+    maxCapacity?: number;
+    pricePerNight?: number;
+    currency?: string;
+    description?: string;
+    photos?: EstablishmentPhotoInput[];
+    status?: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'CLEANING' | 'MAINTENANCE';
+    amenities?: string[];
+  };
+
+  const establishmentId = new Types.ObjectId(body.establishmentId);
+  const existingNum = await HotelRoom.findOne({
+    establishmentId,
+    roomNumber: body.roomNumber.trim(),
+  }).lean();
+  if (existingNum) {
+    throw new AppError('CONFLICT', `La chambre ${body.roomNumber} existe déjà dans cet établissement.`, 409);
+  }
+
+  const photos = await resolveCloudinaryPhotos(body.photos, orgId);
+  const created = await HotelRoom.create({
+    organizationId,
+    establishmentId,
+    roomNumber: body.roomNumber.trim(),
+    categoryId: body.categoryId && Types.ObjectId.isValid(body.categoryId)
+      ? new Types.ObjectId(body.categoryId)
+      : undefined,
+    categoryName: body.categoryName?.trim() || 'Standard',
+    floor: body.floor ?? 1,
+    bedsCount: body.bedsCount ?? 1,
+    maxCapacity: body.maxCapacity ?? 2,
+    pricePerNight: body.pricePerNight ?? 0,
+    currency: body.currency || 'FCFA',
+    description: body.description || '',
+    photos,
+    status: body.status || 'AVAILABLE',
+    amenities: body.amenities || [],
+  });
+
+  await syncEstablishmentRoomCounts(organizationId, establishmentId);
+
+  res.status(201);
+  res.locals.data = created.toObject();
+}
+
+export async function updateRoom(req: Request, res: Response): Promise<void> {
+  const orgId = req.organizationContext!.organizationId;
+  const organizationId = new Types.ObjectId(orgId);
+  const existing = await HotelRoom.findOne({ _id: req.params.id, organizationId });
+  if (!existing) {
+    throw new AppError('NOT_FOUND', 'Chambre introuvable.', 404);
+  }
+
+  const body = req.body as Record<string, any>;
+  if (body.photos !== undefined) {
+    existing.set('photos', await resolveCloudinaryPhotos(body.photos, orgId));
+  }
+
+  const fields = [
+    'roomNumber',
+    'categoryName',
+    'floor',
+    'bedsCount',
+    'maxCapacity',
+    'pricePerNight',
+    'currency',
+    'description',
+    'status',
+    'amenities',
+  ] as const;
+  for (const field of fields) {
+    if (body[field] !== undefined) {
+      existing.set(field, body[field]);
+    }
+  }
+  if (body.categoryId && Types.ObjectId.isValid(body.categoryId)) {
+    existing.categoryId = new Types.ObjectId(body.categoryId);
+  }
+
+  await existing.save();
+  await syncEstablishmentRoomCounts(organizationId, existing.establishmentId);
+  res.locals.data = existing.toObject();
+}
+
+export async function deleteRoom(req: Request, res: Response): Promise<void> {
+  const organizationId = new Types.ObjectId(req.organizationContext!.organizationId);
+  const room = await HotelRoom.findOne({ _id: req.params.id, organizationId }).lean();
+  if (!room) {
+    throw new AppError('NOT_FOUND', 'Chambre introuvable.', 404);
+  }
+
+  // Règle de réservation : impossible de supprimer si la chambre a des réservations actives ou à venir
+  const activeReservationsCount = await HotelReservation.countDocuments({
+    organizationId,
+    roomId: room._id,
+    status: { $in: ['PENDING', 'CONFIRMED', 'CHECKED_IN'] },
+    checkOutDate: { $gte: new Date() },
+  });
+
+  if (activeReservationsCount > 0 || room.status === 'OCCUPIED' || room.status === 'RESERVED') {
+    throw new AppError(
+      'CONFLICT',
+      'Suppression impossible : cette chambre est actuellement occupée ou possède des réservations actives/à venir.',
+      409,
+    );
+  }
+
+  await HotelRoom.deleteOne({ _id: room._id, organizationId });
+  await syncEstablishmentRoomCounts(organizationId, room.establishmentId);
+
+  for (const photo of room.photos ?? []) {
+    if (photo.publicId && !photo.publicId.startsWith('local_')) {
+      await deleteFromCloudinary(photo.publicId);
+    }
+  }
+
+  res.locals.data = { deleted: true, id: req.params.id };
+}
+
+export async function createRoomReservation(req: Request, res: Response): Promise<void> {
+  const organizationId = new Types.ObjectId(req.organizationContext!.organizationId);
+  const body = req.body as {
+    establishmentId: string;
+    roomId: string;
+    guestName: string;
+    guestEmail?: string;
+    guestPhone?: string;
+    source?: 'DIRECT' | 'OTA' | 'CORPORATE' | 'WALK_IN';
+    checkInDate: string;
+    checkOutDate: string;
+    totalAmount?: number;
+  };
+
+  const checkIn = new Date(body.checkInDate);
+  const checkOut = new Date(body.checkOutDate);
+  if (Number.isNaN(checkIn.getTime()) || Number.isNaN(checkOut.getTime()) || checkOut <= checkIn) {
+    throw new AppError('VALIDATION_ERROR', 'Les dates de séjour sont invalides (départ doit être après arrivée).', 422);
+  }
+
+  const room = await HotelRoom.findOne({
+    _id: body.roomId,
+    organizationId,
+    establishmentId: new Types.ObjectId(body.establishmentId),
+  });
+  if (!room) {
+    throw new AppError('NOT_FOUND', 'Chambre introuvable dans cet établissement.', 404);
+  }
+
+  if (room.status === 'MAINTENANCE') {
+    throw new AppError('CONFLICT', 'Cette chambre est en maintenance et ne peut pas être réservée.', 409);
+  }
+
+  // Vérification stricte anti-chevauchement : aucune chambre occupée/réservée sur une période qui se chevauche
+  const overlapping = await HotelReservation.findOne({
+    organizationId,
+    roomId: room._id,
+    status: { $in: ['PENDING', 'CONFIRMED', 'CHECKED_IN'] },
+    checkInDate: { $lt: checkOut },
+    checkOutDate: { $gt: checkIn },
+  }).lean();
+
+  if (overlapping) {
+    throw new AppError(
+      'CONFLICT',
+      `Conflit de réservation : la chambre ${room.roomNumber} est déjà attribuée à ${overlapping.guestName} sur cette période.`,
+      409,
+    );
+  }
+
+  const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+  const totalAmount = body.totalAmount ?? nights * (room.pricePerNight || 0);
+  const now = new Date();
+  const isCurrentStay = checkIn <= now && checkOut > now;
+
+  const created = await HotelReservation.create({
+    organizationId,
+    establishmentId: room.establishmentId,
+    roomId: room._id,
+    roomNumber: room.roomNumber,
+    guestName: body.guestName.trim(),
+    guestEmail: body.guestEmail?.trim() || '',
+    guestPhone: body.guestPhone?.trim() || '',
+    source: body.source || 'DIRECT',
+    checkInDate: checkIn,
+    checkOutDate: checkOut,
+    nights,
+    totalAmount,
+    paidAmount: 0,
+    currency: room.currency || 'FCFA',
+    status: isCurrentStay ? 'CHECKED_IN' : 'CONFIRMED',
+  });
+
+  // Synchroniser automatiquement le statut de la chambre
+  if (isCurrentStay) {
+    room.status = 'OCCUPIED';
+    await room.save();
+  } else if (room.status === 'AVAILABLE') {
+    room.status = 'RESERVED';
+    await room.save();
+  }
+  await syncEstablishmentRoomCounts(organizationId, room.establishmentId);
+
+  await HotelActivityLog.create({
+    organizationId,
+    establishmentId: room.establishmentId,
+    type: 'RESERVATION',
+    title: `Réservation Ch. ${room.roomNumber} — ${created.guestName}`,
+    description: `${nights} nuit(s) du ${checkIn.toLocaleDateString('fr-FR')} au ${checkOut.toLocaleDateString('fr-FR')}`,
+    severity: 'INFO',
+  });
+
+  res.status(201);
+  res.locals.data = created.toObject();
 }

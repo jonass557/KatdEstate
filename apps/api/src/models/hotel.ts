@@ -93,18 +93,44 @@ export const HotelEstablishment =
 // Connected Hotel Operational Models (Rooms, Reservations, Payments, Restaurant, Services, Activity)
 // ============================================================================
 
+const hotelRoomCategorySchema = new Schema(
+  {
+    organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
+    establishmentId: { type: Schema.Types.ObjectId, ref: 'HotelEstablishment', required: true, index: true },
+    name: { type: String, required: true, trim: true, maxlength: 100 },
+    description: { type: String, trim: true, maxlength: 500, default: '' },
+    basePrice: { type: Number, min: 0, default: 0 },
+    defaultBedsCount: { type: Number, min: 1, default: 1 },
+    defaultMaxCapacity: { type: Number, min: 1, default: 2 },
+    currency: { type: String, default: 'FCFA' },
+  },
+  { timestamps: true },
+);
+
+export type HotelRoomCategoryDocument = InferSchemaType<typeof hotelRoomCategorySchema> & {
+  _id: Types.ObjectId;
+};
+export const HotelRoomCategory =
+  (models.HotelRoomCategory as Model<HotelRoomCategoryDocument>) ??
+  model<HotelRoomCategoryDocument>('HotelRoomCategory', hotelRoomCategorySchema);
+
 const hotelRoomSchema = new Schema(
   {
     organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
     establishmentId: { type: Schema.Types.ObjectId, ref: 'HotelEstablishment', required: true, index: true },
     roomNumber: { type: String, required: true, trim: true },
+    categoryId: { type: Schema.Types.ObjectId, ref: 'HotelRoomCategory' },
     categoryName: { type: String, default: 'Standard', trim: true },
     floor: { type: Number, default: 1 },
+    bedsCount: { type: Number, min: 1, default: 1 },
+    maxCapacity: { type: Number, min: 1, default: 2 },
     pricePerNight: { type: Number, min: 0, default: 0 },
     currency: { type: String, default: 'FCFA' },
+    description: { type: String, trim: true, maxlength: 2000, default: '' },
+    photos: { type: [photoSubSchema], default: [] },
     status: {
       type: String,
-      enum: ['AVAILABLE', 'OCCUPIED', 'CLEANING', 'MAINTENANCE'],
+      enum: ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'CLEANING', 'MAINTENANCE'],
       default: 'AVAILABLE',
       index: true,
     },
@@ -112,6 +138,8 @@ const hotelRoomSchema = new Schema(
   },
   { timestamps: true },
 );
+
+hotelRoomSchema.index({ establishmentId: 1, roomNumber: 1 }, { unique: true });
 
 export type HotelRoomDocument = InferSchemaType<typeof hotelRoomSchema> & { _id: Types.ObjectId };
 export const HotelRoom =
