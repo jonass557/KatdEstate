@@ -49,6 +49,7 @@ import { IkeepayModal } from '../components/payments/ikeepay-modal';
 import { IkeepaySettingsModal } from '../components/admin/ikeepay-settings-modal';
 import { AdminNotificationApiSettingsModal } from '../components/admin/notification-api-settings-modal';
 import { OwnerReportProblemModal } from '../components/quartier/OwnerReportProblemModal';
+import { HotelOverviewDashboard } from '../components/hotel/HotelOverviewDashboard';
 import { Modal } from '../components/ui/dialog';
 import {
   getBlockLeaders,
@@ -1192,8 +1193,10 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* 3. KPI Quick Metrics Bar */}
-      {(() => {
+      {/* 3. KPI Quick Metrics Bar (ou Dashboard Principal Hôtelier pour HOTEL_MANAGER) */}
+      {userRole === 'HOTEL_MANAGER' ? (
+        <HotelOverviewDashboard />
+      ) : (() => {
         const overview = data ?? {
           incomeMinor: 24500000,
           arrearsMinor: 1200000,

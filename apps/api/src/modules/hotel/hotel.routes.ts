@@ -78,6 +78,12 @@ export function createHotelRouter(config: AppConfig) {
   router.use(createAuthenticate(config), requireOrganizationMembership);
 
   router.get(
+    '/hotel-dashboard',
+    requirePermission('properties.view'),
+    respond(service.getHotelDashboard),
+  );
+
+  router.get(
     '/establishments',
     requirePermission('properties.view'),
     respond(service.listEstablishments),

@@ -3,7 +3,13 @@ import { Types } from 'mongoose';
 import { AppError } from '../../common/errors.js';
 import { deleteFromCloudinary, uploadToCloudinary } from '../../common/cloudinary.js';
 import {
+  HotelActivityLog,
   HotelEstablishment,
+  HotelExtraServiceOrder,
+  HotelPayment,
+  HotelReservation,
+  HotelRestaurantOrder,
+  HotelRoom,
   type HotelEstablishmentStatus,
   type HotelEstablishmentType,
 } from '../../models/hotel.js';
@@ -315,4 +321,351 @@ export async function uploadEstablishmentPhotos(req: Request, res: Response): Pr
 
   res.status(201);
   res.locals.data = uploaded;
+}
+
+export async function getHotelDashboard(req: Request, res: Response): Promise<void> {
+  const organizationId = new Types.ObjectId(req.organizationContext!.organizationId);
+  const establishmentIdRaw =
+    typeof req.query.establishmentId === 'string' && req.query.establishmentId.trim()
+      ? req.query.establishmentId.trim()
+      : undefined;
+  const period =
+    typeof req.query.period === 'string' ? req.query.period.toUpperCase() : '30D';
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfWeek.getDate() - 6);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const periodDays =
+    period === 'TODAY' ? 1 : period === '7D' ? 7 : period === '90D' ? 90 : period === '1Y' ? 365 : 30;
+  const periodStart = new Date(startOfToday);
+  periodStart.setDate(periodStart.getDate() - (periodDays - 1));
+  const prevPeriodStart = new Date(periodStart);
+  prevPeriodStart.setDate(prevPeriodStart.getDate() - periodDays);
+
+  const estFilter: Record<string, unknown> = { organizationId };
+  if (establishmentIdRaw && Types.ObjectId.isValid(establishmentIdRaw)) {
+    estFilter._id = new Types.ObjectId(establishmentIdRaw);
+  }
+
+  const establishments = await HotelEstablishment.find(estFilter).sort({ createdAt: -1 }).lean();
+  const activeEst = establishments[0] || null;
+  const scopeFilter: Record<string, unknown> = { organizationId };
+  if (establishmentIdRaw && Types.ObjectId.isValid(establishmentIdRaw)) {
+    scopeFilter.establishmentId = new Types.ObjectId(establishmentIdRaw);
+  }
+
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+  const [
+    rooms,
+    reservations,
+    payments,
+    restaurantOrders,
+    serviceOrders,
+    activityLogs,
+  ] = await Promise.all([
+    HotelRoom.find(scopeFilter).lean(),
+    HotelReservation.find(scopeFilter).sort({ createdAt: -1 }).lean(),
+    HotelPayment.find({ ...scopeFilter, paidAt: { $gte: sixMonthsAgo } }).sort({ paidAt: -1 }).lean(),
+    HotelRestaurantOrder.find({ ...scopeFilter, orderedAt: { $gte: sixMonthsAgo } })
+      .sort({ orderedAt: -1 })
+      .lean(),
+    HotelExtraServiceOrder.find({ ...scopeFilter, createdAt: { $gte: sixMonthsAgo } })
+      .sort({ createdAt: -1 })
+      .lean(),
+    HotelActivityLog.find(scopeFilter).sort({ createdAt: -1 }).limit(12).lean(),
+  ]);
+
+  // Chambres & Taux d'occupation
+  const roomCountFromDocs = rooms.length;
+  const fallbackRoomsTotal = establishments.reduce((sum, e) => sum + (e.totalRooms || 0), 0);
+  const fallbackOccupied = establishments.reduce((sum, e) => sum + (e.occupiedRooms || 0), 0);
+
+  const totalRooms = roomCountFromDocs > 0 ? roomCountFromDocs : fallbackRoomsTotal;
+  const occupiedRooms =
+    roomCountFromDocs > 0
+      ? rooms.filter((r) => r.status === 'OCCUPIED').length
+      : fallbackOccupied;
+  const cleaningRooms =
+    roomCountFromDocs > 0 ? rooms.filter((r) => r.status === 'CLEANING').length : 0;
+  const maintenanceRooms =
+    roomCountFromDocs > 0 ? rooms.filter((r) => r.status === 'MAINTENANCE').length : 0;
+  const availableRooms =
+    roomCountFromDocs > 0
+      ? rooms.filter((r) => r.status === 'AVAILABLE').length
+      : Math.max(0, totalRooms - occupiedRooms);
+  const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+
+  // Chiffre d'affaires (Paiements + Restaurant + Services payés)
+  const paidEntries: Array<{ amount: number; category: 'ROOM' | 'RESTAURANT' | 'SERVICE'; date: Date }> = [];
+  for (const p of payments) {
+    if (p.status === 'PAID') {
+      paidEntries.push({
+        amount: p.amount || 0,
+        category: p.category || 'ROOM',
+        date: new Date(p.paidAt || p.createdAt),
+      });
+    }
+  }
+  for (const o of restaurantOrders) {
+    if (o.status === 'PAID') {
+      paidEntries.push({
+        amount: o.totalAmount || 0,
+        category: 'RESTAURANT',
+        date: new Date(o.orderedAt || o.createdAt),
+      });
+    }
+  }
+  for (const s of serviceOrders) {
+    if (s.status === 'PAID') {
+      paidEntries.push({
+        amount: s.amount || 0,
+        category: 'SERVICE',
+        date: new Date(s.createdAt),
+      });
+    }
+  }
+
+  const sumSince = (from: Date, to?: Date) =>
+    paidEntries
+      .filter((e) => e.date >= from && (!to || e.date <= to))
+      .reduce((acc, e) => acc + e.amount, 0);
+
+  const dailyRevenue = sumSince(startOfToday);
+  const weeklyRevenue = sumSince(startOfWeek);
+  const monthlyRevenue = sumSince(startOfMonth);
+  const periodRevenue = sumSince(periodStart);
+  const previousPeriodRevenue = sumSince(prevPeriodStart, periodStart);
+  const revenueGrowthPct =
+    previousPeriodRevenue > 0
+      ? Math.round(((periodRevenue - previousPeriodRevenue) / previousPeriodRevenue) * 100)
+      : periodRevenue > 0
+        ? 100
+        : 0;
+
+  // Réservations du jour, arrivées & départs prévus
+  const todayReservations = reservations.filter((r) => new Date(r.createdAt) >= startOfToday).length;
+  const periodReservations = reservations.filter((r) => new Date(r.createdAt) >= periodStart).length;
+  const arrivalsToday = reservations.filter((r) => {
+    const d = new Date(r.checkInDate);
+    return d >= startOfToday && d <= endOfToday && r.status !== 'CANCELLED';
+  }).length;
+  const departuresToday = reservations.filter((r) => {
+    const d = new Date(r.checkOutDate);
+    return d >= startOfToday && d <= endOfToday && r.status !== 'CANCELLED';
+  }).length;
+
+  // Série d'évolution des revenus & occupation (selon la période)
+  const bucketCount = period === 'TODAY' ? 1 : period === '7D' ? 7 : period === '1Y' ? 12 : 10;
+  const revenueSeries: Array<{
+    dateLabel: string;
+    roomRevenue: number;
+    restaurantRevenue: number;
+    serviceRevenue: number;
+    totalRevenue: number;
+  }> = [];
+  const occupancySeries: Array<{ dateLabel: string; occupancyRate: number }> = [];
+
+  if (period === '1Y') {
+    for (let m = 11; m >= 0; m -= 1) {
+      const mStart = new Date(now.getFullYear(), now.getMonth() - m, 1);
+      const mEnd = new Date(now.getFullYear(), now.getMonth() - m + 1, 0, 23, 59, 59, 999);
+      const label = mStart.toLocaleDateString('fr-FR', { month: 'short' });
+      const inBucket = paidEntries.filter((e) => e.date >= mStart && e.date <= mEnd);
+      const roomRevenue = inBucket.filter((e) => e.category === 'ROOM').reduce((a, b) => a + b.amount, 0);
+      const restaurantRevenue = inBucket.filter((e) => e.category === 'RESTAURANT').reduce((a, b) => a + b.amount, 0);
+      const serviceRevenue = inBucket.filter((e) => e.category === 'SERVICE').reduce((a, b) => a + b.amount, 0);
+      revenueSeries.push({
+        dateLabel: label,
+        roomRevenue,
+        restaurantRevenue,
+        serviceRevenue,
+        totalRevenue: roomRevenue + restaurantRevenue + serviceRevenue,
+      });
+      const activeResCount = reservations.filter(
+        (r) => r.status !== 'CANCELLED' && new Date(r.checkInDate) <= mEnd && new Date(r.checkOutDate) >= mStart,
+      ).length;
+      occupancySeries.push({
+        dateLabel: label,
+        occupancyRate: totalRooms > 0 ? Math.min(100, Math.round((activeResCount / totalRooms) * 100)) : 0,
+      });
+    }
+  } else {
+    const stepDays = Math.max(1, Math.ceil(periodDays / bucketCount));
+    for (let i = bucketCount - 1; i >= 0; i -= 1) {
+      const bEnd = new Date(endOfToday);
+      bEnd.setDate(bEnd.getDate() - i * stepDays);
+      const bStart = new Date(startOfToday);
+      bStart.setDate(bStart.getDate() - (i * stepDays + stepDays - 1));
+      const label = bEnd.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+      const inBucket = paidEntries.filter((e) => e.date >= bStart && e.date <= bEnd);
+      const roomRevenue = inBucket.filter((e) => e.category === 'ROOM').reduce((a, b) => a + b.amount, 0);
+      const restaurantRevenue = inBucket.filter((e) => e.category === 'RESTAURANT').reduce((a, b) => a + b.amount, 0);
+      const serviceRevenue = inBucket.filter((e) => e.category === 'SERVICE').reduce((a, b) => a + b.amount, 0);
+      revenueSeries.push({
+        dateLabel: label,
+        roomRevenue,
+        restaurantRevenue,
+        serviceRevenue,
+        totalRevenue: roomRevenue + restaurantRevenue + serviceRevenue,
+      });
+      const activeResCount = reservations.filter(
+        (r) => r.status !== 'CANCELLED' && new Date(r.checkInDate) <= bEnd && new Date(r.checkOutDate) >= bStart,
+      ).length;
+      occupancySeries.push({
+        dateLabel: label,
+        occupancyRate: totalRooms > 0 ? Math.min(100, Math.round((activeResCount / totalRooms) * 100)) : 0,
+      });
+    }
+  }
+
+  // Répartition des réservations par canal
+  const sources: Array<{ key: 'DIRECT' | 'OTA' | 'CORPORATE' | 'WALK_IN'; label: string; color: string }> = [
+    { key: 'DIRECT', label: 'Direct', color: '#2563eb' },
+    { key: 'OTA', label: 'OTA (Booking, Expedia)', color: '#d97706' },
+    { key: 'CORPORATE', label: 'Entreprise', color: '#10b981' },
+    { key: 'WALK_IN', label: 'Passage (Walk-in)', color: '#8b5cf6' },
+  ];
+  const periodResList = reservations.filter((r) => new Date(r.createdAt) >= periodStart);
+  const totalResForBreakdown = periodResList.length;
+  const bookingBreakdown = sources.map((s) => {
+    const count = periodResList.filter((r) => (r.source || 'DIRECT') === s.key).length;
+    return {
+      source: s.key,
+      label: s.label,
+      color: s.color,
+      count,
+      percentage: totalResForBreakdown > 0 ? Math.round((count / totalResForBreakdown) * 100) : 0,
+    };
+  });
+
+  // Comparaison des performances mensuelles (6 derniers mois)
+  const monthlyComparison: Array<{
+    month: string;
+    revenue: number;
+    reservations: number;
+  }> = [];
+  for (let m = 5; m >= 0; m -= 1) {
+    const mStart = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const mEnd = new Date(now.getFullYear(), now.getMonth() - m + 1, 0, 23, 59, 59, 999);
+    const monthLabel = mStart.toLocaleDateString('fr-FR', { month: 'short' });
+    const rev = sumSince(mStart, mEnd);
+    const resCount = reservations.filter((r) => {
+      const d = new Date(r.createdAt);
+      return d >= mStart && d <= mEnd;
+    }).length;
+    monthlyComparison.push({ month: monthLabel, revenue: rev, reservations: resCount });
+  }
+
+  // Dernières transactions (Paiements + Restaurant + Services)
+  const recentTransactions = [
+    ...payments.slice(0, 6).map((p) => ({
+      id: String(p._id),
+      label: p.guestName || 'Paiement séjour',
+      category: p.category || 'ROOM',
+      method: p.method || 'MOBILE_MONEY',
+      amount: p.amount || 0,
+      currency: p.currency || activeEst?.currency || 'FCFA',
+      status: p.status,
+      date: p.paidAt || p.createdAt,
+    })),
+    ...restaurantOrders.slice(0, 4).map((o) => ({
+      id: String(o._id),
+      label: `${o.label}${o.roomNumber ? ` (Ch. ${o.roomNumber})` : ''}`,
+      category: 'RESTAURANT',
+      method: 'RESTAURANT',
+      amount: o.totalAmount || 0,
+      currency: o.currency || activeEst?.currency || 'FCFA',
+      status: o.status,
+      date: o.orderedAt || o.createdAt,
+    })),
+    ...serviceOrders.slice(0, 4).map((s) => ({
+      id: String(s._id),
+      label: s.serviceName,
+      category: 'SERVICE',
+      method: s.category || 'SERVICE',
+      amount: s.amount || 0,
+      currency: s.currency || activeEst?.currency || 'FCFA',
+      status: s.status,
+      date: s.createdAt,
+    })),
+  ]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 6);
+
+  // Alertes opérationnelles réelles
+  const alerts: Array<{ id: string; severity: 'WARNING' | 'ALERT' | 'INFO'; title: string; detail: string }> = [];
+  if (maintenanceRooms > 0) {
+    alerts.push({
+      id: 'alert-maint-rooms',
+      severity: 'ALERT',
+      title: `${maintenanceRooms} chambre(s) en maintenance`,
+      detail: 'Vérifiez les interventions techniques en cours pour libérer ces chambres.',
+    });
+  }
+  if (cleaningRooms > 0) {
+    alerts.push({
+      id: 'alert-clean-rooms',
+      severity: 'WARNING',
+      title: `${cleaningRooms} chambre(s) à nettoyer (Housekeeping)`,
+      detail: 'En attente de validation propreté avant le prochain check-in.',
+    });
+  }
+  const unpaidResCount = reservations.filter(
+    (r) => r.status !== 'CANCELLED' && (r.paidAmount || 0) < (r.totalAmount || 0),
+  ).length;
+  if (unpaidResCount > 0) {
+    alerts.push({
+      id: 'alert-unpaid',
+      severity: 'WARNING',
+      title: `${unpaidResCount} réservation(s) avec solde en attente`,
+      detail: 'Consultez la facturation pour encaisser les montants restants.',
+    });
+  }
+  const pendingResto = restaurantOrders.filter((o) => o.status === 'PENDING').length;
+  if (pendingResto > 0) {
+    alerts.push({
+      id: 'alert-resto',
+      severity: 'INFO',
+      title: `${pendingResto} commande(s) restaurant en attente`,
+      detail: 'Commandes en cuisine / room service à traiter.',
+    });
+  }
+
+  res.locals.data = {
+    establishment: activeEst,
+    period,
+    kpis: {
+      dailyRevenue,
+      weeklyRevenue,
+      monthlyRevenue,
+      periodRevenue,
+      revenueGrowthPct,
+      currency: activeEst?.currency || 'FCFA',
+      todayReservations,
+      periodReservations,
+      totalRooms,
+      availableRooms,
+      occupiedRooms,
+      cleaningRooms,
+      maintenanceRooms,
+      occupancyRate,
+      arrivalsToday,
+      departuresToday,
+    },
+    charts: {
+      revenueSeries,
+      occupancySeries,
+      bookingBreakdown,
+      monthlyComparison,
+    },
+    recentReservations: reservations.slice(0, 6),
+    recentTransactions,
+    recentActivities: activityLogs,
+    alerts,
+  };
 }

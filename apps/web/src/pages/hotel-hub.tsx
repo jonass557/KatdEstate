@@ -19,6 +19,7 @@ import { PageHeader } from '../components/page-header';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { EstablishmentsManager } from '../components/hotel/EstablishmentsManager';
+import { HotelOverviewDashboard } from '../components/hotel/HotelOverviewDashboard';
 
 const HOTEL_MODULES: Record<
   string,
@@ -29,6 +30,12 @@ const HOTEL_MODULES: Record<
     icon: typeof Building2;
   }
 > = {
+  overview: {
+    title: 'Vue générale de l’hôtel',
+    subtitle: 'Tableau de bord central : revenus, taux d’occupation, réservations, transactions et alertes.',
+    badge: 'DASHBOARD PRINCIPAL',
+    icon: Building2,
+  },
   establishments: {
     title: 'Établissements Hôteliers',
     subtitle: 'Fondation et gestion de vos établissements hôteliers (nom, adresse, étoiles, paramètres).',
@@ -119,7 +126,9 @@ export function HotelModulePage() {
       <BackButton to="/dashboard" label="Retour au Dashboard" />
       <PageHeader title={info.title} description={info.subtitle} />
 
-      {module === 'establishments' ? (
+      {module === 'overview' ? (
+        <HotelOverviewDashboard />
+      ) : module === 'establishments' ? (
         <EstablishmentsManager />
       ) : (
         <Card className="border-border">

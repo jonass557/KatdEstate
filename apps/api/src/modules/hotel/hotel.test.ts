@@ -136,4 +136,27 @@ describe('Gestion des établissements hôteliers', () => {
       .set(authed(intruder));
     expect(deleteAttempt.status).toBe(404);
   });
+
+  it('calcule les statistiques réelles du dashboard hôtelier depuis MongoDB', async () => {
+    const owner = await createActor('OWNER');
+    const base = `/api/v1/organizations/${owner.organizationId}`;
+
+    const created = await api()
+      .post(`${base}/establishments`)
+      .set(authed(owner))
+      .send({ ...establishmentPayload, totalRooms: 10, occupiedRooms: 4 });
+    expect(created.status).toBe(201);
+    const estId = created.body.data._id as string;
+
+    const dash = await api()
+      .get(`${base}/hotel-dashboard?establishmentId=${estId}&period=30D`)
+      .set(authed(owner));
+    expect(dash.status).toBe(200);
+    expect(dash.body.data.kpis.totalRooms).toBe(10);
+    expect(dash.body.data.kpis.occupiedRooms).toBe(4);
+    expect(dash.body.data.kpis.occupancyRate).toBe(40);
+    expect(Array.isArray(dash.body.data.charts.revenueSeries)).toBe(true);
+    expect(Array.isArray(dash.body.data.charts.bookingBreakdown)).toBe(true);
+    expect(Array.isArray(dash.body.data.charts.monthlyComparison)).toBe(true);
+  });
 });
